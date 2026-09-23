@@ -1,30 +1,27 @@
-SET DP0=%~dp0
-SET DP0=%DP0:~0,-1%
+@echo off
 
-rem overriding windows user/local environment
-SET LOCALENV_DIR=%DP0%\_local_env
-SET TMP=%LOCALENV_DIR%\_tmp
-SET TEMP=%LOCALENV_DIR%\_tmp
-SET HOME=%LOCALENV_DIR%\userprofile
-SET HOMEPATH=%LOCALENV_DIR%\userprofile
-SET USERPROFILE=%LOCALENV_DIR%\userprofile
-SET LOCALAPPDATA=%LOCALENV_DIR%\localappdata
-SET APPDATA=%LOCALENV_DIR%\userroaming
+set "DP0=%~dp0"
+set "DP0=%DP0:~0,-1%"
 
-SET PYTHON_PATH=%DP0%\python-3.12.8
+set "PYTHON_VERSION=3.12.8"
+set "PYTHON_PATH=%DP0%\runtime\python-%PYTHON_VERSION%"
+set "LOCALENV_DIR=%DP0%\.local\env"
 
-rem overriding default python env vars in order to interfere with any system python installation
-SET PYTHONHOME=
-SET PYTHONPATH=
-SET PYTHONEXECUTABLE=%PYTHON_PATH%\python.exe
-SET PYTHONWEXECUTABLE=%PYTHON_PATH%\pythonw.exe
+set "TMP=%LOCALENV_DIR%\_tmp"
+set "TEMP=%LOCALENV_DIR%\_tmp"
+set "HOME=%LOCALENV_DIR%\userprofile"
+set "HOMEPATH=%LOCALENV_DIR%\userprofile"
+set "USERPROFILE=%LOCALENV_DIR%\userprofile"
+set "LOCALAPPDATA=%LOCALENV_DIR%\localappdata"
+set "APPDATA=%LOCALENV_DIR%\userroaming"
 
-SET PYTHON_EXECUTABLE=%PYTHON_PATH%\python.exe
-SET PYTHONW_EXECUTABLE=%PYTHON_PATH%\pythonw.exe
-SET PYTHON_BIN_PATH=%PYTHON_EXECUTABLE%
-SET PYTHON_LIB_PATH=%PYTHON_PATH%\Lib\site-packages
-SET PATH=%PYTHON_PATH%;%PYTHON_PATH%\Scripts;%DP0%\CMake\Bin;%PATH%
-SET DISTUTILS_USE_SDK=1
+set "PYTHONHOME="
+set "PYTHONPATH="
+set "PYTHONEXECUTABLE=%PYTHON_PATH%\python.exe"
+set "PYTHONWEXECUTABLE=%PYTHON_PATH%\pythonw.exe"
 
-rem ブラウザをツールフォルダ内に保存・参照するように強制する
-set PLAYWRIGHT_BROWSERS_PATH=%~dp0browsers
+set "PYTHON_EXECUTABLE=%PYTHON_PATH%\python.exe"
+set "PYTHONW_EXECUTABLE=%PYTHON_PATH%\pythonw.exe"
+set "PYTHON_BIN_PATH=%PYTHON_EXECUTABLE%"
+set "PYTHON_LIB_PATH=%PYTHON_PATH%\Lib\site-packages"
+set "PATH=%PYTHON_PATH%;%PYTHON_PATH%\Scripts;%PATH%"
