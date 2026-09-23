@@ -26,6 +26,20 @@
 - 依存の正本は `pyproject.toml`。
 - `runtime/`、`.local/`、`results/` は生成物またはローカル情報。認証情報やtokenをコミットしない。
 
+
+## Windows Embedded Python の環境設計Invariant
+
+- Windows Embedded Pythonを使う目的は、利用者へシステムPythonのインストールを要求しないことにある。
+- Windowsユーザー環境全体を仮想化・隔離することは目的ではない。
+- `USERPROFILE`、`HOME`、`HOMEPATH`、`APPDATA`、`LOCALAPPDATA`、`TEMP`、`TMP` をプロジェクト配下へ置き換えない。
+- `keyring`、Windows Credential Manager、既定ブラウザ、OAuth認証は通常のWindowsユーザー環境を利用する。
+- ローカル化する対象は、原則としてPython Runtimeとアプリ固有データのみとする。
+- `PYTHONHOME` / `PYTHONPATH` はシステムPython設定との混線防止のため、起動プロセス内でクリアしてよい。
+- Embedded Pythonを `PATH` の先頭へ追加する場合も、`setup.bat` / `console.bat` 等から起動したプロセス内だけに限定する。
+- OS環境変数の恒久変更、レジストリへのPythonパス登録、システムPythonへのpip installを行わない。
+- `.local/` はOAuth補助情報、lock、cache等のアプリ固有ローカルデータ用であり、Windowsユーザープロファイルの代替ディレクトリとして使わない。
+- 「ポータブル化」を理由に上記方針を変更しない。変更が必要な場合は、実装より先に仕様上の理由を明示する。
+
 ## 文書の読み分け
 
 - 通常のコード変更: 変更対象と近接テストを優先。
