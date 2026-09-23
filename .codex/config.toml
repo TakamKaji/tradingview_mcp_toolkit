@@ -1,6 +1,9 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
-# Keep project-level Codex settings intentionally minimal.
-# Repository behavior belongs in AGENTS.md; user-level model and approval
-# preferences must not be overridden by this repository.
-project_doc_max_bytes = 32768
+# GPT-6 Astra is the project default. CLI/session overrides still take precedence.
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+model_verbosity = "low"
+
+# Keep always-loaded repository guidance compact.
+project_doc_max_bytes = 16384
