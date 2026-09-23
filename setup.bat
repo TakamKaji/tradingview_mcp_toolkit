@@ -39,10 +39,7 @@ if exist "%TARGET_DIR%\python.exe" (
 call "%~dp0setenv.bat"
 if errorlevel 1 goto :error
 
-if not exist "%LOCALENV_DIR%\_tmp" mkdir "%LOCALENV_DIR%\_tmp"
-if not exist "%LOCALENV_DIR%\userprofile" mkdir "%LOCALENV_DIR%\userprofile"
-if not exist "%LOCALENV_DIR%\localappdata" mkdir "%LOCALENV_DIR%\localappdata"
-if not exist "%LOCALENV_DIR%\userroaming" mkdir "%LOCALENV_DIR%\userroaming"
+if not exist "%APP_LOCAL_DIR%\" mkdir "%APP_LOCAL_DIR%"
 
 "%PYTHON_EXECUTABLE%" -m pip --version >nul 2>&1
 if errorlevel 1 (
