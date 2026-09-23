@@ -1,0 +1,5 @@
+python-3.12.8/
+pip/
+_local_env/
+browsers/
+py/__pycache__/*
