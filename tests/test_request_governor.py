@@ -259,6 +259,36 @@ def test_retry_false_and_max_attempts() -> None:
     asyncio.run(scenario())
 
 
+def test_retry_false_timeout_runs_once_without_backoff() -> None:
+    async def scenario() -> None:
+        limiter = CountingLimiter()
+        delays: list[float] = []
+        calls = 0
+
+        async def fake_sleep(delay: float) -> None:
+            delays.append(delay)
+
+        governor = RequestGovernor(
+            RequestGovernorConfig(timeout_seconds=0.01),
+            _limiter=limiter,
+            _sleep=fake_sleep,
+        )
+
+        async def operation() -> None:
+            nonlocal calls
+            calls += 1
+            await asyncio.Event().wait()
+
+        with pytest.raises(TimeoutError):
+            await governor.execute(operation, retry=False)
+
+        assert calls == 1
+        assert limiter.entries == 1
+        assert delays == []
+
+    asyncio.run(scenario())
+
+
 def test_backoff_releases_slot_before_next_attempt() -> None:
     async def scenario() -> None:
         limiter = CountingLimiter()
