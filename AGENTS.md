@@ -66,3 +66,15 @@ macOS / 通常Pythonでは:
 python -m pytest
 python -m ruff check .
 ```
+
+
+## Codexの役割分担
+
+- Root / 司令塔は GPT-6 Astra とする。
+- Astraは仕様確認、タスク分解、Acceptance Criteria、実装レビュー、最終検証を担当する。
+- `src/` と `tests/` の実装は原則として `implementer` roleへ委任し、実装担当は GPT-6 Sol とする。
+- Astra自身が本実装を抱え込まない。説明文・仕様・設定の小変更はAstraが直接変更してよい。
+- 同一ファイルを複数subagentへ同時編集させない。通常はSol implementerを1つだけ動かす。
+- Solは指定範囲の実装、Unit Test、pytest/ruff、変更結果の報告まで担当し、依頼外の大規模リファクタを行わない。
+- multi-agent機能が利用できない場合、Astraは黙って単独実装へ切り替えず、その状態をユーザーへ明示する。
+- 詳細な実装契約は `docs/tradingview_screening_system_spec.md` を参照する。
