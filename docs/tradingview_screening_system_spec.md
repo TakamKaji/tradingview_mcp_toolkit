@@ -1170,7 +1170,8 @@ dependencies = [
   "tenacity>=9,<10",
   "cachetools>=5,<8",
   "keyring>=25,<26",
-  "filelock>=3,<5"
+  "filelock>=3,<5",
+  "tzdata>=2025.2"
 ]
 
 [project.optional-dependencies]
@@ -1181,6 +1182,8 @@ dev = [
 ```
 
 直接importしない推移依存を重複して明示依存にしない。
+
+`tzdata` はWindows Embedded Python等、OS側にIANA timezone databaseが無い環境で標準ライブラリ `zoneinfo` を利用可能にするためのデータ依存として明示する。Timezone API自体は標準ライブラリ `zoneinfo` を使用し、独自timezoneライブラリは導入しない。
 
 ## 23.3 標準ライブラリ利用
 
@@ -1242,6 +1245,9 @@ Python本体が既にあっても依存更新を実行できるようにする�
 - `USERPROFILE` / `HOME` / `APPDATA` / `LOCALAPPDATA` / `TEMP` / `TMP` をプロジェクト配下へ上書きしない。
 - `PYTHONHOME` / `PYTHONPATH` はプロセス内でクリアし、Embedded PythonをPATH先頭へ追加する変更もそのBATプロセス内だけとする。
 - OS環境変数の恒久変更、レジストリへのPython登録、システムPythonへのpip installを行わない。
+- `setup.bat` / `console.bat` / 通常CLIは管理者権限を要求しない。通常ユーザー権限での実行を標準とし、Windows Credential Managerや既定ブラウザ等もそのユーザーコンテキストを利用する。
+- pytestの一時領域はOSの `%TEMP%` に依存せず、Repository直下のGit管理外 `.pytest-tmp/` を `--basetemp` で使用する。管理者実行で作られたユーザーTemp配下のpytestディレクトリACLが通常ユーザー実行を妨げないようにする。
+- Windowsで実シンボリックリンク作成権限が無い場合、権限依存のテストはskipを許容する。全テストPASSのために管理者権限を要求しない。
 - `pythonXY._pth` isolated modeを前提に、Windows Embedded環境のeditable installではbuild backendを先にEmbedded Pythonへ導入し `--no-build-isolation` を使う。通常Python/macOSにはこの制約を広げない。
 
 ---
