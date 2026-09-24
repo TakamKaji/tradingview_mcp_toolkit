@@ -1,4 +1,4 @@
-"""Small, stable errors for configuration consumers."""
+"""Small, stable application errors shared across common infrastructure."""
 
 from __future__ import annotations
 
