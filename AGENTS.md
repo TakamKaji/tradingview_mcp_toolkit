@@ -39,6 +39,7 @@
 - OS環境変数の恒久変更、レジストリへのPythonパス登録、システムPythonへのpip installを行わない。
 - `.local/` はOAuth補助情報、lock、cache等のアプリ固有ローカルデータ用であり、Windowsユーザープロファイルの代替ディレクトリとして使わない。
 - 「ポータブル化」を理由に上記方針を変更しない。変更が必要な場合は、実装より先に仕様上の理由を明示する。
+- Windows Embeddable Pythonでは `pythonXY._pth` によるisolated modeを前提とする。ローカルプロジェクトのeditable installでは、build backendをEmbedded Pythonへ明示インストールした上で `pip install --no-build-isolation -e .[dev]` 相当を使う。通常Python/macOSにはこの制約を広げない。
 
 ## 文書の読み分け
 

@@ -1,20 +1,25 @@
 @echo off
 setlocal
-title Tool Console
+title TradingView MCP Support Console
 
-rem 環境変数を読み込む（現在のフォルダを基準にする）
 call "%~dp0setenv.bat"
-
-rem カレントディレクトリをこのバッチファイルがある場所（プロジェクトルート）に固定
 cd /d "%~dp0"
 
+if not exist "%PYTHON_EXECUTABLE%" (
+    echo Embedded Python was not found.
+    echo Run setup.bat first.
+    pause
+    exit /b 1
+)
+
 echo ========================================================
-echo  Python Portable Tool
+echo  TradingView MCP Support - Portable Python Console
 echo ========================================================
 echo.
-echo  [Usage]
-echo  Run script:  python py/***.py
+echo  Common commands:
+echo    python -m tradingview_screening --help
+echo    python -m pytest
+echo    python -m ruff check .
 echo.
 
-rem コマンドプロンプトを開いたままにする
 cmd /k
