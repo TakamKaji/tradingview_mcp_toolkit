@@ -1246,6 +1246,7 @@ Python本体が既にあっても依存更新を実行できるようにする�
 - `PYTHONHOME` / `PYTHONPATH` はプロセス内でクリアし、Embedded PythonをPATH先頭へ追加する変更もそのBATプロセス内だけとする。
 - OS環境変数の恒久変更、レジストリへのPython登録、システムPythonへのpip installを行わない。
 - `setup.bat` / `console.bat` / 通常CLIは管理者権限を要求しない。通常ユーザー権限での実行を標準とし、Windows Credential Managerや既定ブラウザ等もそのユーザーコンテキストを利用する。
+- pytestの一時領域はOSの `%TEMP%` に依存せず、Repository直下のGit管理外 `.pytest-tmp/` を `--basetemp` で使用する。管理者実行で作られたユーザーTemp配下のpytestディレクトリACLが通常ユーザー実行を妨げないようにする。
 - Windowsで実シンボリックリンク作成権限が無い場合、権限依存のテストはskipを許容する。全テストPASSのために管理者権限を要求しない。
 - `pythonXY._pth` isolated modeを前提に、Windows Embedded環境のeditable installではbuild backendを先にEmbedded Pythonへ導入し `--no-build-isolation` を使う。通常Python/macOSにはこの制約を広げない。
 
