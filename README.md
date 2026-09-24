@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 2として、Screening / Jobの設定モデルとJSON読込・検証を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
+現在はPhase 3までの設定モデル・JSON検証・共通通信制御を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
 
 ## 開発方針
 
@@ -95,6 +95,32 @@ Screening単体は `screening.validators.load_screening_by_name(name, project_ro
 この段階の `filters` はIssue #4の対象である `{field: [min, max]}` 形式のみを受け付けます。片側を `null` にできますが、両端 `null`、下限が上限を超える範囲、不正な数値は拒否します。Field名の実在確認と特殊フィルター値の対応は後続フェーズで扱います。
 
 設定の読込・参照検証はローカル処理です。MCP接続、Screening実行、Watchlist同期、定期実行は後続フェーズで実装します。サンプルの有効化フラグだけで外部サービスへの操作は発生しません。
+
+## 共通通信制御（Phase 3）
+
+`tradingview_screening.common.request_governor` の `RequestGovernor` は、Provider非依存のasync callableを実行します。`RequestGovernorConfig` で設定を渡せます。
+
+```python
+from tradingview_screening.common.request_governor import RequestGovernor
+
+async def example():
+    governor = RequestGovernor()
+
+    async def operation():
+        return {"value": 42}
+
+    return await governor.execute(operation, cache_key="example")
+```
+
+既定値は30リクエスト/分、同時実行1、試行ごとのTimeout 30秒、初回を含め最大3試行、Retry基本待機2秒、Cache TTL 60秒です。Retry待機は指数的に増加し、小さなjitterを加えます。各試行でRate Limiterを通過し、Retry待機中は同時実行枠を解放します。
+
+Retry対象は `TimeoutError`、`ConnectionResetError`、共通の `TransientRequestError` です。Validation・引数・権限エラーや未分類エラーは再試行しません。Write呼出元は `retry=False` を指定し、`cache_key` を省略してください。
+
+Cacheは明示したキーに対する成功結果のみをプロセス内メモリに保存します。キー省略時とTTLが0の場合は無効です。Cache hitではoperation・Rate Limiter・同時実行枠を使用しません。同じキーの並行呼出しを1回にまとめる保証はありません。
+
+Governorは同じイベントループ内で共有します。Cacheキーは呼出元で操作・引数・結果型を区別できるように作成してください。
+
+Phase 4でProvider側の一時的なHTTP / MCPエラーを共通markerへ変換し、この実行経路に接続します。
 
 ## ライセンス
 

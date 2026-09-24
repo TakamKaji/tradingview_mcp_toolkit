@@ -29,3 +29,7 @@ class ConfigError(Exception):
         if self.field is not None:
             result["field"] = self.field
         return result
+
+
+class TransientRequestError(Exception):
+    """Provider-independent marker for a temporary communication failure."""
