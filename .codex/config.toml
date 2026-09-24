@@ -1,9 +1,19 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
-# GPT-6 Astra is the project default. CLI/session overrides still take precedence.
+# GPT-6 Astra is the project root/orchestrator.
 model = "gpt-6-astra"
 model_reasoning_effort = "high"
 model_verbosity = "low"
 
 # Keep always-loaded repository guidance compact.
 project_doc_max_bytes = 16384
+
+[agents]
+enabled = true
+default_subagent_model = "gpt-6-sol"
+default_subagent_reasoning_effort = "high"
+max_concurrent_threads_per_session = 1
+
+[agents.implementer]
+description = "Primary implementation role. Use for Python source changes, tests, and focused code fixes. Return changed files, test results, and remaining issues to the Astra root."
+config_file = "agents/implementer.toml"
