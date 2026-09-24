@@ -34,6 +34,16 @@ def test_malformed_json(loader, tmp_path: Path) -> None:
     assert "oops" not in caught.value.message
 
 
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+@pytest.mark.parametrize("loader", [load_job, load_screening])
+def test_nonstandard_json_constant_rejected(loader, constant: str, tmp_path: Path) -> None:
+    path = tmp_path / "bad.json"
+    path.write_text(f'{{"value": {constant}}}', encoding="utf-8")
+    with pytest.raises(ConfigError) as caught:
+        loader(path)
+    assert caught.value.code == "CONFIG_JSON_INVALID"
+
+
 def test_invalid_utf8(tmp_path: Path) -> None:
     path = tmp_path / "bad.json"
     path.write_bytes(b"\xff")
