@@ -51,8 +51,15 @@ if errorlevel 1 (
     if errorlevel 1 goto :error
 )
 
+echo Installing local build backend...
+"%PYTHON_EXECUTABLE%" -m pip install "setuptools>=75,<81"
+if errorlevel 1 goto :error
+
 echo Installing project and development dependencies...
-"%PYTHON_EXECUTABLE%" -m pip install -r requirements.txt
+rem Embeddable Python uses pythonXY._pth isolated mode.
+rem pip build isolation relies on temporary paths that this runtime does not inherit reliably,
+rem so build requirements are installed above and the local project is built without isolation.
+"%PYTHON_EXECUTABLE%" -m pip install --no-build-isolation -r requirements.txt
 if errorlevel 1 goto :error
 
 echo.
