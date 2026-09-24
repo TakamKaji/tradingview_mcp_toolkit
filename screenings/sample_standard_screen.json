@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "sample_standard_screen",
+  "description": "TradingView standard screener fields only",
+  "market": "japan",
+  "symbolTypes": ["stock"],
+  "filters": {
+    "price_earnings_ttm": [null, 15]
+  },
+  "sortBy": "change",
+  "sortOrder": "desc",
+  "limit": 50,
+  "columns": [
+    "name",
+    "description",
+    "close",
+    "change",
+    "volume",
+    "market_cap_basic",
+    "sector"
+  ],
+  "watchlist": {
+    "enabled": true,
+    "name": "[Auto] Sample Standard Screen"
+  }
+}
