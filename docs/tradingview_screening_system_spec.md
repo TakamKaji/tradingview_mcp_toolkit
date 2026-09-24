@@ -1170,7 +1170,8 @@ dependencies = [
   "tenacity>=9,<10",
   "cachetools>=5,<8",
   "keyring>=25,<26",
-  "filelock>=3,<5"
+  "filelock>=3,<5",
+  "tzdata>=2025.2"
 ]
 
 [project.optional-dependencies]
@@ -1181,6 +1182,8 @@ dev = [
 ```
 
 直接importしない推移依存を重複して明示依存にしない。
+
+`tzdata` はWindows Embedded Python等、OS側にIANA timezone databaseが無い環境で標準ライブラリ `zoneinfo` を利用可能にするためのデータ依存として明示する。Timezone API自体は標準ライブラリ `zoneinfo` を使用し、独自timezoneライブラリは導入しない。
 
 ## 23.3 標準ライブラリ利用
 
