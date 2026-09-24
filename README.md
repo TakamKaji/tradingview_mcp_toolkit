@@ -21,6 +21,8 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 
 `setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。
 
+`setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。WindowsでDeveloper Modeが無効な場合、pytestの実シンボリックリンク検証1件が権限制約によりskipされることがありますが、これはテスト失敗ではありません。
+
 ### 開発用コマンド
 
 `console.bat` で開いたコンソールから実行します。
