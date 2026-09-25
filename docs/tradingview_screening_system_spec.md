@@ -1,10 +1,12 @@
 # TradingView MCP Screening Tool — Implementation Specification
 
-更新日: 2026-09-24
+更新日: 2026-09-25
 状態: V1 実装仕様
 主対象: Windows / Python
 副対象: macOS / 通常のローカルPython
 正本管理: Google Drive版を正本とし、Repository内の同名ファイルは実装用スナップショットとして同期する。仕様変更はDrive正本を先に更新する。
+
+今回のPhase 4 OAuth bootstrap再設計はユーザー指示に基づくRepository側の先行改訂。§17の責務分離・登録方式・通信境界についてDrive正本更新が必要（未反映）。
 
 ---
 
@@ -809,6 +811,44 @@ OAuth 2.1
 
 OAuthプロトコルを独自実装しない。MCP Python SDKのOAuth client/providerを第一選択とし、Authorization Server discovery、PKCE、token取得・refresh等はSDKへ委譲する。
 
+### Phase 4で確認した現行API（2026-09-25）
+
+TradingView公式docsとインストール済みMCP Python SDK 2.2.0を確認した。接続先、Streamable HTTP、OAuth 2.1、公開Tool 35件の構成は保存版と一致する。実アカウントの利用可否と実Tool schemaは別途smoke testで確認する。
+
+- `mcp auth` はMCPセッションから独立したOAuth bootstrapを実行する。`mcp.Client.__aenter__()` や未認証initializeの成功を前提にしない。
+- bootstrapはHTTP challenge、PRM/AS discovery・検証、client登録方式選択、SDKのPKCE・ブラウザ認可・callback検証・token交換、Credential Store保存を担当する。SDKの公開 `OAuthClientProvider.async_auth_flow()` とmetadata helperを使用し、privateメソッドを呼ばない。token保存後は元HTTP要求の再送を待たず終了し、MCP/SSE接続を開始しない。
+- `TradingViewClient` は保存済みcredentialを要求し、MCP接続・list_tools・call_tool・Governor連携を担当する。対話login UIを持たない。
+- MCPセッションは `Client(mode="auto", cache=None)` とする。未認証の実server/discoverとinitializeはいずれも401であり、legacy固定を正当化する実証は得られていない。認証後のmodern/fallbackはSDKに委譲し、実サービスのnegotiation結果はsmoke待ち。
+- 非対話OAuth refreshには `mcp.client.auth.OAuthClientProvider` と `httpx2.AsyncClient` を使い、`mcp.client.streamable_http.streamable_http_client(endpoint, http_client=...)` をClientへ渡す。status/toolsからDCR・ブラウザ認可へ移行せず、再認証が必要なら `AUTH_REQUIRED` とする。
+- `TokenStorage` は `get_tokens` / `set_tokens` と `get_client_info` / `set_client_info` の4メソッドを実装する。
+- callbackはtupleではなく `AuthorizationCodeResult(code=..., state=..., iss=...)` を返す。state・issはSDKへ未加工で渡す。
+- `Client.list_tools(cursor=...)` の `next_cursor` を最後まで辿る。SDKの重複Cacheは `Client(..., cache=None)` で無効にし、アプリ側の共通通信制御を利用する。
+- `CallToolResult.is_error` を検査し、コード向けデータは `structured_content` として扱う。`content` 本文を構造化データへ推測変換しない。
+- SDK 2.2.0のHTTP層は `httpx2` を使用する。Provider内で直接importする場合は `pyproject.toml` の直接依存へ追加する。
+- SDKが生成するOAuth用Requestにもアプリ固有の `User-Agent` を補完する。AsyncClientの既定headerだけではauth flow内部のRequestへ継承されない。metadata・登録・token・refreshのすべてに同じHTTP境界を適用する。
+- SDK 2.2.0は保存トークンの期限と認証サーバーmetadataを再起動時に自動復元しない。取得時の絶対期限と、SDKでdiscovery・検証済みのOAuth metadataをCredential Storeに保持する。期限切れのaccess tokenは送信させず、SDKの公開 `context.oauth_metadata` を復元してSDK自身のrefresh経路へ渡す。privateな初期化・refreshメソッドは呼ばない。
+- OAuth callbackは対話認証時だけ `http://127.0.0.1:8765/oauth/callback` を使用する。固定portの衝突は明示エラーとし、登録済みredirect URIを黙って変更しない。
+- SDK 2.2.0のStreamable HTTP層ではHTTPステータスの詳細が一般的なMCPエラーへ変換される。Providerの公開HTTP境界で一時通信失敗・認証・権限・引数エラーを区別し、SDKセッションを壊さず共通Governorへ伝える。OAuth通信の401等は先にSDKの認証フローへ処理させる。
+
+参照: [TradingView公式MCP](https://www.tradingview.com/mcp/docs)、[SDK Client](https://py.sdk.modelcontextprotocol.io/client/)、[SDK OAuth](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/)。
+
+### Client registrationと検証境界
+
+- 正規の事前登録client情報がある場合はそれを優先する。なければCIMD広告と本アプリ用HTTPS metadata URLが揃う場合にCIMDを使用し、それ以外は広告された `registration_endpoint` でDCRを行う。いずれも利用できなければ `MCP_OAUTH_CLIENT_REGISTRATION_UNAVAILABLE` とする。
+- 本アプリ用の公開CIMD URL・事前登録IDは現時点で存在しない。OpenAI/ChatGPTのID・CIMD URL・tokenを流用せず、外部hostingを自動作成しない。
+- 公開識別子の任意設定は `TRADINGVIEW_MCP_CLIENT_ID`（正規に発行されたpublic client ID）、`TRADINGVIEW_MCP_CLIENT_METADATA_URL`（本アプリ自身のHTTPS CIMD）。token/client secretを環境変数で供給・保存しない。既存client登録の再利用はissuerと選択方式に整合する場合に限る。
+- DCRは `client_name`、loopback `redirect_uris`、`grant_types=[authorization_code, refresh_token]`、`response_types=[code]`、`token_endpoint_auth_method=none`、`application_type=native` を送る。広告のない `/register` を推測しない。
+- PRM resource、AS issuer、HTTPS endpointと送信先を検証する。metadata取得失敗をDCR fallbackへ進めない。PKCE・state・iss検証はSDKに委譲する。単一TradingView ASのcallbackを使用し、任意ASへcredentialを送らない。
+- discovery、登録手段なし、DCR、認可、token交換、Credential Storeの失敗を固定文言の個別エラーに分類する。provider本文・token・code・state・PKCE verifierをJSON・通常ログに出さない。
+
+### 実サーバー調査（2026-09-25）
+
+- path付きPRMは200、root PRMは404。resourceは `https://mcp.tradingview.com/mcp`、AS issuerは `https://www.tradingview.com`。
+- ASは `/mcp/oauth/authorize`、`/mcp/oauth/token`、`/mcp/oauth/register` を広告。token auth methodsは `none / client_secret_basic / client_secret_post`、PKCEは `S256`。CIMDとauthorization-response issの広告fieldはない。
+- User-Agent無しのSDK metadata Requestは403。同一Requestに自アプリUser-Agentを加えると200。実SDKでMCP GET401 → PRM200 → AS200 → 正規DCR201 → redirect handler到達を確認。未補完時はAS403 → SDK推測 `/register` 404 → OAuthRegistrationErrorだった。
+- 旧HTTP境界がOAuthRegistrationErrorを汎用MCP_CONNECTION_ERRORへ再変換していたため、MCP modeの変更だけでは原因を識別できなかった。
+- ユーザー認可・callback・token交換・OS保存・認証後MCP接続の実機smokeは未実行。Phase 4の実アカウント完了条件は未達のままとする。
+
 ## 17.2 保存
 
 認証情報はGitへ保存しない。
@@ -826,7 +866,7 @@ app.bat mcp auth
 app.bat mcp status
 ```
 
-- `mcp auth` は対話操作であり、必要に応じて既定ブラウザを開いて初回認証・再認証を行う。
+- `mcp auth` は独立OAuth loginを実行し、既定ブラウザによる認可とcredential保存を完了する。成功JSONの `authenticated: true` はOAuth完了を示し、MCP Tool discovery成功とは区別する。
 - access token期限切れ時、refresh可能ならSDK経由で自動refreshする。
 - refresh不能・revoked・Credential不足の場合は `AUTH_REQUIRED` を返す。
 - 手動CLIの認証コマンド以外、特にTask Scheduler実行中は再認証ブラウザを自動起動しない。
@@ -936,6 +976,8 @@ symbol_types = ["stock"]
 # 20. TradingView公式MCP 全35 Toolラッパー
 
 V1実装時点で、公式ドキュメントに掲載されている全35 Toolを型付き公開メソッドとして実装する。
+
+公開Pythonメソッド名は本仕様表の論理名（例: `run_screener`, `list_watchlists`）を維持する。一方、2026-09-25の実 `list_tools()` ではTradingView系が `mcp-tv-*`、Watchlist系が `mcp-watchlist-*` のwire名で公開されている。実MCP呼出し・Tool availability判定・差分検知は `integrations/tradingview/tool_catalog.py` の論理名→wire名mappingを唯一の変換点として使用し、論理名をそのまま `call_tool()` へ送らない。
 
 実装着手時に次を必ず行う。
 
@@ -1100,6 +1142,8 @@ implemented: true/false
 
 ## 21.2 期待Tool差分
 
+Phase 4では個別wrapperは未実装のため、期待35件の**wire名**と取得一覧から `expectedMissing` / `unexpectedAvailable` を返し、各Toolに `expected` と `implemented: false` を付ける。不足Toolがあっても一覧診断自体は成功させる。公式説明上の論理名と実サーバーwire名は直接比較しない。2026-09-25の実機確認では35件すべて取得でき、論理名をそのまま期待値にした旧catalogでは35件すべてがmissing/unexpectedに誤分類されたため、以後は `TOOL_NAME_MAP` のvalueを期待wire名の正本とする。以下の実装済み分類はPhase 5のwrapper追加後に適用する。
+
 アプリ実装済み35 Toolと `list_tools()` を比較し、次を区別する。
 
 ```text
@@ -1164,7 +1208,8 @@ Windows bootstrapのpatch versionは再現性のため固定する。更新は�
 [project]
 requires-python = ">=3.11,<3.14"
 dependencies = [
-  "mcp>=2,<3",
+  "mcp>=2.2,<3",
+  "httpx2>=2.13,<3",
   "pydantic>=2,<3",
   "aiolimiter>=1.3,<2",
   "tenacity>=9,<10",
