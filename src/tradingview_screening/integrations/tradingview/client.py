@@ -53,6 +53,7 @@ WRITE_TOOL_NAMES = frozenset({
     "create_watchlist", "delete_watchlist", "add_to_watchlist", "remove_from_watchlist", "update_watchlist",
     "create_alert", "update_alert", "delete_alert", "stop_alerts", "restart_alerts",
 })
+NON_RETRY_TOOL_NAMES = WRITE_TOOL_NAMES | {"get_active_watchlist"}
 
 
 @dataclass(frozen=True)
@@ -520,7 +521,7 @@ class TradingViewClient:
         except (ValidationError, ValueError, TypeError) as exc:
             raise AppError("MCP_ARGUMENT_ERROR", "MCP request arguments are invalid") from exc
         result = await self._call_tool(
-            wire_name, arguments, retry=logical_name not in WRITE_TOOL_NAMES, cache_key=None,
+            wire_name, arguments, retry=logical_name not in NON_RETRY_TOOL_NAMES, cache_key=None,
         )
         try:
             return response_type.model_validate({
