@@ -84,6 +84,7 @@ def test_exception_group_prefers_specific_oauth_error() -> None:
         "connection failed",
         [
             RuntimeError("secondary cleanup failure"),
+            TransientRequestError("secondary transport failure"),
             OAuthRegistrationError("provider body must stay hidden"),
         ],
     )
