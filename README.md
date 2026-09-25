@@ -220,7 +220,7 @@ Providerの `structured_content.success=false` は、MCPの `is_error` とは別
 
 8件とも `ObservedReadResponse` として応答を検証できましたが、実データ取得が成功したのは4件です。他の27件は実呼出し未確認であり、全35件の成功応答shapeを実機確認したという意味ではありません。
 
-Screening実行engine・結果保存・Watchlist同期・Job Runnerは後続Phaseの対象です。仕様書のPhase 5契約はRepositoryへ先行反映しているため、Google Drive正本更新が必要です。
+Screening実行engine・結果保存・Watchlist同期・Job Runnerは後続Phaseの対象です。Phase 4/5の仕様変更は2026-09-26にGoogle Drive正本へ同期済みです。
 
 ## ライセンス
 
