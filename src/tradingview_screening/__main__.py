@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from . import __version__
-from .common.errors import AppError, ConfigError
+from .common.errors import AppError, ConfigError, TransientRequestError
 from .integrations.tradingview.auth import KeyringTokenStorage
 from .integrations.tradingview.client import ENDPOINT, TradingViewClient
 from .integrations.tradingview.tool_catalog import EXPECTED_TOOLS
@@ -120,6 +120,11 @@ def main(argv: list[str] | None = None) -> int:
         _emit(_failed(operation, error, credential_present=present))
         print(f"{error.code}: {error.message}", file=sys.stderr)
         return 3 if error.code == "AUTH_REQUIRED" else 1
+    except TransientRequestError as transient:
+        error = AppError("MCP_CONNECTION_ERROR", str(transient))
+        _emit(_failed(operation, error))
+        print(f"{error.code}: {error.message}", file=sys.stderr)
+        return 1
     except (ConfigError, ValidationError):
         error = AppError("CONFIG_VALIDATION_ERROR", "Invalid local configuration")
         _emit(_failed(operation, error))
