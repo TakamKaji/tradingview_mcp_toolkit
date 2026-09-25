@@ -259,13 +259,15 @@ class TradingViewClient:
         interactive: bool = False,
         governor: RequestGovernor | None = None,
         _storage: KeyringTokenStorage | None = None,
-        _sdk_factory: Callable[..., Any] = Client,
+        _sdk_factory: Callable[..., Any] | None = None,
         _http_transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.interactive = interactive
         self.governor = governor or RequestGovernor()
         self._storage = _storage or KeyringTokenStorage()
-        self._sdk_factory = _sdk_factory
+        self._sdk_factory = _sdk_factory or (
+            lambda transport, **kwargs: Client(transport, mode="legacy", **kwargs)
+        )
         self._http_transport = _http_transport
         self._stack: AsyncExitStack | None = None
         self._sdk: Any = None
