@@ -75,7 +75,7 @@ def test_sdk_bootstrap_to_saved_token_without_mcp_session(
                 if body["method"] == "server/discover":
                     result = {"supportedVersions": ["2026-07-28"], "capabilities": {"tools": {}}}
                 elif body["method"] == "tools/list":
-                    result = {"tools": [{"name": "run_screener", "inputSchema": {"type": "object"}}],
+                    result = {"tools": [{"name": "mcp-tv-run-screener", "inputSchema": {"type": "object"}}],
                               "cacheScope": "private", "resultType": "complete", "ttlMs": 0}
                 else:
                     raise AssertionError(body["method"])
