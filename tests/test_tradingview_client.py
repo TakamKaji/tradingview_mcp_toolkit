@@ -75,6 +75,26 @@ def _storage(monkeypatch: pytest.MonkeyPatch) -> auth.KeyringTokenStorage:
     return auth.KeyringTokenStorage(_keyring=NativeKeyring())
 
 
+def test_exception_group_prefers_specific_oauth_error() -> None:
+    from mcp.client.auth import OAuthRegistrationError
+
+    from tradingview_screening.integrations.tradingview.client import _normalize_error
+
+    grouped = ExceptionGroup(
+        "connection failed",
+        [
+            RuntimeError("secondary cleanup failure"),
+            OAuthRegistrationError("provider body must stay hidden"),
+        ],
+    )
+
+    mapped = _normalize_error(grouped)
+
+    assert isinstance(mapped, AppError)
+    assert mapped.code == "MCP_OAUTH_REGISTRATION_ERROR"
+    assert "provider body" not in mapped.message
+
+
 def test_oauth_client_metadata_is_public_native_pkce_registration() -> None:
     metadata = _oauth_client_metadata("http://127.0.0.1:8765/oauth/callback")
     payload = metadata.model_dump(mode="json", exclude_none=True)
