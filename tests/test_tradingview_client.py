@@ -125,6 +125,24 @@ def test_expected_catalog_is_unique_and_complete() -> None:
     assert "mcp-tv-get-alerts-log" in EXPECTED_TOOLS
 
 
+def test_live_wire_catalog_has_no_false_diff(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        storage = _storage(monkeypatch)
+        await storage.set_tokens(OAuthToken(access_token="token"))
+        await storage.set_client_info(OAuthClientInformationFull(client_id="id"))
+        sdk = FakeSDK([ListToolsResult(tools=[_tool(name) for name in sorted(EXPECTED_TOOLS)])])
+        async with TradingViewClient(
+            _storage=storage, _sdk_factory=lambda _transport, **_kwargs: sdk
+        ) as client:
+            catalog = await client.list_tools()
+            assert catalog.available_count == 35
+            assert catalog.expected_missing == ()
+            assert catalog.unexpected_available == ()
+            assert all(tool.expected for tool in catalog.tools)
+
+    asyncio.run(scenario())
+
+
 def test_client_context_catalog_pagination_and_diff(monkeypatch: pytest.MonkeyPatch) -> None:
     async def scenario() -> None:
         storage = _storage(monkeypatch)
