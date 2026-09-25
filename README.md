@@ -190,7 +190,7 @@ async def example():
 - Requestは2026-09-25の実35 `inputSchema` を基準に、必須・省略可能・null許可を区別します。未知キーは原則拒否し、Providerが許容するopen object / pattern propertyは維持します。`run_screener.filters` はJSON objectで、Phase 2のScreening定義の範囲検証とは別です。
 - 全wrapperはPydantic検証済みResponseを返します。`structured_content` と `content` は分離し、文章を自動で構造化データとして読み替えません。未確認の応答fieldを必須化せず、Betaでの追加fieldを保持します。不正な既知fieldは `MCP_SCHEMA_MISMATCH` です。
 - 実測済みRead 8件は `ObservedReadResponse` / `ObservedReadData` で `success` と、存在する場合の `error` / `count` / `missing_count` を型付けします。残り27件は `TypedToolResponse` でJSON値を保持します。Tool固有のdata/bars等の詳細構造はまだ厳格化していません。
-- Read 25件は `retry=True`、Write 10件は `retry=False`。Phase 5のwrapperは全件cacheなしです。欠落Toolはその呼出しだけ `MCP_TOOL_UNAVAILABLE` になります。
+- Read 25件のうち通常Read 24件は `retry=True`、Write 10件は `retry=False` です。`get_active_watchlist` は分類上Readですが、Provider説明上activate/createの副作用があるため安全側で `retry=False` とします。Phase 5のwrapperは全件cacheなしです。欠落Toolはその呼出しだけ `MCP_TOOL_UNAVAILABLE` になります。
 - WriteはWatchlistのcreate/delete/add/remove/updateとAlertのcreate/update/delete/stop/restartです。実アカウントのWrite smokeは実施しません。
 - `get_active_watchlist` は分類上Readですが、Provider説明には未選択時のactivate・Watchlist不在時の作成があるため、読み取り専用smokeから除外します。
 - AlertのWebhook作成・Webhook付きAlertの更新はMCP非対応です。`update_alert` ではcondition/symbol/timeframeを変更できません。schema上の許可はProviderの操作対応を保証しません。
