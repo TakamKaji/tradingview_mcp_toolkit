@@ -22,6 +22,10 @@ from tradingview_screening.integrations.tradingview.client import (
     _normalize_error,
     _oauth_client_metadata,
 )
+from tradingview_screening.integrations.tradingview.schemas import (
+    GetOhlcvRequest,
+    GetSymbolDataRequest,
+)
 from tradingview_screening.integrations.tradingview.tool_catalog import (
     EXPECTED_TOOLS,
     TOOL_NAME_MAP,
@@ -168,12 +172,39 @@ def test_client_context_catalog_pagination_and_diff(monkeypatch: pytest.MonkeyPa
             assert catalog.available_count == 2
             assert catalog.unexpected_available == ("future_tool",)
             assert "mcp-tv-get-ohlcv" in catalog.expected_missing
-            assert all(not tool.implemented for tool in catalog.tools)
+            assert next(tool for tool in catalog.tools if tool.name == "mcp-tv-run-screener").implemented
+            assert not next(tool for tool in catalog.tools if tool.name == "future_tool").implemented
             assert catalog.tools[0].input_schema == {"type": "object"}
             assert governor.policies == [(True, None), (True, None)]
         assert sdk.exited
         with pytest.raises(RuntimeError, match="active async context"):
             await client.list_tools()
+
+    asyncio.run(scenario())
+
+
+def test_typed_wrapper_handles_missing_and_new_catalog_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        storage = _storage(monkeypatch)
+        await storage.set_tokens(OAuthToken(access_token="token"))
+        await storage.set_client_info(OAuthClientInformationFull(client_id="id"))
+        sdk = FakeSDK([ListToolsResult(tools=[_tool("mcp-tv-get-ohlcv"), _tool("future_tool")])])
+        sdk.result = CallToolResult(
+            content=[TextContent(type="text", text="provider content")],
+            structured_content={"success": True, "bars": []},
+        )
+        async with TradingViewClient(
+            _storage=storage, _sdk_factory=lambda _transport, **_kwargs: sdk,
+        ) as client:
+            result = await client.get_ohlcv(GetOhlcvRequest(symbol="TSE:7203"))
+            assert result.structured_content is not None
+            assert result.structured_content.success is True
+            with pytest.raises(AppError) as caught:
+                await client.get_symbol_data(GetSymbolDataRequest(symbol="TSE:7203"))
+            assert caught.value.code == "MCP_TOOL_UNAVAILABLE"
+            assert sdk.calls == [("mcp-tv-get-ohlcv", {"symbol": "TSE:7203"})]
+            future = await client._call_tool("future_tool")
+            assert future.structured_content == {"success": True, "bars": []}
 
     asyncio.run(scenario())
 

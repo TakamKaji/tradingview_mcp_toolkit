@@ -7,7 +7,7 @@ import logging
 from collections.abc import Callable, Hashable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, Self, TypeVar, overload
 from urllib.parse import urlsplit
 
 import httpx2
@@ -21,10 +21,12 @@ from mcp.client.auth import (
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
 from mcp.types import INVALID_PARAMS, METHOD_NOT_FOUND
+from pydantic import ValidationError
 
 from tradingview_screening.common.errors import AppError, TransientRequestError
 from tradingview_screening.common.request_governor import RequestGovernor
 
+from . import schemas as tv_schemas
 from .auth import (
     CALLBACK_PATH,
     CALLBACK_PORT,
@@ -32,9 +34,10 @@ from .auth import (
     noninteractive_callback,
     noninteractive_redirect,
 )
-from .tool_catalog import EXPECTED_TOOLS
+from .tool_catalog import EXPECTED_TOOLS, TOOL_NAME_MAP
 
 ENDPOINT = "https://mcp.tradingview.com/mcp"
+_ResponseT = TypeVar("_ResponseT", bound=tv_schemas.TypedToolResponse)
 _TEMPORARY_HTTP = -32029
 _PERMISSION_HTTP = -32043
 _ARGUMENT_HTTP = -32040
@@ -46,6 +49,10 @@ _OAUTH_TOKEN = -32045
 _OAUTH_FLOW = -32046
 _TEMPORARY_STATUSES = frozenset({429, 500, 502, 503, 504})
 APP_USER_AGENT = "TradingView-MCP-Support/0.0.0"
+WRITE_TOOL_NAMES = frozenset({
+    "create_watchlist", "delete_watchlist", "add_to_watchlist", "remove_from_watchlist", "update_watchlist",
+    "create_alert", "update_alert", "delete_alert", "stop_alerts", "restart_alerts",
+})
 
 
 @dataclass(frozen=True)
@@ -431,6 +438,7 @@ class TradingViewClient:
                         description=tool.description,
                         input_schema=tool.input_schema,
                         expected=tool.name in EXPECTED_TOOLS,
+                        implemented=tool.name in EXPECTED_TOOLS,
                     )
                 cursor = page.next_cursor
                 if cursor is None:
@@ -481,3 +489,148 @@ class TradingViewClient:
             retry=retry,
             cache_key=cache_key if retry else None,
         )
+
+    @overload
+    async def _invoke_typed(
+        self, logical_name: str, request: tv_schemas.ToolRequest,
+        response_type: type[_ResponseT],
+    ) -> _ResponseT: ...
+
+    @overload
+    async def _invoke_typed(
+        self, logical_name: str, request: tv_schemas.ToolRequest,
+    ) -> tv_schemas.TypedToolResponse: ...
+
+    async def _invoke_typed(
+        self, logical_name: str, request: tv_schemas.ToolRequest,
+        response_type: type[tv_schemas.TypedToolResponse] = tv_schemas.TypedToolResponse,
+    ) -> tv_schemas.TypedToolResponse:
+        """Validate one logical request and normalize the matching wire result."""
+        request_type = tv_schemas.REQUEST_MODELS[logical_name]
+        if not isinstance(request, request_type):
+            raise AppError("MCP_ARGUMENT_ERROR", "Incorrect request model for MCP tool")
+        wire_name = TOOL_NAME_MAP[logical_name]
+        try:
+            raw_arguments = {
+                name: getattr(request, name) for name in request.model_fields_set
+                if name in request_type.model_fields
+            }
+            raw_arguments.update(request.model_extra or {})
+            arguments = request_type.model_validate(raw_arguments).model_dump(mode="json", exclude_unset=True)
+        except (ValidationError, ValueError, TypeError) as exc:
+            raise AppError("MCP_ARGUMENT_ERROR", "MCP request arguments are invalid") from exc
+        result = await self._call_tool(
+            wire_name, arguments, retry=logical_name not in WRITE_TOOL_NAMES, cache_key=None,
+        )
+        try:
+            return response_type.model_validate({
+                "structured_content": result.structured_content,
+                "content": result.content,
+            })
+        except ValidationError as exc:
+            raise AppError("MCP_SCHEMA_MISMATCH", "MCP tool response schema changed") from exc
+
+    async def list_watchlists(self, request: tv_schemas.ListWatchlistsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("list_watchlists", request)
+
+    async def get_watchlist(self, request: tv_schemas.GetWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_watchlist", request)
+
+    async def get_active_watchlist(self, request: tv_schemas.GetActiveWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_active_watchlist", request)
+
+    async def create_watchlist(self, request: tv_schemas.CreateWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("create_watchlist", request)
+
+    async def delete_watchlist(self, request: tv_schemas.DeleteWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("delete_watchlist", request)
+
+    async def add_to_watchlist(self, request: tv_schemas.AddToWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("add_to_watchlist", request)
+
+    async def remove_from_watchlist(self, request: tv_schemas.RemoveFromWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("remove_from_watchlist", request)
+
+    async def update_watchlist(self, request: tv_schemas.UpdateWatchlistRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("update_watchlist", request)
+
+    async def get_ohlcv(self, request: tv_schemas.GetOhlcvRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("get_ohlcv", request, tv_schemas.ObservedReadResponse)
+
+    async def get_economic_data(self, request: tv_schemas.GetEconomicDataRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_economic_data", request)
+
+    async def get_economic_symbols(self, request: tv_schemas.GetEconomicSymbolsRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("get_economic_symbols", request, tv_schemas.ObservedReadResponse)
+
+    async def search_symbols(self, request: tv_schemas.SearchSymbolsRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("search_symbols", request, tv_schemas.ObservedReadResponse)
+
+    async def get_symbol_data(self, request: tv_schemas.GetSymbolDataRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("get_symbol_data", request, tv_schemas.ObservedReadResponse)
+
+    async def run_screener(self, request: tv_schemas.RunScreenerRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("run_screener", request, tv_schemas.ObservedReadResponse)
+
+    async def get_symbol_data_batch(self, request: tv_schemas.GetSymbolDataBatchRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("get_symbol_data_batch", request, tv_schemas.ObservedReadResponse)
+
+    async def get_screener_columns(self, request: tv_schemas.GetScreenerColumnsRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("get_screener_columns", request, tv_schemas.ObservedReadResponse)
+
+    async def get_technicals_rating(self, request: tv_schemas.GetTechnicalsRatingRequest) -> tv_schemas.ObservedReadResponse:
+        return await self._invoke_typed("get_technicals_rating", request, tv_schemas.ObservedReadResponse)
+
+    async def get_news(self, request: tv_schemas.GetNewsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_news", request)
+
+    async def get_news_story(self, request: tv_schemas.GetNewsStoryRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_news_story", request)
+
+    async def get_forecasts(self, request: tv_schemas.GetForecastsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_forecasts", request)
+
+    async def get_financials(self, request: tv_schemas.GetFinancialsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_financials", request)
+
+    async def get_financial_history(self, request: tv_schemas.GetFinancialHistoryRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_financial_history", request)
+
+    async def get_documents(self, request: tv_schemas.GetDocumentsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_documents", request)
+
+    async def get_document_view(self, request: tv_schemas.GetDocumentViewRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_document_view", request)
+
+    async def get_earnings_calendar(self, request: tv_schemas.GetEarningsCalendarRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_earnings_calendar", request)
+
+    async def get_economic_calendar(self, request: tv_schemas.GetEconomicCalendarRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_economic_calendar", request)
+
+    async def get_dividends_calendar(self, request: tv_schemas.GetDividendsCalendarRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_dividends_calendar", request)
+
+    async def create_alert(self, request: tv_schemas.CreateAlertRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("create_alert", request)
+
+    async def update_alert(self, request: tv_schemas.UpdateAlertRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("update_alert", request)
+
+    async def delete_alert(self, request: tv_schemas.DeleteAlertRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("delete_alert", request)
+
+    async def stop_alerts(self, request: tv_schemas.StopAlertsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("stop_alerts", request)
+
+    async def restart_alerts(self, request: tv_schemas.RestartAlertsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("restart_alerts", request)
+
+    async def list_alerts(self, request: tv_schemas.ListAlertsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("list_alerts", request)
+
+    async def get_alerts(self, request: tv_schemas.GetAlertsRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_alerts", request)
+
+    async def get_alerts_log(self, request: tv_schemas.GetAlertsLogRequest) -> tv_schemas.TypedToolResponse:
+        return await self._invoke_typed("get_alerts_log", request)

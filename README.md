@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 4までの設定モデル・JSON検証・共通通信制御・MCP接続基盤を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
+現在はPhase 5までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython APIを実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
 
 ## 開発方針
 
@@ -149,7 +149,7 @@ python -m tradingview_screening mcp tools
 
 1. 初回の `auth` で既定ブラウザが開き、TradingViewの認可を完了できることを確認します。認証済みの場合は再度開かないことがあります。
 2. `status` が認証成功とTool discovery可否をJSONで返し、ブラウザを開かないことを確認します。
-3. `tools` が実Tool一覧と期待35件に対する不足・追加を返し、ブラウザを開かないことを確認します。Phase 4の `implemented` は全件 `false` です。
+3. `tools` が実Tool一覧と期待35件に対する不足・追加を返し、ブラウザを開かないことを確認します。Phase 5では既知35件の `implemented` は `true`、未知の追加Toolは `false` です。
 4. 新しい `console.bat` を開いて `mcp status` を再実行し、プロセスを跨ぐCredential永続化を確認します。
 5. 期限切れ後の `status` でrefresh可能ならブラウザなしで成功すること、認可失効後は `AUTH_REQUIRED`・終了コード3になることを確認します。
 6. いずれのstdout/stderrにもtoken・client secret・認可codeが出ていないことを確認します。
@@ -168,9 +168,59 @@ CLIの終了コードは成功0、通信・権限・Credential Store等の失敗
 
 `mcp status` は `endpoint`、`credentialPresent`、`authenticated`、`toolDiscoveryAvailable` と取得可能な `protocolVersion` / `serverInfo` を返します。保存情報を読み取れない場合の `credentialPresent` は `null` です。Credential Storeのservice名は `tradingview-mcp-support/oauth` で、token・client_info・oauth_metadataを別entryに保持します。
 
-Python側は `async with TradingViewClient() as client` で接続し、`await client.list_tools()` で正規化した `ToolCatalog` を取得します。内部の `_call_tool(name, arguments, retry=..., cache_key=...)` は共通Governorを通り、`ToolCallData` の `structured_content` と `content` を分離して返します。個別Tool wrapperはPhase 5で追加します。
+Python側は `async with TradingViewClient() as client` で接続し、`await client.list_tools()` で正規化した `ToolCatalog` を取得します。内部の `_call_tool(name, arguments, retry=..., cache_key=...)` は共通Governorを通り、`ToolCallData` の `structured_content` と `content` を分離して返します。
 
-実Tool名35件とinput schemaは実機Tool Discoveryで確認済みです。Phase 5ではこのwire名mappingと取得済みschemaを基準に個別型付きwrapperへ進みます。
+## 型付きTool API（Phase 5）
+
+`integrations.tradingview.schemas` の35 Request modelと、`TradingViewClient` の同名asyncメソッドを利用します。Watchlists 8、Market/Economic 3、Symbol 1、Screener 5、News 2、Fundamentals 3、Documents 2、Calendars 3、Alerts 8の全35件が対象です。
+
+```python
+from tradingview_screening.integrations.tradingview.client import TradingViewClient
+from tradingview_screening.integrations.tradingview.schemas import RunScreenerRequest
+
+async def example():
+    async with TradingViewClient() as client:
+        result = await client.run_screener(
+            RunScreenerRequest(market="japan", symbolset=["TSE:7203"], limit=50)
+        )
+        return result.structured_content
+```
+
+- 公開メソッドは論理名です。共通typed invocationが `TOOL_NAME_MAP` でwire名へ変換し、`_call_tool()` と既存Governorを通ります。
+- Requestは2026-09-25の実35 `inputSchema` を基準に、必須・省略可能・null許可を区別します。未知キーは原則拒否し、Providerが許容するopen object / pattern propertyは維持します。`run_screener.filters` はJSON objectで、Phase 2のScreening定義の範囲検証とは別です。
+- 全wrapperはPydantic検証済みResponseを返します。`structured_content` と `content` は分離し、文章を自動で構造化データとして読み替えません。未確認の応答fieldを必須化せず、Betaでの追加fieldを保持します。不正な既知fieldは `MCP_SCHEMA_MISMATCH` です。
+- 実測済みRead 8件は `ObservedReadResponse` / `ObservedReadData` で `success` と、存在する場合の `error` / `count` / `missing_count` を型付けします。残り27件は `TypedToolResponse` でJSON値を保持します。Tool固有のdata/bars等の詳細構造はまだ厳格化していません。
+- Read 25件は `retry=True`、Write 10件は `retry=False`。Phase 5のwrapperは全件cacheなしです。欠落Toolはその呼出しだけ `MCP_TOOL_UNAVAILABLE` になります。
+- WriteはWatchlistのcreate/delete/add/remove/updateとAlertのcreate/update/delete/stop/restartです。実アカウントのWrite smokeは実施しません。
+- `get_active_watchlist` は分類上Readですが、Provider説明には未選択時のactivate・Watchlist不在時の作成があるため、読み取り専用smokeから除外します。
+- AlertのWebhook作成・Webhook付きAlertの更新はMCP非対応です。`update_alert` ではcondition/symbol/timeframeを変更できません。schema上の許可はProviderの操作対応を保証しません。
+
+### schema driftと検証
+
+実 `inputSchema` だけを取得日・protocol/server versionとともに `tests/fixtures/tradingview_input_schemas_2026-09-25.json` へ保存しています。永続的な公式仕様ではなくBetaの比較基準です。互換性テストはproperty・required・型・nullability・additionalProperties・patternProperties・enum・既知制約を比較し、title/default等を含むJSON全体一致は使いません。schemaにはなく説明文に明記された制約は、根拠となる文言とともにテスト側で管理します。
+
+Unit Testは保存済みsnapshotを使うオフライン検証です。Provider更新の確認時は明示的に `mcp tools` を実行してsnapshotを見直します。実行時にschema全体の一致を要求して非破壊的な追加まで拒否する処理は設けません。
+
+2026-09-26にも保存credentialで `mcp status` / `mcp tools` を再実行し、35件すべて `implemented=true`・不足0件・追加0件、その時点の実inputSchemaとRequest modelの互換性35/35を確認しました。CLI JSONはASCIIエスケープを使い、Windowsのcp932でもProvider説明文のUnicode記号で失敗しないようにしています。
+
+実アカウントsmokeはUnit Test後、保存credentialを使って上記APIから `search_symbols`、`get_ohlcv`、`get_symbol_data`、`get_symbol_data_batch`、`get_screener_columns`、`run_screener`、`get_technicals_rating`、`get_economic_symbols` を呼びます。銘柄は `TSE:7203`、取得件数は少数に限定し、認証情報・市場データ全文をログやfixtureへ保存しません。
+
+Providerの `structured_content.success=false` は、MCPの `is_error` とは別の業務エラー応答です。wrapperが値を返しただけでデータ取得成功とは判定せず、実測済みRead応答の `success` と、バッチ取得の欠落情報も確認してください。`run_screener` はinputSchema上全引数が省略可能ですが、2026-09-26実測では `filters` / `filter_preset` / `symbolset` のいずれかがない呼出しをProviderが拒否しました。Python側に未公表の独自必須条件は追加せず、その応答を保持します。
+
+2026-09-26の通常Windowsユーザー・Embedded Python 3.12.8での実測結果:
+
+| Read Tool | 結果 |
+|---|---|
+| `search_symbols` | `7203`検索で5件、success=true |
+| `get_ohlcv` | `TSE:7203`日足3本、success=true |
+| `get_screener_columns` | stockのclose検索で3列、success=true |
+| `get_economic_symbols` | JPのinflation検索で22件、success=true |
+| `get_symbol_data` / `run_screener` / `get_technicals_rating` | 応答型検証は成功。Provider内の日本市場scannerが429でsuccess=false |
+| `get_symbol_data_batch` | 応答型検証は成功。success=trueだが0件、missing_count=1（TSE:7203のQuote未取得） |
+
+8件とも `ObservedReadResponse` として応答を検証できましたが、実データ取得が成功したのは4件です。他の27件は実呼出し未確認であり、全35件の成功応答shapeを実機確認したという意味ではありません。
+
+Screening実行engine・結果保存・Watchlist同期・Job Runnerは後続Phaseの対象です。仕様書のPhase 5契約はRepositoryへ先行反映しているため、Google Drive正本更新が必要です。
 
 ## ライセンス
 
