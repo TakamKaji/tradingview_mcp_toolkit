@@ -14,6 +14,7 @@ from schema_contract import OVERLAYS, schema_is_compatible
 
 from tradingview_screening.common.errors import AppError
 from tradingview_screening.integrations.tradingview.client import (
+    NON_RETRY_TOOL_NAMES,
     WRITE_TOOL_NAMES,
     ToolCallData,
     TradingViewClient,
@@ -79,6 +80,7 @@ def test_complete_logical_wire_request_wrapper_and_policy_sets() -> None:
     assert SNAPSHOT["serverVersion"] == "1.30.0"
     assert len(WRITE_TOOL_NAMES) == 10
     assert len(set(TOOL_NAME_MAP) - WRITE_TOOL_NAMES) == 25
+    assert NON_RETRY_TOOL_NAMES == WRITE_TOOL_NAMES | {"get_active_watchlist"}
     for logical in TOOL_NAME_MAP:
         assert inspect.iscoroutinefunction(getattr(TradingViewClient, logical))
         hints = get_type_hints(getattr(TradingViewClient, logical))
@@ -144,7 +146,7 @@ def test_all_wrappers_map_to_wire_and_correct_retry_policy(logical: str, monkeyp
             assert result.structured_content == {"success": True, "value": 1}
         assert result.content[0].text == "provider text"
         assert calls == [(TOOL_NAME_MAP[logical], request.model_dump(mode="json", exclude_unset=True),
-                          logical not in WRITE_TOOL_NAMES, None)]
+                          logical not in NON_RETRY_TOOL_NAMES, None)]
 
     asyncio.run(scenario())
 
