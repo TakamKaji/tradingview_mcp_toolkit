@@ -1,14 +1,12 @@
 # TradingView MCP Screening Tool — Implementation Specification
 
-更新日: 2026-09-25
+更新日: 2026-09-26
 状態: V1 実装仕様
 主対象: Windows / Python
 副対象: macOS / 通常のローカルPython
 正本管理: Google Drive版を正本とし、Repository内の同名ファイルは実装用スナップショットとして同期する。仕様変更はDrive正本を先に更新する。
 
-今回のPhase 4 OAuth bootstrap再設計はユーザー指示に基づくRepository側の先行改訂。§17の責務分離・登録方式・通信境界についてDrive正本更新が必要（未反映）。
-
-Phase 5も2026-09-25のユーザー指示に基づくRepository側の先行改訂。§14・§21・Phase 5完了条件の35 typed wrappers、実inputSchemaとの互換性、共通Response方針についてDrive正本更新が必要（未反映）。
+Phase 4のOAuth bootstrap再設計とPhase 5の35 typed wrappers・実inputSchema互換性・Response方針は、2026-09-26にGoogle Drive正本へ同期済み。
 
 ---
 
