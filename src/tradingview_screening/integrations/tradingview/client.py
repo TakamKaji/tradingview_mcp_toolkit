@@ -91,11 +91,19 @@ class _DropOAuthLogs(logging.Filter):
 def _normalize_error(exc: BaseException) -> Exception:
     """Map provider/transport errors without exposing body, headers or token values."""
     if isinstance(exc, BaseExceptionGroup):
+        # AnyIO/transport teardown can wrap the actionable OAuth/HTTP failure together
+        # with secondary cancellation/cleanup exceptions. Inspect every leaf first and
+        # prefer a specific normalized failure over the generic connection fallback.
+        generic: AppError | None = None
         for member in exc.exceptions:
             mapped = _normalize_error(member)
-            if isinstance(mapped, (AppError, TransientRequestError)):
+            if isinstance(mapped, TransientRequestError):
                 return mapped
-        return AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
+            if isinstance(mapped, AppError):
+                if mapped.code != "MCP_CONNECTION_ERROR":
+                    return mapped
+                generic = mapped
+        return generic or AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
     if isinstance(exc, (AppError, TransientRequestError)):
         return exc
     if isinstance(exc, httpx2.HTTPStatusError):
