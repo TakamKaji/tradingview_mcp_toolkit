@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 from typing import Self
 
@@ -35,7 +36,7 @@ class FakeClient:
 
     async def list_tools(self) -> ToolCatalog:
         return ToolCatalog(
-            tools=(ToolInfo("mcp-tv-run-screener", "Run", "Description", {"type": "object"}, True),),
+            tools=(ToolInfo("mcp-tv-run-screener", "Run", "Description", {"type": "object"}, True, True),),
             expected_missing=("mcp-tv-get-ohlcv",),
             unexpected_available=(),
         )
@@ -79,7 +80,7 @@ def test_cli_success_json_once(
     if command == "tools":
         assert payload["availableCount"] == 1
         assert payload["expectedCount"] == 35
-        assert payload["tools"][0]["implemented"] is False
+        assert payload["tools"][0]["implemented"] is True
 
 
 @pytest.mark.parametrize("present", [True, False, None])
@@ -178,3 +179,14 @@ def test_cli_auth_real_sdk_finishes_without_mcp_session(
     assert callback.url is not None
     assert urls.count(cli.ENDPOINT) == 2
     assert ("secret" not in str(payload))
+
+
+def test_cli_json_is_safe_on_cp932_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    sink = io.BytesIO()
+    output = io.TextIOWrapper(sink, encoding="cp932", errors="strict")
+    monkeypatch.setattr(cli.sys, "stdout", output)
+    cli._emit({"description": "em dash — and 日本語"})
+    output.flush()
+    encoded = sink.getvalue()
+    assert encoded.isascii()
+    assert json.loads(encoded.decode("cp932")) == {"description": "em dash — and 日本語"}

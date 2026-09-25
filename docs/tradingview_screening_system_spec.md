@@ -1,12 +1,12 @@
 # TradingView MCP Screening Tool — Implementation Specification
 
-更新日: 2026-09-25
+更新日: 2026-09-26
 状態: V1 実装仕様
 主対象: Windows / Python
 副対象: macOS / 通常のローカルPython
 正本管理: Google Drive版を正本とし、Repository内の同名ファイルは実装用スナップショットとして同期する。仕様変更はDrive正本を先に更新する。
 
-今回のPhase 4 OAuth bootstrap再設計はユーザー指示に基づくRepository側の先行改訂。§17の責務分離・登録方式・通信境界についてDrive正本更新が必要（未反映）。
+Phase 4のOAuth bootstrap再設計とPhase 5の35 typed wrappers・実inputSchema互換性・Response方針は、2026-09-26にGoogle Drive正本へ同期済み。
 
 ---
 
@@ -653,6 +653,10 @@ await client.create_watchlist(request)
 - 範囲制約が公式仕様にある場合はValidationする
 - MCPへ送信する前にValidationを完了する
 
+Phase 5では2026-09-25の実35 `inputSchema` を正本とする。必須とnull許可は独立した契約であり、requiredかつnullableな配列もある。省略可能・非nullableのfieldへ明示的なnullを送信しない。Providerが閉じているobjectは閉じ、`run_screener.filters` 等の `additionalProperties: true` はJSON値を保持する。Phase 2のScreening定義の独自制約をMCP Requestへ持ち込まない。Alertの `patternProperties` も互換性確認対象とする。
+
+説明文に明記された最大件数・文字数・値の列挙は根拠を明示して検証する。例示や省略記号のある一覧を閉じたenumに変えない。JSON Schemaのtitle/default等の差は無視し、property・required・型・array/object・nullability・additionalProperties・patternProperties・enum・制約を比較するテストを用意する。fixtureは取得日・protocol/server versionと35 inputSchemaだけを保存し、認証情報・Tool結果全文は含めない。
+
 例:
 
 ```python
@@ -671,12 +675,16 @@ class GetWatchlistRequest(BaseModel):
 
 - アプリが利用する既知Fieldは型付けする。
 - 将来Field追加で壊れないよう、必要なResponseでは `extra="allow"` を許容する。
-- 公式レスポンスが十分文書化されていないToolは、最初の実レスポンスをfixtureとして保存しSchemaを確定する。
+- 公式レスポンスが十分確認できていないToolは、共通の最小typed envelopeでJSON値を安全に保持する。必要なfieldを型付けするときは実測のshapeを根拠とし、市場データ全文の保存を前提にしない。
 - 生レスポンス全文の永続保存はしない。
+
+35 wrapperすべてがPydantic検証済みのResponseを返す。同一契約は共通modelを共有してよく、35個の個別Response classは必須ではない。`structured_content` と `content` は分離し、content内の文章をJSONとして解釈し直さない。raw SDK `CallToolResult` は公開しない。既知fieldのValidationErrorは `MCP_SCHEMA_MISMATCH` に変換する。
+
+2026-09-26のRead smokeで共通の `success: bool` と任意の `error` / `count` / `missing_count` を実測した8件には `ObservedReadResponse` / `ObservedReadData` を使う。残り27件は `TypedToolResponse`。Tool固有payloadはopenなJSON値として保持し、追加fieldを許容する。`success=false` のProvider業務エラーも検証済み応答として保持し、MCPの `is_error` やtransport失敗と混同しない。
 
 ## 14.3 共通model
 
-最低限次を共通化する。
+将来、実測で必要性とfield契約が確認できた場合に次の共通化を検討する。Phase 5では未確認fieldを推測して実装しない。
 
 ```text
 ToolError
@@ -847,7 +855,7 @@ TradingView公式docsとインストール済みMCP Python SDK 2.2.0を確認し
 - ASは `/mcp/oauth/authorize`、`/mcp/oauth/token`、`/mcp/oauth/register` を広告。token auth methodsは `none / client_secret_basic / client_secret_post`、PKCEは `S256`。CIMDとauthorization-response issの広告fieldはない。
 - User-Agent無しのSDK metadata Requestは403。同一Requestに自アプリUser-Agentを加えると200。実SDKでMCP GET401 → PRM200 → AS200 → 正規DCR201 → redirect handler到達を確認。未補完時はAS403 → SDK推測 `/register` 404 → OAuthRegistrationErrorだった。
 - 旧HTTP境界がOAuthRegistrationErrorを汎用MCP_CONNECTION_ERRORへ再変換していたため、MCP modeの変更だけでは原因を識別できなかった。
-- ユーザー認可・callback・token交換・OS保存・認証後MCP接続の実機smokeは未実行。Phase 4の実アカウント完了条件は未達のままとする。
+- その後、Windows Embedded Python 3.12.8・通常ユーザーで認可・callback・token交換・Credential Manager保存・MCP接続・35 Tool Discoveryまで成功。Phase 5開始時にも保存credentialでstatus / SDK list_tools成功を再確認した。protocolVersion `2025-11-25`、server `mcp-streamable-http 1.30.0`。
 
 ## 17.2 保存
 
@@ -1010,7 +1018,7 @@ V1実装時点で、公式ドキュメントに掲載されている全35 Tool�
 `get_ohlcv.interval` 現行候補:
 
 ```text
-1m / 5m / 15m / 30m / 1h / 4h / 1D / 1W / M
+1m / 5m / 15m / 30m / 1h / 4h / 1D / 1W / M / 1mo / month
 ```
 
 `count` は現行最大5000本。
@@ -1024,7 +1032,7 @@ V1実装時点で、公式ドキュメントに掲載されている全35 Tool�
 現行 `type_filter` 候補:
 
 ```text
-stock / etf / bond / forex / index / futures / crypto
+stock / etf / bond / forex / index / futures / crypto / all
 ```
 
 ## 20.4 Screener — 5
@@ -1142,7 +1150,7 @@ implemented: true/false
 
 ## 21.2 期待Tool差分
 
-Phase 4では個別wrapperは未実装のため、期待35件の**wire名**と取得一覧から `expectedMissing` / `unexpectedAvailable` を返し、各Toolに `expected` と `implemented: false` を付ける。不足Toolがあっても一覧診断自体は成功させる。公式説明上の論理名と実サーバーwire名は直接比較しない。2026-09-25の実機確認では35件すべて取得でき、論理名をそのまま期待値にした旧catalogでは35件すべてがmissing/unexpectedに誤分類されたため、以後は `TOOL_NAME_MAP` のvalueを期待wire名の正本とする。以下の実装済み分類はPhase 5のwrapper追加後に適用する。
+期待35件の**wire名**と取得一覧から `expectedMissing` / `unexpectedAvailable` を返し、各Toolに `expected` と `implemented` を付ける。Phase 5では既知35件のwrapperが実装済みであり、未知の追加Toolは `implemented: false` とする。不足Toolがあっても一覧診断自体は成功させる。公式説明上の論理名と実サーバーwire名は直接比較しない。2026-09-25の実機確認では35件すべて取得でき、論理名をそのまま期待値にした旧catalogでは35件すべてがmissing/unexpectedに誤分類されたため、以後は `TOOL_NAME_MAP` のvalueを期待wire名の正本とする。
 
 アプリ実装済み35 Toolと `list_tools()` を比較し、次を区別する。
 
@@ -1385,7 +1393,7 @@ Stress Test専用機能は作らない。
 - 35メソッドが共通 `_call_tool()` を経由する。
 - Request modelから正しいTool argumentへ変換される。
 - mocked structured responseをResponse modelへ変換できる。
-- Write ToolのLockが機能する。
+- Write Toolの自動再送・cacheが無効であり、共通Governorのconcurrency/timeoutを通る。対象別Lockは後続Watchlist同期Phaseの検証対象。
 - Tool unavailableを明確なアプリErrorへ変換する。
 
 ## 27.3 Integration Test
@@ -1401,7 +1409,7 @@ Stress Test専用機能は作らない。
 - Watchlist作成/追加/削除/更新
 - その他35 Toolの最低限smoke call（安全に実行できるRead Tool中心）
 
-Write Toolの破壊的テストは専用テスト用Watchlist/Alertだけを対象にする。
+Write Toolの破壊的テストは、明示許可された専用テスト用Watchlist/Alertだけを対象にする。Phase 5では実Writeを実行しない。Read smokeはREADMEの8件を対象とする。
 
 ---
 
@@ -1511,7 +1519,7 @@ mock処理で直列・Retry・Cacheがテストできる。
 
 1. `schemas.py`
 2. 35 Request models
-3. 35 Response/normalized models
+3. 全35 wrapperでPydantic Response/normalized modelを使用（共通model可）
 4. 35 async public methods
 5. Unit tests
 
@@ -1520,6 +1528,13 @@ mock処理で直列・Retry・Cacheがテストできる。
 - 全35メソッドが存在。
 - 全メソッドが共通 `_call_tool()` / `RequestGovernor` 経由。
 - 公式Tool一覧との照合テストがある。
+- `TOOL_NAME_MAP` を唯一の論理名→wire名変換に使う。Request/public wrapper/policy coverageは35件、mappingのkey/valueはいずれも一意。
+- Read 25件のうち通常Read 24件は `retry=True`。`get_active_watchlist` は分類上Readだが、Provider説明上activate/createの副作用があるため `retry=False` とする。Write 10件（Watchlist create/delete/add/remove/update、Alert create/update/delete/stop/restart）は `retry=False, cache_key=None`。全wrapperでcacheを使用しない。
+- 必須・任意・nullable・未知field・境界値と、全35 wrapperの呼出経路・再試行policyをtable driven testで検証する。
+- 実35 inputSchema snapshotとの互換性と、破壊的drift・追加/欠落Toolを検出するテストがある。
+- Unit Test後にReadのみ実アカウントsmokeを行う。`get_active_watchlist` はProvider説明上activate/createの副作用があり対象外とする。Writeはmockで検証し、実応答shapeは未確認と明記する。
+- AlertのWebhook作成とWebhook付きAlert更新はMCP非対応。`update_alert` はcondition/symbol/timeframe変更不可。回避操作を実装しない。
+- Screening engine・結果保存・Watchlist同期・Job Runnerは実装しない。
 
 ## Phase 6 — Screening
 

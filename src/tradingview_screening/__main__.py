@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _emit(payload: dict[str, Any]) -> None:
-    print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    print(json.dumps(payload, ensure_ascii=True, separators=(",", ":")))
 
 
 def _failed(

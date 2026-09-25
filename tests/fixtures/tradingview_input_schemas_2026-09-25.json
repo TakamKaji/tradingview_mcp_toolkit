@@ -1,0 +1,864 @@
+{
+  "retrievedAt": "2026-09-25",
+  "protocolVersion": "2025-11-25",
+  "serverVersion": "1.30.0",
+  "tools": {
+    "mcp-tv-create-alert": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "price": {
+          "type": "number",
+          "description": "Price threshold for a simple price condition"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Price condition type: cross, cross_up, cross_down, greater, less. Default cross"
+        },
+        "message": {
+          "type": "string",
+          "description": "Message shown when the alert fires (max 4000 chars)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Alert name (max 300 chars)"
+        },
+        "resolution": {
+          "type": "string",
+          "description": "Chart resolution the alert is evaluated on: 1, 60 (hour), 1D, ... Default 1"
+        },
+        "expiration": {
+          "type": "string",
+          "description": "ISO expiration time; default now+30d"
+        },
+        "auto_deactivate": {
+          "type": "boolean",
+          "description": "Deactivate the alert after the first fire. Default false"
+        },
+        "email": {
+          "type": "boolean",
+          "description": "Send email on fire. Default false"
+        },
+        "mobile_push": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "Send mobile push on fire. Default true"
+        },
+        "popup": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "Show popup on fire. Default true"
+        },
+        "conditions": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Raw condition payload (overrides price/condition). Only a single price condition with barset/value series is accepted; multi-condition and indicator (study) conditions are not supported yet and are rejected"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "patternProperties": {
+        "^(webhook|monitor)$": true
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-delete-alert": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "description": "Alert ids"
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-alerts": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "description": "Alert ids"
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-alerts-log": {
+      "type": "object",
+      "properties": {
+        "days": {
+          "type": "integer",
+          "description": "Look-back window in days, default 7"
+        },
+        "symbol": {
+          "type": "string",
+          "description": "Filter by symbol in EXCHANGE:TICKER format"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max events to return, default 100, cap 2000"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-dividends-calendar": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Per-symbol mode: symbols in EXCHANGE:TICKER format"
+        },
+        "market": {
+          "type": "string",
+          "description": "Market screening mode (uses date_from/date_to), e.g. america"
+        },
+        "date_from": {
+          "type": "string",
+          "description": "ISO date, screening-mode ex-date window start (default now)"
+        },
+        "date_to": {
+          "type": "string",
+          "description": "ISO date, screening-mode ex-date window end (default +30d)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max rows in screening mode, default 50, cap 200"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-document-view": {
+      "type": "object",
+      "properties": {
+        "view_id": {
+          "type": "string",
+          "description": "Document view id from get_documents views[].id, verbatim — never construct or edit it"
+        }
+      },
+      "required": [
+        "view_id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-documents": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category slug: all, annual_reports, quarterly_reports, interim_reports, company_events, insider_transactions, transcripts, presentations, press_releases, other. Also accepts 10-K / 10-Q / 8-K aliases"
+        },
+        "event": {
+          "type": "string",
+          "description": "Event filter: earning or corporate_event"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "RFC3339 start of the EVENT-date window (inclusive), historical windows work"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "RFC3339 end of the EVENT-date window (inclusive)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max documents to return, default 20"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-earnings-calendar": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Symbols in EXCHANGE:TICKER format"
+        },
+        "date_from": {
+          "type": "string",
+          "description": "ISO date, default today; past dates allowed"
+        },
+        "date_to": {
+          "type": "string",
+          "description": "ISO date, default +180d"
+        }
+      },
+      "required": [
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-economic-calendar": {
+      "type": "object",
+      "properties": {
+        "countries": {
+          "type": "string",
+          "description": "Comma-separated 2-letter country codes plus regions like EU. Default US"
+        },
+        "currencies": {
+          "type": "string",
+          "description": "Comma-separated ISO currency codes to filter by: USD,JPY,EUR"
+        },
+        "category": {
+          "type": "string",
+          "description": "Event category: gdp, bonds, business, consumer, goverment, health, housing, labor, money, prices, trade, taxes. Default all"
+        },
+        "date_from": {
+          "type": "string",
+          "description": "UTC date/time: YYYY-MM-DD or RFC3339. Default today 00:00. Past works (data since 2003-09-01)"
+        },
+        "date_to": {
+          "type": "string",
+          "description": "UTC date/time, default today 23:59. Forward window ~31 days"
+        },
+        "min_importance": {
+          "type": [
+            "null",
+            "integer"
+          ],
+          "description": "Minimum importance: -1 (all), 0 (medium+high), 1 (high only). Default -1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-economic-data": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Economic ticker ECONOMICS:<COUNTRY><INDICATOR>, e.g. ECONOMICS:USIRYY. Use get_economic_symbols to discover valid tickers"
+        },
+        "date_from": {
+          "type": "string",
+          "description": "ISO date, start of the series window (inclusive)"
+        },
+        "date_to": {
+          "type": "string",
+          "description": "ISO date, end of the series window (inclusive)"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-economic-symbols": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string",
+          "description": "Two-letter country/region code, e.g. US, DE, EU, CN. When set, returns ready-to-use ECONOMICS:* tickers instead of bare indicator codes"
+        },
+        "category": {
+          "type": "string",
+          "description": "Return indicators of one category: gdp, lbr, prce, hlth, mny, trd, gov, bsnss, cnsm, hse, txs, enrg, clmt"
+        },
+        "search": {
+          "type": "string",
+          "description": "Return indicators whose code or name contains this substring (case-insensitive), e.g. inflation"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-financial-history": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "period": {
+          "type": "string",
+          "description": "fq (quarterly) or fy (annual). Default fq"
+        },
+        "date_from": {
+          "type": "string",
+          "description": "ISO date, start of the reporting window"
+        },
+        "date_to": {
+          "type": "string",
+          "description": "ISO date, end of the reporting window"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-financials": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "metric": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional subset of financial metrics (aliases like pe, roe, revenue, fcf or raw TV columns); omit for the full set"
+        },
+        "period": {
+          "type": "string",
+          "description": "Reporting period for metric columns: fy, fq, ttm, fh, current. Default ttm"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-forecasts": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-news": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "lang": {
+          "type": "string",
+          "description": "Language code: en ru de fr es pt it pl tr ar he ko ja vi th ms id zh-Hans zh-Hant ro en_IN. Default en"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max headlines per call, default 25, cap 200"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Skip this many newest headlines; use with limit to page through all available news (see has_more/total_available in the response)"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-news-story": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Story id in urn format from get_news, e.g. urn:newsml:mtnewswires.com:20260810:A123:0"
+        },
+        "lang": {
+          "type": "string",
+          "description": "ISO 639-1 language code, default en"
+        },
+        "user_prostatus": {
+          "type": "string",
+          "description": "pro or non_pro, default non_pro"
+        },
+        "user_country": {
+          "type": "string",
+          "description": "ISO country code"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-ohlcv": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format, e.g. NASDAQ:NVDA or BINANCE:BTCUSDT"
+        },
+        "interval": {
+          "type": "string",
+          "description": "Bar interval: 1m 5m 15m 30m 1h 4h 1D 1W (use M / 1mo / month for monthly). Default 1D"
+        },
+        "count": {
+          "type": "integer",
+          "description": "Number of bars, default 300, max 5000"
+        },
+        "summary": {
+          "type": "boolean",
+          "description": "If true, omit the raw bars array and return aggregate statistics only"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-screener-columns": {
+      "type": "object",
+      "properties": {
+        "market": {
+          "type": "string",
+          "description": "Filter by screener market: stock, etf, crypto, bond or all. Default all"
+        },
+        "group": {
+          "type": "string",
+          "description": "Return full details (descriptions and period/timeframe variants) for one group, e.g. valuation, technicals, income_statement"
+        },
+        "search": {
+          "type": "string",
+          "description": "Return full details for columns whose name or description contains this substring (case-insensitive), e.g. margin"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-symbol-data": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "columns": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "TradingView screener columns to fetch. Default: name description close change change_abs volume market_cap_basic price_earnings_ttm sector industry"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-symbol-data-batch": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Symbols in EXCHANGE:TICKER format, up to 50, deduplicated"
+        },
+        "columns": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "TradingView screener columns to fetch. Default: name description close change change_abs volume market_cap_basic price_earnings_ttm sector industry"
+        }
+      },
+      "required": [
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-technicals-rating": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Symbol in EXCHANGE:TICKER format"
+        },
+        "interval": {
+          "type": "string",
+          "description": "Timeframe: 1m 5m 15m 30m 1h 2h 4h 1D 1W 1M. Default 1D"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-list-alerts": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Filter by symbol in EXCHANGE:TICKER format"
+        },
+        "active": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "Filter by active state"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-restart-alerts": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "description": "Alert ids"
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-run-screener": {
+      "type": "object",
+      "properties": {
+        "market": {
+          "type": "string",
+          "description": "Screener market: america, crypto, forex, futures, bonds, cfd, uk, germany, india, japan, ... Default america"
+        },
+        "filters": {
+          "type": "object",
+          "description": "Filters as {field: [min, max]} (null side = unbounded) plus special keys index / sector / industry / analyst_rating, e.g. {\"index\": \"S&P 500\", \"pe\": [null, 15], \"rsi\": [null, 40], \"div_yield\": [2, null]}",
+          "additionalProperties": true
+        },
+        "sort_by": {
+          "type": "string",
+          "description": "Column to sort by, default volume"
+        },
+        "sort_order": {
+          "type": "string",
+          "description": "asc or desc, default desc"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max rows to return, default 100, cap 1000"
+        },
+        "columns": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Screener columns to return"
+        },
+        "symbol_types": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Instrument types to include, e.g. [\"stock\"]"
+        },
+        "filter_preset": {
+          "type": "string",
+          "description": "Named preset: pullback_with_reversal, breakout_with_volume, oversold_healthy, earnings_runup, relative_strength, new_highs"
+        },
+        "symbolset": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Explicit symbol universe, e.g. [\"SYML:SP;SPX\"]"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-search-symbols": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Ticker, company name or description to fuzzy-search"
+        },
+        "type_filter": {
+          "type": "string",
+          "description": "Filter by instrument type: stock, etf, bond, forex, index, futures, crypto. Default all"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-stop-alerts": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "description": "Alert ids"
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-update-alert": {
+      "type": "object",
+      "properties": {
+        "alert_id": {
+          "type": "integer",
+          "description": "Alert id returned by create_alert / list_alerts"
+        },
+        "message": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "description": "New message; omit to keep current"
+        },
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "description": "New name; omit to keep current"
+        },
+        "expiration": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "description": "New ISO expiration; empty string removes expiration (premium); omit to keep current"
+        },
+        "auto_deactivate": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "New auto-deactivate flag; omit to keep current"
+        },
+        "email": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "New email flag; omit to keep current"
+        },
+        "mobile_push": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "New mobile push flag; omit to keep current"
+        },
+        "popup": {
+          "type": [
+            "null",
+            "boolean"
+          ],
+          "description": "New popup flag; omit to keep current"
+        }
+      },
+      "required": [
+        "alert_id"
+      ],
+      "patternProperties": {
+        "^(webhook)$": true
+      },
+      "additionalProperties": false
+    },
+    "mcp-watchlist-add-to-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string",
+          "description": "Numeric id of the watchlist"
+        },
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Symbols in EXCHANGE:TICKER format, e.g. NASDAQ:AAPL"
+        }
+      },
+      "required": [
+        "watchlist_id",
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-create-watchlist": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional name of the new watchlist (max 500 chars)"
+        },
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional initial symbols in EXCHANGE:TICKER format, e.g. NASDAQ:AAPL"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-watchlist-delete-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string",
+          "description": "Numeric id of the watchlist"
+        }
+      },
+      "required": [
+        "watchlist_id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-get-active-watchlist": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "mcp-watchlist-get-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string",
+          "description": "Numeric id of the watchlist"
+        }
+      },
+      "required": [
+        "watchlist_id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-list-watchlists": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "mcp-watchlist-remove-from-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string",
+          "description": "Numeric id of the watchlist"
+        },
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Symbols in EXCHANGE:TICKER format, e.g. NASDAQ:AAPL"
+        }
+      },
+      "required": [
+        "watchlist_id",
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-update-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string",
+          "description": "Numeric id of the watchlist"
+        },
+        "name": {
+          "type": "string",
+          "description": "New name of the watchlist (max 500 chars)"
+        },
+        "description": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "description": "New description text for the watchlist"
+        }
+      },
+      "required": [
+        "watchlist_id"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
