@@ -977,6 +977,8 @@ symbol_types = ["stock"]
 
 V1実装時点で、公式ドキュメントに掲載されている全35 Toolを型付き公開メソッドとして実装する。
 
+公開Pythonメソッド名は本仕様表の論理名（例: `run_screener`, `list_watchlists`）を維持する。一方、2026-09-25の実 `list_tools()` ではTradingView系が `mcp-tv-*`、Watchlist系が `mcp-watchlist-*` のwire名で公開されている。実MCP呼出し・Tool availability判定・差分検知は `integrations/tradingview/tool_catalog.py` の論理名→wire名mappingを唯一の変換点として使用し、論理名をそのまま `call_tool()` へ送らない。
+
 実装着手時に次を必ず行う。
 
 1. `docs/TRADINGVIEW_MCP_OFFICIAL_REFERENCE.md` を確認。
@@ -1140,7 +1142,7 @@ implemented: true/false
 
 ## 21.2 期待Tool差分
 
-Phase 4では個別wrapperは未実装のため、期待35件と取得一覧から `expectedMissing` / `unexpectedAvailable` を返し、各Toolに `expected` と `implemented: false` を付ける。不足Toolがあっても一覧診断自体は成功させる。以下の実装済み分類はPhase 5のwrapper追加後に適用する。
+Phase 4では個別wrapperは未実装のため、期待35件の**wire名**と取得一覧から `expectedMissing` / `unexpectedAvailable` を返し、各Toolに `expected` と `implemented: false` を付ける。不足Toolがあっても一覧診断自体は成功させる。公式説明上の論理名と実サーバーwire名は直接比較しない。2026-09-25の実機確認では35件すべて取得でき、論理名をそのまま期待値にした旧catalogでは35件すべてがmissing/unexpectedに誤分類されたため、以後は `TOOL_NAME_MAP` のvalueを期待wire名の正本とする。以下の実装済み分類はPhase 5のwrapper追加後に適用する。
 
 アプリ実装済み35 Toolと `list_tools()` を比較し、次を区別する。
 
