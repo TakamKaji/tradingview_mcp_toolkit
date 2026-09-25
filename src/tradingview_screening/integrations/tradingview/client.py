@@ -11,7 +11,7 @@ from typing import Any, Self
 
 import httpx2
 from mcp import Client, MCPError
-from mcp.client.auth import OAuthClientProvider, OAuthFlowError
+from mcp.client.auth import OAuthClientProvider, OAuthFlowError, OAuthRegistrationError, OAuthTokenError
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
 from mcp.types import INVALID_PARAMS, METHOD_NOT_FOUND
@@ -123,8 +123,12 @@ def _normalize_error(exc: BaseException) -> Exception:
     if isinstance(exc, (httpx2.TimeoutException, httpx2.NetworkError,
                         httpx2.RemoteProtocolError, ConnectionResetError, TimeoutError)):
         return TransientRequestError("Temporary MCP transport failure")
+    if isinstance(exc, OAuthRegistrationError):
+        return AppError("MCP_OAUTH_REGISTRATION_ERROR", "OAuth client registration failed")
+    if isinstance(exc, OAuthTokenError):
+        return AppError("MCP_OAUTH_TOKEN_ERROR", "OAuth token exchange failed")
     if isinstance(exc, OAuthFlowError):
-        return AppError("AUTH_REQUIRED", "TradingView authorization is required")
+        return AppError("MCP_OAUTH_FLOW_ERROR", "OAuth authorization flow failed")
     return AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
 
 
@@ -248,6 +252,8 @@ class TradingViewClient:
                 client_name="TradingView MCP Support",
                 redirect_uris=[redirect_uri],
                 grant_types=["authorization_code", "refresh_token"],
+                response_types=["code"],
+                token_endpoint_auth_method="none",
             )
             provider = OAuthClientProvider(
                 ENDPOINT,
