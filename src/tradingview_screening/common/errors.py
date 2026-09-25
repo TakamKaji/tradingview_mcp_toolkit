@@ -33,3 +33,14 @@ class ConfigError(Exception):
 
 class TransientRequestError(Exception):
     """Provider-independent marker for a temporary communication failure."""
+
+
+@dataclass
+class AppError(Exception):
+    """Stable, secret-free application error for CLI and integration boundaries."""
+
+    code: str
+    message: str
+
+    def __str__(self) -> str:
+        return self.message

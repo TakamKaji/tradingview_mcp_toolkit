@@ -1,6 +1,6 @@
 # TradingView MCP Screening Tool — Implementation Specification
 
-更新日: 2026-09-24
+更新日: 2026-09-25
 状態: V1 実装仕様
 主対象: Windows / Python
 副対象: macOS / 通常のローカルPython
@@ -809,6 +809,23 @@ OAuth 2.1
 
 OAuthプロトコルを独自実装しない。MCP Python SDKのOAuth client/providerを第一選択とし、Authorization Server discovery、PKCE、token取得・refresh等はSDKへ委譲する。
 
+### Phase 4で確認した現行API（2026-09-25）
+
+TradingView公式docsとインストール済みMCP Python SDK 2.2.0を確認した。接続先、Streamable HTTP、OAuth 2.1、公開Tool 35件の構成は保存版と一致する。実アカウントの利用可否と実Tool schemaは別途smoke testで確認する。
+
+- `mcp.Client` のasync contextを接続の所有者とする。
+- OAuthは `mcp.client.auth.OAuthClientProvider` を `httpx2.AsyncClient(auth=...)` に設定し、`mcp.client.streamable_http.streamable_http_client(endpoint, http_client=...)` をClientへ渡す。transportに `auth=` を直接渡さない。
+- `TokenStorage` は `get_tokens` / `set_tokens` と `get_client_info` / `set_client_info` の4メソッドを実装する。
+- callbackはtupleではなく `AuthorizationCodeResult(code=..., state=..., iss=...)` を返す。state・issはSDKへ未加工で渡す。
+- `Client.list_tools(cursor=...)` の `next_cursor` を最後まで辿る。SDKの重複Cacheは `Client(..., cache=None)` で無効にし、アプリ側の共通通信制御を利用する。
+- `CallToolResult.is_error` を検査し、コード向けデータは `structured_content` として扱う。`content` 本文を構造化データへ推測変換しない。
+- SDK 2.2.0のHTTP層は `httpx2` を使用する。Provider内で直接importする場合は `pyproject.toml` の直接依存へ追加する。
+- SDK 2.2.0は保存トークンの期限と認証サーバーmetadataを再起動時に自動復元しない。取得時の絶対期限と、SDKでdiscovery・検証済みのOAuth metadataをCredential Storeに保持する。期限切れのaccess tokenは送信させず、SDKの公開 `context.oauth_metadata` を復元してSDK自身のrefresh経路へ渡す。privateな初期化・refreshメソッドは呼ばない。
+- OAuth callbackは対話認証時だけ `http://127.0.0.1:8765/oauth/callback` を使用する。固定portの衝突は明示エラーとし、登録済みredirect URIを黙って変更しない。
+- SDK 2.2.0のStreamable HTTP層ではHTTPステータスの詳細が一般的なMCPエラーへ変換される。Providerの公開HTTP境界で一時通信失敗・認証・権限・引数エラーを区別し、SDKセッションを壊さず共通Governorへ伝える。OAuth通信の401等は先にSDKの認証フローへ処理させる。
+
+参照: [TradingView公式MCP](https://www.tradingview.com/mcp/docs)、[SDK Client](https://py.sdk.modelcontextprotocol.io/client/)、[SDK OAuth](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/)。
+
 ## 17.2 保存
 
 認証情報はGitへ保存しない。
@@ -1100,6 +1117,8 @@ implemented: true/false
 
 ## 21.2 期待Tool差分
 
+Phase 4では個別wrapperは未実装のため、期待35件と取得一覧から `expectedMissing` / `unexpectedAvailable` を返し、各Toolに `expected` と `implemented: false` を付ける。不足Toolがあっても一覧診断自体は成功させる。以下の実装済み分類はPhase 5のwrapper追加後に適用する。
+
 アプリ実装済み35 Toolと `list_tools()` を比較し、次を区別する。
 
 ```text
@@ -1164,7 +1183,8 @@ Windows bootstrapのpatch versionは再現性のため固定する。更新は�
 [project]
 requires-python = ">=3.11,<3.14"
 dependencies = [
-  "mcp>=2,<3",
+  "mcp>=2.2,<3",
+  "httpx2>=2.13,<3",
   "pydantic>=2,<3",
   "aiolimiter>=1.3,<2",
   "tenacity>=9,<10",

@@ -4,6 +4,7 @@
 
 > Snapshot retained for implementation reference. Source URL: https://www.tradingview.com/mcp/docs
 > Captured in project planning on 2026-09-18.
+> Phase 4 verification: 2026-09-25. Current official docs retain the same endpoint, OAuth 2.1, Streamable HTTP, 35-tool catalog, and Essential-or-higher eligibility excluding trials. SDK integration details are recorded in the implementation specification §17.1; live account access and discovered schemas require a separate smoke test.
 
 ## Connect TradingView to your AI assistant
 
