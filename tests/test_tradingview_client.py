@@ -22,7 +22,7 @@ from tradingview_screening.integrations.tradingview.client import (
     _normalize_error,
     _oauth_client_metadata,
 )
-from tradingview_screening.integrations.tradingview.tool_catalog import EXPECTED_TOOLS
+from tradingview_screening.integrations.tradingview.tool_catalog import EXPECTED_TOOLS, TOOL_NAME_MAP
 
 
 def _tool(name: str) -> Tool:
@@ -31,7 +31,7 @@ def _tool(name: str) -> Tool:
 
 class FakeSDK:
     def __init__(self, pages: list[ListToolsResult] | None = None) -> None:
-        self.pages = pages or [ListToolsResult(tools=[_tool("run_screener")])]
+        self.pages = pages or [ListToolsResult(tools=[_tool("mcp-tv-run-screener")])]
         self.entered = False
         self.exited = False
         self.cursors: list[str | None] = []
@@ -119,8 +119,10 @@ def test_oauth_client_metadata_is_public_native_pkce_registration() -> None:
 
 def test_expected_catalog_is_unique_and_complete() -> None:
     assert len(EXPECTED_TOOLS) == 35
-    assert "run_screener" in EXPECTED_TOOLS
-    assert "get_alerts_log" in EXPECTED_TOOLS
+    assert TOOL_NAME_MAP["run_screener"] == "mcp-tv-run-screener"
+    assert TOOL_NAME_MAP["list_watchlists"] == "mcp-watchlist-list-watchlists"
+    assert set(TOOL_NAME_MAP.values()) == set(EXPECTED_TOOLS)
+    assert "mcp-tv-get-alerts-log" in EXPECTED_TOOLS
 
 
 def test_client_context_catalog_pagination_and_diff(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -129,7 +131,7 @@ def test_client_context_catalog_pagination_and_diff(monkeypatch: pytest.MonkeyPa
         await storage.set_tokens(OAuthToken(access_token="token"))
         await storage.set_client_info(OAuthClientInformationFull(client_id="id"))
         sdk = FakeSDK([
-            ListToolsResult(tools=[_tool("run_screener")], next_cursor="next"),
+            ListToolsResult(tools=[_tool("mcp-tv-run-screener")], next_cursor="next"),
             ListToolsResult(tools=[_tool("future_tool")]),
         ])
         governor = RecordingGovernor()
@@ -144,7 +146,7 @@ def test_client_context_catalog_pagination_and_diff(monkeypatch: pytest.MonkeyPa
             assert sdk.cursors == [None, "next"]
             assert catalog.available_count == 2
             assert catalog.unexpected_available == ("future_tool",)
-            assert "get_ohlcv" in catalog.expected_missing
+            assert "mcp-tv-get-ohlcv" in catalog.expected_missing
             assert all(not tool.implemented for tool in catalog.tools)
             assert catalog.tools[0].input_schema == {"type": "object"}
             assert governor.policies == [(True, None), (True, None)]
@@ -165,20 +167,20 @@ def test_call_tool_governor_read_write_cache_and_results(monkeypatch: pytest.Mon
         async with TradingViewClient(
             _storage=storage, _sdk_factory=lambda _transport, **_kwargs: sdk, governor=governor
         ) as client:
-            result = await client._call_tool("run_screener", {"market": "america"}, cache_key="key")
+            result = await client._call_tool("mcp-tv-run-screener", {"market": "america"}, cache_key="key")
             assert result.structured_content == {"rows": [1]}
             assert result.content[0]["text"] == "model text"
             assert governor.policies[-1] == (True, "key")
-            await client._call_tool("run_screener", {}, retry=False, cache_key="write-key")
+            await client._call_tool("mcp-tv-run-screener", {}, retry=False, cache_key="write-key")
             assert governor.policies[-1] == (False, None)
-            assert sdk.calls == [("run_screener", {"market": "america"}), ("run_screener", {})]
+            assert sdk.calls == [("mcp-tv-run-screener", {"market": "america"}), ("mcp-tv-run-screener", {})]
 
             with pytest.raises(AppError) as caught:
                 await client._call_tool("missing")
             assert caught.value.code == "MCP_TOOL_UNAVAILABLE"
             sdk.result = CallToolResult(content=[], is_error=True)
             with pytest.raises(AppError) as caught:
-                await client._call_tool("run_screener")
+                await client._call_tool("mcp-tv-run-screener")
             assert caught.value.code == "MCP_TOOL_ERROR"
 
     asyncio.run(scenario())
