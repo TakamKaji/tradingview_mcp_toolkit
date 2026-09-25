@@ -7,6 +7,7 @@ from typing import Any, Self
 import httpx2
 import pytest
 from mcp import MCPError
+from mcp.client.auth import OAuthFlowError, OAuthRegistrationError, OAuthTokenError
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool
 from test_tradingview_auth import NativeKeyring
@@ -156,6 +157,21 @@ def test_http_status_classification(status: int, expected: str) -> None:
         assert isinstance(mapped, AppError)
         assert mapped.code == expected
     assert "secret" not in str(mapped)
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (OAuthRegistrationError("secret registration body"), "MCP_OAUTH_REGISTRATION_ERROR"),
+        (OAuthTokenError("secret token body"), "MCP_OAUTH_TOKEN_ERROR"),
+        (OAuthFlowError("secret discovery detail"), "MCP_OAUTH_FLOW_ERROR"),
+    ],
+)
+def test_oauth_errors_are_stage_specific_and_sanitized(error: Exception, code: str) -> None:
+    mapped = _normalize_error(error)
+    assert isinstance(mapped, AppError)
+    assert mapped.code == code
+    assert "secret" not in mapped.message
 
 
 def test_mcp_error_classification_and_status_transport() -> None:
