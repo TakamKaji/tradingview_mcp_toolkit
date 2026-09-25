@@ -1531,7 +1531,7 @@ mock処理で直列・Retry・Cacheがテストできる。
 - 全メソッドが共通 `_call_tool()` / `RequestGovernor` 経由。
 - 公式Tool一覧との照合テストがある。
 - `TOOL_NAME_MAP` を唯一の論理名→wire名変換に使う。Request/public wrapper/policy coverageは35件、mappingのkey/valueはいずれも一意。
-- Read 25件は `retry=True`。Write 10件（Watchlist create/delete/add/remove/update、Alert create/update/delete/stop/restart）は `retry=False, cache_key=None`。全wrapperでcacheを使用しない。
+- Read 25件のうち通常Read 24件は `retry=True`。`get_active_watchlist` は分類上Readだが、Provider説明上activate/createの副作用があるため `retry=False` とする。Write 10件（Watchlist create/delete/add/remove/update、Alert create/update/delete/stop/restart）は `retry=False, cache_key=None`。全wrapperでcacheを使用しない。
 - 必須・任意・nullable・未知field・境界値と、全35 wrapperの呼出経路・再試行policyをtable driven testで検証する。
 - 実35 inputSchema snapshotとの互換性と、破壊的drift・追加/欠落Toolを検出するテストがある。
 - Unit Test後にReadのみ実アカウントsmokeを行う。`get_active_watchlist` はProvider説明上activate/createの副作用があり対象外とする。Writeはmockで検証し、実応答shapeは未確認と明記する。
