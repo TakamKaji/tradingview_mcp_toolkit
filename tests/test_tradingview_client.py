@@ -19,6 +19,7 @@ from tradingview_screening.integrations.tradingview.client import (
     ClassifyingTransport,
     TradingViewClient,
     _normalize_error,
+    _oauth_client_metadata,
 )
 from tradingview_screening.integrations.tradingview.tool_catalog import EXPECTED_TOOLS
 
@@ -72,6 +73,15 @@ class RecordingGovernor:
 def _storage(monkeypatch: pytest.MonkeyPatch) -> auth.KeyringTokenStorage:
     monkeypatch.setattr(auth.sys, "platform", "win32")
     return auth.KeyringTokenStorage(_keyring=NativeKeyring())
+
+
+def test_oauth_client_metadata_is_public_native_pkce_registration() -> None:
+    metadata = _oauth_client_metadata("http://127.0.0.1:8765/oauth/callback")
+    payload = metadata.model_dump(mode="json", exclude_none=True)
+    assert payload["response_types"] == ["code"]
+    assert payload["grant_types"] == ["authorization_code", "refresh_token"]
+    assert payload["token_endpoint_auth_method"] == "none"
+    assert payload["application_type"] == "native"
 
 
 def test_expected_catalog_is_unique_and_complete() -> None:
