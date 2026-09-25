@@ -133,7 +133,9 @@ Phase 4のProvider層が一時的なHTTP / MCPエラーを共通markerへ変換�
 
 正規のpublic client IDが別途発行された場合は `TRADINGVIEW_MCP_CLIENT_ID`、本アプリ自身のHTTPS CIMDを用意した場合は `TRADINGVIEW_MCP_CLIENT_METADATA_URL` で指定できます。いずれも通常は未設定です。これは公開client識別子の設定であり、token・client secretの環境変数保存には使用しません。CIMD URLの設定だけでは文書の所有権や公開内容の正しさは保証されないため、本アプリ管理下の文書を使用してください。
 
-同日の障害調査では、SDK生成OAuthリクエストの `User-Agent` 欠落でAS metadataが403となり、SDKの推測DCRが404になる経路を再現しました。アプリ固有の `User-Agent` を補完するとmetadata 200 → 正規DCR 201 → redirect handler到達まで実通信で確認できました。ユーザー認可・token交換・保存後MCP接続の実機確認は下記smoke testで行います。
+同日の障害調査では、SDK生成OAuthリクエストの `User-Agent` 欠落でAS metadataが403となり、SDKの推測DCRが404になる経路を再現しました。アプリ固有の `User-Agent` を補完するとmetadata 200 → 正規DCR 201へ進み、その後のWindows実機smokeでもブラウザ認可・token交換・Credential Manager保存・MCP接続・Tool Discoveryまで成功しました。実サーバーは protocolVersion `2025-11-25`、server version `1.30.0` を返し、35 Toolを公開していました。
+
+TradingView公式資料で使われる論理名（例: `run_screener`, `list_watchlists`）と、実MCPサーバーが `list_tools()` で返すwire名は異なります。2026-09-25実測ではTradingView系は `mcp-tv-*`、Watchlist系は `mcp-watchlist-*` でした。Phase 5の公開Pythonメソッド名は論理名を維持し、実MCP呼出しは `tool_catalog.TOOL_NAME_MAP` でwire名へ解決します。Tool差分検知もwire名同士で比較します。
 
 TradingView MCPの利用にはEssential以上の対象プランが必要です。trialは対象外です。利用権限不足は認証不足と区別して返します。
 
@@ -168,7 +170,7 @@ CLIの終了コードは成功0、通信・権限・Credential Store等の失敗
 
 Python側は `async with TradingViewClient() as client` で接続し、`await client.list_tools()` で正規化した `ToolCatalog` を取得します。内部の `_call_tool(name, arguments, retry=..., cache_key=...)` は共通Governorを通り、`ToolCallData` の `structured_content` と `content` を分離して返します。個別Tool wrapperはPhase 5で追加します。
 
-このsmoke testで実Tool名・input schemaを確認してから、Phase 5の個別型付きwrapperへ進みます。
+実Tool名35件とinput schemaは実機Tool Discoveryで確認済みです。Phase 5ではこのwire名mappingと取得済みschemaを基準に個別型付きwrapperへ進みます。
 
 ## ライセンス
 
