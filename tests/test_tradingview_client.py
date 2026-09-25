@@ -22,7 +22,10 @@ from tradingview_screening.integrations.tradingview.client import (
     _normalize_error,
     _oauth_client_metadata,
 )
-from tradingview_screening.integrations.tradingview.tool_catalog import EXPECTED_TOOLS, TOOL_NAME_MAP
+from tradingview_screening.integrations.tradingview.tool_catalog import (
+    EXPECTED_TOOLS,
+    TOOL_NAME_MAP,
+)
 
 
 def _tool(name: str) -> Tool:
