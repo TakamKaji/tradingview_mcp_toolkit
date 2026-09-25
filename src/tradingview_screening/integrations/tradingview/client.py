@@ -88,6 +88,18 @@ class _DropOAuthLogs(logging.Filter):
         return False
 
 
+def _exception_type_names(exc: BaseException) -> tuple[str, ...]:
+    """Return exception class names only; never include exception text or provider data."""
+    if isinstance(exc, BaseExceptionGroup):
+        names: list[str] = []
+        for member in exc.exceptions:
+            for name in _exception_type_names(member):
+                if name not in names:
+                    names.append(name)
+        return tuple(names)
+    return (type(exc).__name__,)
+
+
 def _normalize_error(exc: BaseException) -> Exception:
     """Map provider/transport errors without exposing body, headers or token values."""
     if isinstance(exc, BaseExceptionGroup):
@@ -270,8 +282,10 @@ class TradingViewClient:
 
         stack = AsyncExitStack()
         self._stack = stack
+        stage = "oauth_loopback"
         try:
             callback = await stack.enter_async_context(LoopbackCallback()) if self.interactive else None
+            stage = "oauth_setup"
             redirect_uri = (
                 callback.redirect_uri if callback is not None
                 else f"http://127.0.0.1:{CALLBACK_PORT}{CALLBACK_PATH}"
@@ -298,6 +312,7 @@ class TradingViewClient:
                 sdk_logger.addFilter(log_filter)
                 stack.callback(sdk_logger.removeFilter, log_filter)
 
+            stage = "http_client"
             http_client = await stack.enter_async_context(
                 SafeOAuthHTTPClient(
                     auth=provider,
@@ -306,6 +321,7 @@ class TradingViewClient:
                 )
             )
             transport = streamable_http_client(ENDPOINT, http_client=http_client)
+            stage = "mcp_session"
             self._sdk = await stack.enter_async_context(self._sdk_factory(transport, cache=None))
             return self
         except BaseException as exc:
@@ -314,7 +330,18 @@ class TradingViewClient:
             self._sdk = None
             if not isinstance(exc, Exception):
                 raise
-            raise _normalize_error(exc) from exc
+            mapped = _normalize_error(exc)
+            if (
+                isinstance(mapped, AppError)
+                and mapped.code == "MCP_CONNECTION_ERROR"
+                and mapped.message == "MCP connection failed"
+            ):
+                names = ",".join(_exception_type_names(exc)[:4])
+                mapped = AppError(
+                    "MCP_CONNECTION_ERROR",
+                    f"MCP connection failed during {stage} ({names})",
+                )
+            raise mapped from exc
 
     async def __aexit__(self, *_args: object) -> None:
         try:
