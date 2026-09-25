@@ -99,7 +99,7 @@ def test_sdk_refresh_credential_save_failure_keeps_error_class(
     monkeypatch.setattr(auth.sys, "platform", "win32")
 
     def handler(request: httpx2.Request) -> httpx2.Response:
-        if str(request.url) == "https://accounts.example/token":
+        if str(request.url) == "https://www.tradingview.com/mcp/oauth/token":
             return httpx2.Response(200, json={"access_token": "fresh", "token_type": "Bearer"})
         raise AssertionError(f"unexpected request {request.url}")
 
@@ -108,9 +108,9 @@ def test_sdk_refresh_credential_save_failure_keeps_error_class(
         await storage.set_tokens(OAuthToken(access_token="old", refresh_token="refresh", expires_in=0))
         await storage.set_client_info(OAuthClientInformationFull(client_id="client"))
         await storage.set_oauth_metadata(OAuthMetadata(
-            issuer="https://accounts.example",
-            authorization_endpoint="https://accounts.example/authorize",
-            token_endpoint="https://accounts.example/token",
+            issuer="https://www.tradingview.com",
+            authorization_endpoint="https://www.tradingview.com/mcp/oauth/authorize",
+            token_endpoint="https://www.tradingview.com/mcp/oauth/token",
         ))
 
         async def fail_save(_tokens: OAuthToken) -> None:
@@ -131,70 +131,55 @@ def test_sdk_refresh_credential_save_failure_keeps_error_class(
     asyncio.run(scenario())
 
 
-def test_default_sdk_legacy_mode_reaches_interactive_oauth_redirect(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("modern", [True, False])
+def test_default_sdk_auto_mode_modern_and_legacy_fallback(
+    modern: bool, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(auth.sys, "platform", "win32")
-    requests: list[str] = []
-    redirected: list[str] = []
-
-    class RedirectReached(Exception):
-        pass
-
-    async def stop_at_redirect(_callback: object, _url: str) -> None:
-        redirected.append(_url)
-        raise RedirectReached
-
-    monkeypatch.setattr(auth.LoopbackCallback, "redirect", stop_at_redirect)
+    methods: list[str] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
-        url = str(request.url)
+        assert str(request.url) == "https://mcp.tradingview.com/mcp"
         if request.method == "GET":
-            if url == "https://mcp.tradingview.com/.well-known/oauth-protected-resource/mcp":
-                return httpx2.Response(200, json={
-                    "resource": "https://mcp.tradingview.com/mcp",
-                    "authorization_servers": ["https://auth.example"],
-                })
-            if url == "https://auth.example/.well-known/oauth-authorization-server":
-                return httpx2.Response(200, json={
-                    "issuer": "https://auth.example",
-                    "authorization_endpoint": "https://auth.example/authorize",
-                    "token_endpoint": "https://auth.example/token",
-                    "registration_endpoint": "https://auth.example/register",
-                })
-            raise AssertionError(f"unexpected GET {url}")
+            return httpx2.Response(405)
         if request.method == "DELETE":
             return httpx2.Response(204)
-        if request.method == "POST" and url == "https://auth.example/register":
-            requests.append("registration")
-            registration = json.loads(request.content)
-            registration["client_id"] = "test-client"
-            return httpx2.Response(201, json=registration)
         body = json.loads(request.content)
         method = body.get("method", "notification")
-        requests.append(method)
+        methods.append(method)
         if "id" not in body:
             return httpx2.Response(202)
-        if method == "initialize":
-            return httpx2.Response(401, headers={
-                "www-authenticate": 'Bearer resource_metadata="https://mcp.tradingview.com/.well-known/oauth-protected-resource/mcp"',
-            })
-        raise AssertionError(f"unexpected MCP method {method}")
+        if method == "server/discover":
+            if modern:
+                result = {"supportedVersions": ["2026-07-28"], "capabilities": {"tools": {}}}
+            else:
+                return httpx2.Response(200, headers={"content-type": "application/json"}, json={
+                    "jsonrpc": "2.0", "id": body["id"],
+                    "error": {"code": -32601, "message": "Method not found"},
+                })
+        elif method == "initialize":
+            result = {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
+                      "serverInfo": {"name": "fake", "version": "1"}}
+        elif method == "tools/list":
+            result = {"tools": [{"name": "run_screener", "inputSchema": {"type": "object"}}]}
+            if modern:
+                result.update({"cacheScope": "private", "resultType": "complete", "ttlMs": 0})
+        else:
+            raise AssertionError(method)
+        return httpx2.Response(200, headers={"content-type": "application/json"}, json={
+            "jsonrpc": "2.0", "id": body["id"], "result": result,
+        })
 
     async def scenario() -> None:
         storage = auth.KeyringTokenStorage(_keyring=NativeKeyring())
-        client = TradingViewClient(
+        await storage.set_tokens(OAuthToken(access_token="token"))
+        await storage.set_client_info(OAuthClientInformationFull(client_id="client"))
+        async with TradingViewClient(
             _storage=storage, _http_transport=httpx2.MockTransport(handler),
-            interactive=True,
-        )
-        with pytest.raises(AppError) as caught:
-            await client.__aenter__()
-        assert caught.value.code == "MCP_CONNECTION_ERROR", str(caught.value)
-        assert len(redirected) == 1, (requests, str(caught.value))
-        assert redirected[0].startswith("https://auth.example/authorize?")
-        assert "initialize" in requests
-        assert "server/discover" not in requests
-        assert "registration" in requests
+        ) as client:
+            assert (await client.list_tools()).available_count == 1
+        assert methods[0] == "server/discover"
+        assert ("initialize" in methods) is not modern
 
     asyncio.run(scenario())
 
@@ -205,8 +190,10 @@ def test_real_sdk_401_noninteractive_becomes_auth_required(
     monkeypatch.setattr(auth.sys, "platform", "win32")
     monkeypatch.setattr(auth.webbrowser, "open", lambda _url: pytest.fail("browser opened"))
     methods: list[str] = []
+    urls: list[str] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
+        urls.append(str(request.url))
         if request.method == "GET":
             return httpx2.Response(404)
         if request.method == "DELETE":
@@ -242,5 +229,6 @@ def test_real_sdk_401_noninteractive_becomes_auth_required(
                 await client.list_tools()
             assert caught.value.code == "AUTH_REQUIRED"
             assert methods.count("tools/list") == 1
+            assert set(urls) == {"https://mcp.tradingview.com/mcp"}
 
     asyncio.run(scenario())

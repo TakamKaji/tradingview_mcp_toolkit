@@ -125,7 +125,15 @@ Phase 4のProvider層が一時的なHTTP / MCPエラーを共通markerへ変換�
 
 ## MCP接続と実アカウントsmoke test（Phase 4）
 
-現行の[TradingView公式MCP docs](https://www.tradingview.com/mcp/docs)と、インストール済み **MCP Python SDK 2.2.0** の公開APIを2026-09-25に確認しました。接続はStreamable HTTP・OAuth 2.1です。[SDK公式OAuth手順](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/)に従い、`OAuthClientProvider` → `httpx2.AsyncClient` → `streamable_http_client` → `mcp.Client` の構成を使います。
+現行の[TradingView公式MCP docs](https://www.tradingview.com/mcp/docs)と、インストール済み **MCP Python SDK 2.2.0** の公開APIを2026-09-25に確認しました。接続はStreamable HTTP・OAuth 2.1です。`mcp auth` はMCPセッションを作らず、SDKの公開 `OAuthClientProvider.async_auth_flow()` で独立したOAuth bootstrapを実行します。`status` / `tools` は保存済みcredentialを読み、`Client(mode="auto", cache=None)` で接続します。
+
+初回認証の順序は、HTTP認証challenge → Protected Resource Metadata → Authorization Server Metadata → client登録方式選択 → SDKのPKCE・ブラウザ認可・callback検証 → token交換・Credential Store保存です。`auth` の成功はOAuth完了を示し、MCPセッション・Tool一覧取得の確認は続く `status` / `tools` が担当します。
+
+2026-09-25の実測ではTradingViewはDCR endpoint、public clientの `none`、PKCE `S256` を広告し、CIMD対応は広告していませんでした。本アプリ用の公開CIMD URL・事前登録IDも未設定のため、広告されたDCRを採用します。`registration_endpoint` のないサーバーに推測の `/register` を送信しません。OpenAI/ChatGPTのclient identityは使用しません。
+
+正規のpublic client IDが別途発行された場合は `TRADINGVIEW_MCP_CLIENT_ID`、本アプリ自身のHTTPS CIMDを用意した場合は `TRADINGVIEW_MCP_CLIENT_METADATA_URL` で指定できます。いずれも通常は未設定です。これは公開client識別子の設定であり、token・client secretの環境変数保存には使用しません。CIMD URLの設定だけでは文書の所有権や公開内容の正しさは保証されないため、本アプリ管理下の文書を使用してください。
+
+同日の障害調査では、SDK生成OAuthリクエストの `User-Agent` 欠落でAS metadataが403となり、SDKの推測DCRが404になる経路を再現しました。アプリ固有の `User-Agent` を補完するとmetadata 200 → 正規DCR 201 → redirect handler到達まで実通信で確認できました。ユーザー認可・token交換・保存後MCP接続の実機確認は下記smoke testで行います。
 
 TradingView MCPの利用にはEssential以上の対象プランが必要です。trialは対象外です。利用権限不足は認証不足と区別して返します。
 

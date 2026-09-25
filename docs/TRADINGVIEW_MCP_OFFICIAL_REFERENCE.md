@@ -6,6 +6,17 @@
 > Captured in project planning on 2026-09-18.
 > Phase 4 verification: 2026-09-25. Current official docs retain the same endpoint, OAuth 2.1, Streamable HTTP, 35-tool catalog, and Essential-or-higher eligibility excluding trials. SDK integration details are recorded in the implementation specification §17.1; live account access and discovered schemas require a separate smoke test.
 
+## Phase 4 OAuth調査注記（2026-09-25、公式本文とは別の実測）
+
+- [path付きPRM](https://mcp.tradingview.com/.well-known/oauth-protected-resource/mcp) は200。resourceはMCP endpoint、authorization serverは `https://www.tradingview.com`。root PRMは404。
+- [AS metadata](https://www.tradingview.com/.well-known/oauth-authorization-server) はauthorize/token/register endpointを広告。public client `none` とPKCE `S256` に対応し、CIMD対応fieldとresponse `iss` 対応fieldは未広告。
+- 本アプリのnative/public metadataによる正規DCRは201。CIMD必須・事前登録必須という証拠は得られていない。
+- SDK生成HTTP RequestのUser-Agent欠落でAS metadataが403となることを再現。自アプリ名のUser-Agent補完後、実SDKが正規DCRを経てredirect handlerへ到達した。ユーザー認可以降の実機確認は別途必要。
+- [Codex登録実装](https://github.com/openai/codex/blob/main/codex-rs/rmcp-client/src/oauth_client_registration.rs) はMCPセッション外でmetadataを解決し、対応metadataとnative callback条件が揃えばCIMD、それ以外はDCRを選ぶ。これは公開実装の確認であり、ユーザーのDesktop接続で実際に選択された方式を証明するものではない。
+- [Codex callback実装](https://github.com/openai/codex/blob/main/codex-rs/rmcp-client/src/oauth_callback.rs) はissuer応答を検証できる場合にshared `/callback`、それ以外はサーバー固有 `/callback/{id}` を用いる。本アプリは独自の単一TradingView callbackを維持し、Codexのclient identityを流用しない。
+
+仕様根拠: [MCP Authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)、[Client Registration](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/client-registration)、[SDK OAuth](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/)。
+
 ## Connect TradingView to your AI assistant
 
 Use TradingView data and analytics inside Claude, ChatGPT and any MCP-compatible client through the official MCP server. Included in Essential and above; trial plans don’t include MCP access.

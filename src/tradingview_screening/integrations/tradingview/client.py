@@ -8,6 +8,7 @@ from collections.abc import Callable, Hashable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from typing import Any, Self
+from urllib.parse import urlsplit
 
 import httpx2
 from mcp import Client, MCPError
@@ -28,7 +29,6 @@ from .auth import (
     CALLBACK_PATH,
     CALLBACK_PORT,
     KeyringTokenStorage,
-    LoopbackCallback,
     noninteractive_callback,
     noninteractive_redirect,
 )
@@ -41,7 +41,11 @@ _ARGUMENT_HTTP = -32040
 _AUTH_HTTP = -32041
 _CREDENTIAL_HTTP = -32042
 _CONNECTION_HTTP = -32001
+_OAUTH_REGISTRATION = -32044
+_OAUTH_TOKEN = -32045
+_OAUTH_FLOW = -32046
 _TEMPORARY_STATUSES = frozenset({429, 500, 502, 503, 504})
+APP_USER_AGENT = "TradingView-MCP-Support/0.0.0"
 
 
 @dataclass(frozen=True)
@@ -138,6 +142,12 @@ def _normalize_error(exc: BaseException) -> Exception:
             return AppError("CREDENTIAL_STORE_ERROR", "Credential Store is unavailable")
         if exc.code == _CONNECTION_HTTP:
             return AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
+        if exc.code == _OAUTH_REGISTRATION:
+            return AppError("MCP_OAUTH_REGISTRATION_ERROR", "OAuth client registration failed")
+        if exc.code == _OAUTH_TOKEN:
+            return AppError("MCP_OAUTH_TOKEN_ERROR", "OAuth token exchange failed")
+        if exc.code == _OAUTH_FLOW:
+            return AppError("MCP_OAUTH_FLOW_ERROR", "OAuth authorization flow failed")
         if exc.code == _TEMPORARY_HTTP:
             return TransientRequestError("Temporary MCP server failure")
         if exc.code == _PERMISSION_HTTP:
@@ -184,6 +194,8 @@ class ClassifyingTransport(httpx2.AsyncBaseTransport):
         self.inner = inner
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        # SDK-created auth requests bypass AsyncClient's default User-Agent header.
+        request.headers.setdefault("User-Agent", APP_USER_AGENT)
         try:
             response = await self.inner.handle_async_request(request)
         except (httpx2.TimeoutException, httpx2.NetworkError, httpx2.RemoteProtocolError):
@@ -213,6 +225,31 @@ class ClassifyingTransport(httpx2.AsyncBaseTransport):
         await self.inner.aclose()
 
 
+class NoninteractiveTransport(httpx2.AsyncBaseTransport):
+    """Allow saved-token refresh, never OAuth discovery or registration from MCP commands."""
+
+    def __init__(self, inner: httpx2.AsyncBaseTransport, token_endpoint: str | None) -> None:
+        self.inner = inner
+        parsed = urlsplit(token_endpoint) if token_endpoint else None
+        self.token_endpoint = token_endpoint if (
+            parsed is not None and parsed.scheme == "https"
+            and parsed.netloc == "www.tradingview.com" and parsed.fragment == ""
+            and parsed.username is None and parsed.password is None
+        ) else None
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        if str(request.url) != ENDPOINT and not (
+            self.token_endpoint is not None
+            and request.method == "POST"
+            and str(request.url) == self.token_endpoint
+        ):
+            raise AppError("AUTH_REQUIRED", "TradingView authorization is required")
+        return await self.inner.handle_async_request(request)
+
+    async def aclose(self) -> None:
+        await self.inner.aclose()
+
+
 class SafeOAuthHTTPClient(httpx2.AsyncClient):
     """Keep SDK auth failures on its request/result path instead of tearing down transport tasks."""
 
@@ -231,6 +268,12 @@ class SafeOAuthHTTPClient(httpx2.AsyncClient):
                 code = _CREDENTIAL_HTTP
             elif isinstance(mapped, AppError) and mapped.code == "MCP_PERMISSION_DENIED":
                 code = _PERMISSION_HTTP
+            elif isinstance(mapped, AppError) and mapped.code == "MCP_OAUTH_REGISTRATION_ERROR":
+                code = _OAUTH_REGISTRATION
+            elif isinstance(mapped, AppError) and mapped.code == "MCP_OAUTH_TOKEN_ERROR":
+                code = _OAUTH_TOKEN
+            elif isinstance(mapped, AppError) and mapped.code == "MCP_OAUTH_FLOW_ERROR":
+                code = _OAUTH_FLOW
             else:
                 code = _CONNECTION_HTTP
             replacement = _error_response(request, code)
@@ -256,17 +299,15 @@ class TradingViewClient:
     def __init__(
         self,
         *,
-        interactive: bool = False,
         governor: RequestGovernor | None = None,
         _storage: KeyringTokenStorage | None = None,
         _sdk_factory: Callable[..., Any] | None = None,
         _http_transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
-        self.interactive = interactive
         self.governor = governor or RequestGovernor()
         self._storage = _storage or KeyringTokenStorage()
         self._sdk_factory = _sdk_factory or (
-            lambda transport, **kwargs: Client(transport, mode="legacy", **kwargs)
+            lambda transport, **kwargs: Client(transport, mode="auto", **kwargs)
         )
         self._http_transport = _http_transport
         self._stack: AsyncExitStack | None = None
@@ -276,31 +317,26 @@ class TradingViewClient:
     async def __aenter__(self) -> Self:
         if self._sdk is not None:
             raise RuntimeError("TradingViewClient is already connected")
-        if not self.interactive:
-            token = await self._storage.get_tokens()
-            client_info = await self._storage.get_client_info()
-            if token is None or client_info is None or (not token.access_token and not token.refresh_token):
-                raise AppError("AUTH_REQUIRED", "TradingView authorization is required")
+        token = await self._storage.get_tokens()
+        client_info = await self._storage.get_client_info()
+        if token is None or client_info is None or (not token.access_token and not token.refresh_token):
+            raise AppError("AUTH_REQUIRED", "TradingView authorization is required")
 
         stack = AsyncExitStack()
         self._stack = stack
-        stage = "oauth_loopback"
+        stage = "oauth_setup"
         try:
-            callback = await stack.enter_async_context(LoopbackCallback()) if self.interactive else None
-            stage = "oauth_setup"
-            redirect_uri = (
-                callback.redirect_uri if callback is not None
-                else f"http://127.0.0.1:{CALLBACK_PORT}{CALLBACK_PATH}"
-            )
+            redirect_uri = f"http://127.0.0.1:{CALLBACK_PORT}{CALLBACK_PATH}"
             metadata = _oauth_client_metadata(redirect_uri)
             provider = OAuthClientProvider(
                 ENDPOINT,
                 metadata,
                 self._storage,
-                redirect_handler=callback.redirect if callback else noninteractive_redirect,
-                callback_handler=callback.callback if callback else noninteractive_callback,
+                redirect_handler=noninteractive_redirect,
+                callback_handler=noninteractive_callback,
             )
-            provider.context.oauth_metadata = await self._storage.get_oauth_metadata()
+            saved_metadata = await self._storage.get_oauth_metadata()
+            provider.context.oauth_metadata = saved_metadata
             provider.context.token_expiry_time = await self._storage.get_token_expiry()
             self._storage.metadata_source = lambda: provider.context.oauth_metadata
 
@@ -319,7 +355,10 @@ class TradingViewClient:
                 SafeOAuthHTTPClient(
                     auth=provider,
                     timeout=httpx2.Timeout(30, read=300),
-                    transport=ClassifyingTransport(self._http_transport or httpx2.AsyncHTTPTransport()),
+                    transport=NoninteractiveTransport(
+                        ClassifyingTransport(self._http_transport or httpx2.AsyncHTTPTransport()),
+                        str(saved_metadata.token_endpoint) if saved_metadata is not None else None,
+                    ),
                 )
             )
             transport = streamable_http_client(ENDPOINT, http_client=http_client)
@@ -379,7 +418,10 @@ class TradingViewClient:
                     try:
                         return await sdk.list_tools(cursor=page_cursor)
                     except Exception as exc:
-                        raise _normalize_error(exc) from exc
+                        mapped = _normalize_error(exc)
+                        if mapped is exc:
+                            raise
+                        raise mapped from exc
 
                 page = await self.governor.execute(fetch_page)
                 for tool in page.tools:
@@ -397,7 +439,10 @@ class TradingViewClient:
                     raise AppError("MCP_SCHEMA_MISMATCH", "MCP tool pagination is invalid")
                 seen_cursors.add(cursor)
         except Exception as exc:
-            raise _normalize_error(exc) from exc
+            mapped = _normalize_error(exc)
+            if mapped is exc:
+                raise
+            raise mapped from exc
         available = set(tools)
         self._catalog = ToolCatalog(
             tools=tuple(tools[name] for name in sorted(tools)),

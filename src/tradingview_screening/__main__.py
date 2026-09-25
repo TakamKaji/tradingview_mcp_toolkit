@@ -13,6 +13,7 @@ from . import __version__
 from .common.errors import AppError, ConfigError, TransientRequestError
 from .integrations.tradingview.auth import KeyringTokenStorage
 from .integrations.tradingview.client import ENDPOINT, TradingViewClient
+from .integrations.tradingview.oauth_bootstrap import bootstrap_oauth
 from .integrations.tradingview.tool_catalog import EXPECTED_TOOLS
 
 
@@ -60,15 +61,16 @@ def _failed(
 
 
 async def _execute(command: str) -> dict[str, Any]:
-    async with TradingViewClient(interactive=command == "auth") as client:
+    if command == "auth":
+        await bootstrap_oauth()
+        return {
+            "schemaVersion": 1,
+            "status": "success",
+            "operation": "mcp_auth",
+            "authenticated": True,
+        }
+    async with TradingViewClient() as client:
         catalog = await client.list_tools()
-        if command == "auth":
-            return {
-                "schemaVersion": 1,
-                "status": "success",
-                "operation": "mcp_auth",
-                "authenticated": True,
-            }
         if command == "status":
             return {
                 "schemaVersion": 1,
