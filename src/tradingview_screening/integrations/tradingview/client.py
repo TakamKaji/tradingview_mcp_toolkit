@@ -92,18 +92,22 @@ def _normalize_error(exc: BaseException) -> Exception:
     """Map provider/transport errors without exposing body, headers or token values."""
     if isinstance(exc, BaseExceptionGroup):
         # AnyIO/transport teardown can wrap the actionable OAuth/HTTP failure together
-        # with secondary cancellation/cleanup exceptions. Inspect every leaf first and
-        # prefer a specific normalized failure over the generic connection fallback.
+        # with secondary cancellation/cleanup exceptions. Inspect every leaf first.
+        # Prefer a specific application error, then a transient transport failure, and
+        # only then fall back to a generic connection error.
+        specific: AppError | None = None
+        transient: TransientRequestError | None = None
         generic: AppError | None = None
         for member in exc.exceptions:
             mapped = _normalize_error(member)
-            if isinstance(mapped, TransientRequestError):
-                return mapped
             if isinstance(mapped, AppError):
-                if mapped.code != "MCP_CONNECTION_ERROR":
-                    return mapped
-                generic = mapped
-        return generic or AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
+                if mapped.code != "MCP_CONNECTION_ERROR" and specific is None:
+                    specific = mapped
+                elif generic is None:
+                    generic = mapped
+            elif isinstance(mapped, TransientRequestError) and transient is None:
+                transient = mapped
+        return specific or transient or generic or AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
     if isinstance(exc, (AppError, TransientRequestError)):
         return exc
     if isinstance(exc, httpx2.HTTPStatusError):
