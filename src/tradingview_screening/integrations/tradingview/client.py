@@ -11,7 +11,12 @@ from typing import Any, Self
 
 import httpx2
 from mcp import Client, MCPError
-from mcp.client.auth import OAuthClientProvider, OAuthFlowError, OAuthRegistrationError, OAuthTokenError
+from mcp.client.auth import (
+    OAuthClientProvider,
+    OAuthFlowError,
+    OAuthRegistrationError,
+    OAuthTokenError,
+)
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
 from mcp.types import INVALID_PARAMS, METHOD_NOT_FOUND
@@ -210,6 +215,17 @@ class SafeOAuthHTTPClient(httpx2.AsyncClient):
             return replacement
 
 
+def _oauth_client_metadata(redirect_uri: str) -> OAuthClientMetadata:
+    """Build native/public OAuth registration metadata for PKCE authorization."""
+    return OAuthClientMetadata(
+        client_name="TradingView MCP Support",
+        redirect_uris=[redirect_uri],
+        grant_types=["authorization_code", "refresh_token"],
+        response_types=["code"],
+        token_endpoint_auth_method="none",
+    )
+
+
 class TradingViewClient:
     """Own one authenticated Streamable HTTP MCP session per async context."""
 
@@ -248,13 +264,7 @@ class TradingViewClient:
                 callback.redirect_uri if callback is not None
                 else f"http://127.0.0.1:{CALLBACK_PORT}{CALLBACK_PATH}"
             )
-            metadata = OAuthClientMetadata(
-                client_name="TradingView MCP Support",
-                redirect_uris=[redirect_uri],
-                grant_types=["authorization_code", "refresh_token"],
-                response_types=["code"],
-                token_endpoint_auth_method="none",
-            )
+            metadata = _oauth_client_metadata(redirect_uri)
             provider = OAuthClientProvider(
                 ENDPOINT,
                 metadata,
