@@ -35,8 +35,8 @@ class FakeClient:
 
     async def list_tools(self) -> ToolCatalog:
         return ToolCatalog(
-            tools=(ToolInfo("run_screener", "Run", "Description", {"type": "object"}, True),),
-            expected_missing=("get_ohlcv",),
+            tools=(ToolInfo("mcp-tv-run-screener", "Run", "Description", {"type": "object"}, True),),
+            expected_missing=("mcp-tv-get-ohlcv",),
             unexpected_available=(),
         )
 
