@@ -6,7 +6,7 @@ from typing import Self
 import pytest
 
 from tradingview_screening import __main__ as cli
-from tradingview_screening.common.errors import AppError
+from tradingview_screening.common.errors import AppError, TransientRequestError
 from tradingview_screening.integrations.tradingview.client import ToolCatalog, ToolInfo
 
 
@@ -88,6 +88,24 @@ def test_cli_status_auth_required_credential_presence(
     assert payload["error"]["code"] == "AUTH_REQUIRED"
     assert payload["credentialPresent"] is present
     FakeClient.failure = None
+
+
+def test_cli_transient_transport_failure_is_not_hidden(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class TransientClient(FakeClient):
+        async def __aenter__(self):
+            raise TransientRequestError("Temporary MCP transport failure")
+
+    monkeypatch.setattr(cli, "TradingViewClient", TransientClient)
+    assert cli.main(["mcp", "auth"]) == 1
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["error"] == {
+        "code": "MCP_CONNECTION_ERROR",
+        "message": "Temporary MCP transport failure",
+    }
+    assert "Temporary MCP transport failure" in captured.err
 
 
 def test_cli_failure_and_usage_are_sanitized(
