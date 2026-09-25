@@ -18,6 +18,7 @@ from tradingview_screening.integrations.tradingview.client import (
     ENDPOINT,
     ClassifyingTransport,
     TradingViewClient,
+    _exception_type_names,
     _normalize_error,
     _oauth_client_metadata,
 )
@@ -73,6 +74,17 @@ class RecordingGovernor:
 def _storage(monkeypatch: pytest.MonkeyPatch) -> auth.KeyringTokenStorage:
     monkeypatch.setattr(auth.sys, "platform", "win32")
     return auth.KeyringTokenStorage(_keyring=NativeKeyring())
+
+
+def test_exception_type_names_are_secret_free() -> None:
+    grouped = ExceptionGroup(
+        "secret group text",
+        [
+            ValueError("secret provider body"),
+            ExceptionGroup("nested", [RuntimeError("secret token")]),
+        ],
+    )
+    assert _exception_type_names(grouped) == ("ValueError", "RuntimeError")
 
 
 def test_exception_group_prefers_specific_oauth_error() -> None:
