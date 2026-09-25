@@ -44,7 +44,7 @@ def test_real_sdk_streamable_http_status_classification_and_governor_retry(
                 "serverInfo": {"name": "fake-tradingview", "version": "1"},
             }
         elif method == "tools/list":
-            result = {"tools": [{"name": "run_screener", "inputSchema": {"type": "object"}}]}
+            result = {"tools": [{"name": "mcp-tv-run-screener", "inputSchema": {"type": "object"}}]}
         elif method == "tools/call":
             if tool_status == "timeout" and counts[method] == 1:
                 raise httpx2.ReadTimeout("fake timeout", request=request)
@@ -76,17 +76,17 @@ def test_real_sdk_streamable_http_status_classification_and_governor_retry(
             assert catalog.available_count == 1
             if tool_status in (403, 501):
                 with pytest.raises(AppError) as caught:
-                    await client._call_tool("run_screener", {}, retry=retry)
+                    await client._call_tool("mcp-tv-run-screener", {}, retry=retry)
                 assert caught.value.code == (
                     "MCP_PERMISSION_DENIED" if tool_status == 403 else "MCP_CONNECTION_ERROR"
                 )
                 assert counts["tools/call"] == 1
             elif not retry:
                 with pytest.raises(TransientRequestError):
-                    await client._call_tool("run_screener", {}, retry=False)
+                    await client._call_tool("mcp-tv-run-screener", {}, retry=False)
                 assert counts["tools/call"] == 1
             else:
-                result = await client._call_tool("run_screener", {})
+                result = await client._call_tool("mcp-tv-run-screener", {})
                 assert result.structured_content == {"ok": True}
                 assert counts["tools/call"] == 2
 
@@ -161,7 +161,7 @@ def test_default_sdk_auto_mode_modern_and_legacy_fallback(
             result = {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
                       "serverInfo": {"name": "fake", "version": "1"}}
         elif method == "tools/list":
-            result = {"tools": [{"name": "run_screener", "inputSchema": {"type": "object"}}]}
+            result = {"tools": [{"name": "mcp-tv-run-screener", "inputSchema": {"type": "object"}}]}
             if modern:
                 result.update({"cacheScope": "private", "resultType": "complete", "ttlMs": 0})
         else:
