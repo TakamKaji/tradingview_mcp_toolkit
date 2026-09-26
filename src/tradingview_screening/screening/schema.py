@@ -20,6 +20,8 @@ from pydantic import (
 Number = StrictInt | StrictFloat
 Range = tuple[Number | None, Number | None]
 NonEmptyString = Annotated[StrictStr, Field(min_length=1)]
+FilterValue = Range | NonEmptyString
+SPECIAL_FILTER_KEYS = frozenset({"index", "sector", "industry", "analyst_rating"})
 
 
 class WatchlistConfig(BaseModel):
@@ -50,7 +52,7 @@ class ScreeningDefinition(BaseModel):
     description: StrictStr | None = None
     market: NonEmptyString
     symbolTypes: list[NonEmptyString] = Field(min_length=1)
-    filters: dict[NonEmptyString, Range] = Field(default_factory=dict)
+    filters: dict[NonEmptyString, FilterValue] = Field(default_factory=dict)
     sortBy: StrictStr | None = None
     sortOrder: Literal["asc", "desc"] = "desc"
     limit: StrictInt = Field(ge=1, le=1000)
@@ -81,10 +83,17 @@ class ScreeningDefinition(BaseModel):
 
     @field_validator("filters")
     @classmethod
-    def validate_filters(cls, value: dict[str, Range]) -> dict[str, Range]:
-        for field, (minimum, maximum) in value.items():
+    def validate_filters(cls, value: dict[str, FilterValue]) -> dict[str, FilterValue]:
+        for field, filter_value in value.items():
             if not field.strip():
                 raise ValueError("filter field must not be empty")
+            if field in SPECIAL_FILTER_KEYS:
+                if not isinstance(filter_value, str) or not filter_value.strip():
+                    raise ValueError(f"special filter {field} requires a non-empty string")
+                continue
+            if isinstance(filter_value, str):
+                raise ValueError(f"filter {field} requires a numeric [min, max] range")
+            minimum, maximum = filter_value
             if minimum is None and maximum is None:
                 raise ValueError(f"filter {field} requires a bound")
             if any(isinstance(bound, float) and not math.isfinite(bound) for bound in (minimum, maximum)):
