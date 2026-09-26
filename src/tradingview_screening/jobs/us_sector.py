@@ -102,6 +102,26 @@ def aggregate_us_sector_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+
+def require_complete_coverage(*, returned_count: int, total_count: int) -> None:
+    """Reject truncated screener universes instead of presenting them as full-market results."""
+    if (
+        isinstance(returned_count, bool)
+        or isinstance(total_count, bool)
+        or not isinstance(returned_count, int)
+        or not isinstance(total_count, int)
+        or returned_count < 0
+        or total_count < 0
+        or returned_count > total_count
+    ):
+        raise AppError("MCP_SCHEMA_MISMATCH", "US sector screener counts are invalid")
+    if returned_count < total_count:
+        raise AppError(
+            "US_SECTOR_COVERAGE_INCOMPLETE",
+            "US sector screener result does not cover the full reported universe",
+        )
+
+
 def build_us_sector_summary(
     rows: Iterable[dict[str, Any]], *, retrieved_at: datetime,
 ) -> dict[str, Any]:
