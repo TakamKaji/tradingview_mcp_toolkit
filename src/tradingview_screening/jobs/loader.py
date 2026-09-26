@@ -33,7 +33,7 @@ def list_job_names(project_root: Path) -> tuple[str, ...]:
     try:
         root = project_root.resolve()
         base = directory.resolve()
-        if not base.is_relative_to(root):
+        if directory.is_symlink() or not base.is_relative_to(root):
             raise ConfigError("CONFIG_NAME_INVALID", "Invalid job definition path", "name")
         entries = tuple(directory.iterdir())
     except FileNotFoundError:
@@ -56,7 +56,12 @@ def list_job_names(project_root: Path) -> tuple[str, ...]:
 
 
 def load_job_by_name(name: str, project_root: Path) -> JobDefinition:
-    job = load_job(definition_path(project_root / "jobs", name, project_root=project_root))
+    directory = project_root / "jobs"
+    resolved = definition_path(directory, name, project_root=project_root)
+    path = directory / f"{name}.json"
+    if directory.is_symlink() or path.is_symlink():
+        raise ConfigError("CONFIG_NAME_INVALID", "Invalid job definition path", "name")
+    job = load_job(resolved)
     if job.name != name:
         raise ConfigError(
             "CONFIG_VALIDATION_ERROR",
@@ -73,7 +78,12 @@ def validate_job_screening_reference(
     if job.task.type == "builtin":
         return None
     try:
-        return load_screening_by_name(job.task.definition, project_root)
+        screening = load_screening_by_name(job.task.definition, project_root)
+        if screening.name != job.task.definition:
+            raise ConfigError(
+                "CONFIG_VALIDATION_ERROR", "Screening name does not match filename", "task.definition"
+            )
+        return screening
     except ConfigError as exc:
         if exc.code == "CONFIG_FILE_NOT_FOUND":
             raise ConfigError(
