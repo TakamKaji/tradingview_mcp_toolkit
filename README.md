@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 6までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython APIと、名前付きScreeningの実行・結果JSON保存・最新結果取得を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
+現在はPhase 7までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、名前付きScreeningの実行・結果JSON保存・最新結果取得、管理Watchlistへの差分同期Python APIを実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
 
 ## 開発方針
 
@@ -59,7 +59,7 @@ Runtime:
 - `tenacity>=9,<10`
 - `cachetools>=5,<8`
 - `keyring>=25,<26`
-- `filelock>=3,<5`
+- `filelock>=3.12.1,<5`（非thread-local lockとPython 3.12対応）
 - `tzdata>=2025.2`（WindowsなどIANA timezoneデータを持たない環境の検証用）
 
 Development:
@@ -191,7 +191,7 @@ async def example():
 - 全wrapperはPydantic検証済みResponseを返します。`structured_content` と `content` は分離し、文章を自動で構造化データとして読み替えません。未確認の応答fieldを必須化せず、Betaでの追加fieldを保持します。不正な既知fieldは `MCP_SCHEMA_MISMATCH` です。
 - 実測済みRead 8件は `ObservedReadResponse` / `ObservedReadData` で `success` と、存在する場合の `error` / `count` / `missing_count` を型付けします。残り27件は `TypedToolResponse` でJSON値を保持します。Tool固有のdata/bars等の詳細構造はまだ厳格化していません。
 - Read 25件のうち通常Read 24件は `retry=True`、Write 10件は `retry=False` です。`get_active_watchlist` は分類上Readですが、Provider説明上activate/createの副作用があるため安全側で `retry=False` とします。Phase 5のwrapperは全件cacheなしです。欠落Toolはその呼出しだけ `MCP_TOOL_UNAVAILABLE` になります。
-- WriteはWatchlistのcreate/delete/add/remove/updateとAlertのcreate/update/delete/stop/restartです。実アカウントのWrite smokeは実施しません。
+- WriteはWatchlistのcreate/delete/add/remove/updateとAlertのcreate/update/delete/stop/restartです。Phase 5時点では実Write smokeは未実施でした。Phase 7では専用テストWatchlistだけで確認しています。
 - `get_active_watchlist` は分類上Readですが、Provider説明には未選択時のactivate・Watchlist不在時の作成があるため、読み取り専用smokeから除外します。
 - AlertのWebhook作成・Webhook付きAlertの更新はMCP非対応です。`update_alert` ではcondition/symbol/timeframeを変更できません。schema上の許可はProviderの操作対応を保証しません。
 
@@ -220,7 +220,7 @@ Providerの `structured_content.success=false` は、MCPの `is_error` とは別
 
 8件とも `ObservedReadResponse` として応答を検証できましたが、実データ取得が成功したのは4件です。他の27件は実呼出し未確認であり、全35件の成功応答shapeを実機確認したという意味ではありません。
 
-Watchlist同期・Job Runner・Schedulerは後続Phaseの対象です。Phase 4/5の仕様変更は2026-09-26にGoogle Drive正本へ同期済みです。
+Job Runner・Schedulerは後続Phaseの対象です。Phase 4/5の仕様変更は2026-09-26にGoogle Drive正本へ同期済みです。
 
 ## Screening実行と保存結果（Phase 6）
 
@@ -259,6 +259,25 @@ Unit Test後の実CLI確認も、Embedded Python 3.12.8・管理者権限なし�
 Phase 5で観測した日本市場scannerの429は今回の実確認では発生していません。Provider業務失敗、transport/OAuth失敗、schema不整合は別に扱い、失敗全体をpartialへ変換しません。RequestGovernorはcache利用情報を返さないため、metadataの `cacheHit` は省略します。
 
 Phase 6の仕様変更（実測responseの正規化、cacheHit省略、同秒衝突・atomic保存・latestの契約）は、2026-09-26にGoogle Drive正本へ同期済みです。
+
+## 管理Watchlist差分同期（Phase 7）
+
+`screening.watchlist_sync.sync_screening_watchlist()` はPhase 6の正規化済みScreening結果を入力に、アプリ管理Watchlistへ必要なadd/removeだけを行うasync Python APIです。使用例は [SCREENING_MANUAL.md](docs/SCREENING_MANUAL.md)、保存・競合・失敗時の仕様は [WATCHLIST_SYNC.md](docs/WATCHLIST_SYNC.md) を参照してください。
+
+- ownershipは `.local/managed_watchlists.json` に保存した `watchlistId` のみ。名前一致では既存Watchlistを採用しません。
+- 初回は新規createの返却IDを保存します。expectedNameは診断用です。通常同期でdelete、名前変更、active Watchlist操作はしません。
+- symbolの重複を除去し、順序差だけならWriteなし。正常successの0件は管理Watchlistを空にします。failed/partial/不正symbolを含む結果はWrite前に拒否します。
+- Screening単位の作成lock、Watchlist ID単位のWrite lock、短時間のmapping更新lockを `.local/watchlist_locks/` に置きます。キーはhash化し、mappingはatomic replaceします。
+- Writeは既存RequestGovernor経由でretry=False/cacheなし。add/remove後はReadで実状態を確認し、確認できた操作だけを記録します。自動rollbackはしません。
+- create後mapping保存失敗では作成済ID付きエラーにして停止します。自動deleteや次回の名前一致採用はしません。
+
+2026-09-26の専用テストで、create/getは `watchlist.id`（整数）・name・symbols、add/removeは `watchlist_id`・symbolsを実測しました。成功応答にsuccess fieldはありません。実ID・テスト名・Provider全文はfixtureへコミットしていません。
+
+**現在のProvider制約:** 削除済みIDへのgetエラーは「不存在」と「所有権/公開アクセス不能」を区別しません。一般の `MCP_TOOL_ERROR` では自動再作成せずmappingを保持して停止します。確実な不存在を識別する実応答は未確認です。
+
+Unit Test後の実API確認はWindows Embedded Python 3.12.8・通常ユーザーで成功しました。実Screeningの1件を新規Watchlistへ同期し、保存mappingの一致、同じ入力の再同期でWrite 0回、制御した正常空Envelopeで1件removeを確認しています。Writeはすべてretry=False/cacheなしでした。テスト用としてその実行で作成したIDだけをcleanupし、`deleted=true`を確認しました。
+
+Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済みです。既存 `screen` コマンドはReadと結果保存のみで、Watchlist設定がenabledでも同期しません。Watchlist CLI、Job Runner、`run <job>`、Schedulerは追加していません。
 
 ## ライセンス
 
