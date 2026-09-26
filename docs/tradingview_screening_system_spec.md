@@ -6,7 +6,7 @@
 副対象: macOS / 通常のローカルPython
 正本管理: Google Drive版を正本とし、Repository内の同名ファイルは実装用スナップショットとして同期する。仕様変更はDrive正本を先に更新する。
 
-Phase 4のOAuth bootstrap再設計とPhase 5の35 typed wrappers・実inputSchema互換性・Response方針は、2026-09-26にGoogle Drive正本へ同期済み。
+Phase 4のOAuth bootstrap再設計、Phase 5の35 typed wrappers・実inputSchema互換性・Response方針、Phase 6のScreening実行・結果正規化・保存/latest契約は、2026-09-26にGoogle Drive正本へ同期済み。
 
 ---
 
@@ -274,7 +274,7 @@ app.bat jobs list
 app.bat schedule apply
 app.bat schedule list
 app.bat schedule remove <job_name>
-app.bat results latest [job_name]
+app.bat results latest [screening_name]
 app.bat mcp auth
 app.bat mcp status
 app.bat mcp tools
@@ -312,7 +312,6 @@ CLIの機械可読な正本出力はJSONのみとする。
   "metadata": {
     "requestedCount": 100,
     "returnedCount": 23,
-    "cacheHit": false,
     "partial": false,
     "durationMs": 1234
   },
@@ -365,6 +364,20 @@ CLIの終了コードは次で固定する。
 
 ---
 
+## 7.5 Phase 6 Screening結果の確定契約
+
+- `screen <screening_name>` は既存Screening Validation後、`market / filters / sortBy / sortOrder / limit / columns / symbolTypes` を `RunScreenerRequest.market / filters / sort_by / sort_order / limit / columns / symbol_types` へ明示変換する。filtersの値は変えず、独自operator DSLやLLM解釈を追加しない。
+- `TradingViewClient.run_screener()` → `_call_tool()` → `RequestGovernor` の既存経路だけを使用する。Watchlist設定は検証しても実行しない。
+- 共通Envelopeは `schemaVersion / status / operation / name / executedAt / source / metadata / results / errors` を持つ。operationは `screening`、sourceは `tradingview_official_mcp`、executedAtはAsia/Tokyoのtimezone-aware ISO 8601。
+- metadataは `requestedCount / returnedCount / partial / durationMs` を持つ。定義検証前の失敗ではrequestedCountをnullとする。returnedCountは正規化後の行数。RequestGovernorはcache hit情報を返さないため、Phase 6は `cacheHit` を省略し、推測値を入れない。
+- 2026-09-26に保存credentialによるRead-only確認で、`structured_content.success=true`、`data.rows`（空配列および1行のobject配列）、`data.totalCount`（整数）、行の `symbol`（文字列）と要求列を実測した。市場データ値や生response全文は証拠fixtureとして保存しない。
+- Provider固有の正規化は `integrations/tradingview/` 内に置く。行から `symbol` と要求したcolumnsだけを保存し、未知の追加fieldは許容するが保存しない。欠落列や不正shapeを推測補完せず `MCP_SCHEMA_MISMATCH` とする。content本文のJSON再parseは禁止する。
+- `structured_content.success=false` はProvider業務失敗としてsecret-freeなAppErrorへ変換し、MCP transport / OAuth / MCP is_errorとは区別する。生エラー本文をstdoutや結果へ出さない。
+- Phase 6は不整合な行を含む応答全体をfailedとする。部分結果の安全な契約を確認できていないため、便宜上partialを生成しない。通常のlimitによる打切りをpartialにしない。
+- 終了コードは0=success/partial、1=application/provider runtime failure、2=CLI usage/local Validation、3=AUTH_REQUIRED。既存mcp auth/status/toolsを維持する。
+
+---
+
 # 8. 結果保存
 
 すべての保存対象結果は日付別フォルダへ置く。
@@ -387,6 +400,19 @@ results/
 - `results latest` は日付フォルダを横断して最新結果を解決する。
 - MCP生レスポンス全量は保存しない。
 - 保存するのはアプリ標準JSONと再現・診断に必要なmetadataのみ。
+
+---
+
+## 8.2 Phase 6保存とlatest
+
+- 保存対象はsuccess/partialのScreening共通Envelopeのみ。failed結果は保存しない。stdoutと保存結果は同じ契約と値を使用する。
+- 保存先は `results/YYYY-MM-DD/<screening_name>_<HHMMSS>.json`。日付・時刻はexecutedAtをAsia/Tokyoへ変換する。
+- 同一秒の衝突では `<screening_name>_<HHMMSS>_1.json`、`_2.json` と連番を付け、既存ファイルを上書きしない。
+- 同一日付フォルダ内の一時ファイルへ完全なJSONを書きfsync後、hard linkで非上書きのatomic publishを行う。公開できない場合は保存エラーとし、途中のJSONを結果として残さない。
+- `python -m tradingview_screening results latest [screening_name]` は日付フォルダを横断する。指定ありは指定Screening、なしは全Screeningを対象にする。
+- 日付・ファイル名・Envelopeの整合性を検証し、executedAtの絶対時刻を優先、同時刻は衝突連番等で決定的に解決する。directory mtimeには依存しない。
+- path traversal、外部を指すリンク、壊れたJSON、無関係なJSON、failed結果を採用しない。有効結果がない場合は明示的なアプリerrorとする。
+- `results/` はGit管理外。Watchlist同期・Job Runner・Schedulerは後続Phaseに残す。
 
 ---
 

@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 5までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython APIを実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
+現在はPhase 6までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython APIと、名前付きScreeningの実行・結果JSON保存・最新結果取得を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
 
 ## 開発方針
 
@@ -220,7 +220,45 @@ Providerの `structured_content.success=false` は、MCPの `is_error` とは別
 
 8件とも `ObservedReadResponse` として応答を検証できましたが、実データ取得が成功したのは4件です。他の27件は実呼出し未確認であり、全35件の成功応答shapeを実機確認したという意味ではありません。
 
-Screening実行engine・結果保存・Watchlist同期・Job Runnerは後続Phaseの対象です。Phase 4/5の仕様変更は2026-09-26にGoogle Drive正本へ同期済みです。
+Watchlist同期・Job Runner・Schedulerは後続Phaseの対象です。Phase 4/5の仕様変更は2026-09-26にGoogle Drive正本へ同期済みです。
+
+## Screening実行と保存結果（Phase 6）
+
+リポジトリ直下で、Windowsは `console.bat` を開いて実行します。保存済み認証が必要です。
+
+```bat
+python -m tradingview_screening screen sample_standard_screen
+python -m tradingview_screening results latest
+python -m tradingview_screening results latest sample_standard_screen
+```
+
+`screenings/<name>.json` を既存モデルで検証し、定義のfiltersを解釈し直さず `TradingViewClient.run_screener()` へ渡します。サンプルのWatchlist設定がenabledでも、Phase 6ではWatchlistを操作しません。
+
+成功結果はstdoutへJSONを1つ返し、同じ結果を `results/YYYY-MM-DD/<name>_<HHMMSS>.json` へ保存します。日付と時刻はAsia/Tokyo基準です。同一秒の衝突では `_1`、`_2` と連番を追加し、既存結果を上書きしません。失敗結果は保存しません。`results/` はGit管理外です。
+
+`results latest` は全Screening、名前指定時はそのScreeningの保存結果を日付フォルダ横断で検索します。JSON契約・ファイル名を検証し、executedAtで最新を判定します。壊れたファイルや無関係なJSONを除外し、有効結果がなければアプリerrorを返します。
+
+stdoutは機械可読JSON、stderrは診断用です。終了コードは0=success/partial、1=実行時失敗、2=usage/定義Validation失敗、3=AUTH_REQUIREDです。詳細は [RESULTS.md](docs/RESULTS.md) を参照してください。
+
+### Phase 6の実MCP確認
+
+2026-09-26、Windows Embedded Python 3.12.8・通常ユーザー・保存credentialで、Read-onlyの `run_screener` をlimit=1で確認しました。銘柄指定の空結果と、サンプル条件の1行取得が成功し、`structured_content.success=true`、`data.rows`、`data.totalCount`、行の `symbol` と要求列の構造を実測しました。要求外の追加列は保存対象に含めません。Providerの本文や市場データ値をfixtureへ保存していません。
+
+Unit Test後の実CLI確認も、Embedded Python 3.12.8・管理者権限なしで成功しました。
+
+| コマンド | 実測結果 |
+| --- | --- |
+| `mcp status` | 認証・Tool Discovery成功、protocol `2025-11-25`、exit 0 |
+| `mcp tools` | 35 Tool、期待との差分なし、exit 0 |
+| `screen sample_standard_screen` | 50件要求・50件取得、success、exit 0 |
+| `results latest` | 保存済みScreening結果と一致、exit 0 |
+| `results latest sample_standard_screen` | 保存済みScreening結果と一致、exit 0 |
+
+保存先は `results/2026-09-26/sample_standard_screen_085529.json` で、stdoutとファイル内容の一致も確認しました。全5コマンドのstderrは空でした。
+
+Phase 5で観測した日本市場scannerの429は今回の実確認では発生していません。Provider業務失敗、transport/OAuth失敗、schema不整合は別に扱い、失敗全体をpartialへ変換しません。RequestGovernorはcache利用情報を返さないため、metadataの `cacheHit` は省略します。
+
+Phase 6の仕様変更（実測responseの正規化、cacheHit省略、同秒衝突・atomic保存・latestの契約）は、2026-09-26にGoogle Drive正本へ同期済みです。
 
 ## ライセンス
 

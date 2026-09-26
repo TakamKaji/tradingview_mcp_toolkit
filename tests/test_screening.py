@@ -79,6 +79,31 @@ def test_valid_filters() -> None:
     assert screen.model_dump(mode="json")["filters"]["close"] == [100, 5000]
 
 
+def test_special_filters_are_preserved() -> None:
+    data = minimal_screening()
+    data["filters"] = {
+        "index": "Nikkei 225",
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "analyst_rating": "Buy",
+    }
+    screen = validate_screening(data)
+    assert screen.model_dump(mode="json")["filters"] == data["filters"]
+
+
+@pytest.mark.parametrize("filters", [
+    {"close": "Technology"},
+    {"sector": [1, 5]},
+    {"industry": "   "},
+])
+def test_filter_value_shape_matches_normal_and_special_contract(filters: object) -> None:
+    data = minimal_screening()
+    data["filters"] = filters
+    with pytest.raises(ConfigError) as caught:
+        validate_screening(data)
+    assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+
+
 def test_limit_upper_bound() -> None:
     data = minimal_screening()
     data["limit"] = 1000
