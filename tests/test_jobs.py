@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from tradingview_screening.common.errors import ConfigError
-from tradingview_screening.jobs.loader import load_job, load_job_by_name, validate_job
+from tradingview_screening.jobs.loader import list_job_names, load_job, load_job_by_name, validate_job
 
 
 def minimal_job() -> dict:
@@ -120,3 +120,33 @@ def test_load_job_by_name_accepts_matching_name(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert load_job_by_name("test_job", tmp_path).name == "test_job"
+
+
+def test_list_job_names_is_sorted_and_ignores_non_json(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    for name in ("zeta", "alpha"):
+        payload = minimal_job()
+        payload["name"] = name
+        (jobs / f"{name}.json").write_text(__import__("json").dumps(payload), encoding="utf-8")
+    (jobs / "notes.txt").write_text("ignored", encoding="utf-8")
+    assert list_job_names(tmp_path) == ("alpha", "zeta")
+
+
+def test_list_job_names_missing_directory_is_empty(tmp_path: Path) -> None:
+    assert list_job_names(tmp_path) == ()
+
+
+def test_list_job_names_rejects_symlink_json_when_supported(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    target = tmp_path / "outside.json"
+    target.write_text(__import__("json").dumps(minimal_job()), encoding="utf-8")
+    link = jobs / "linked.json"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("Creating symlinks is unavailable")
+    with pytest.raises(ConfigError) as caught:
+        list_job_names(tmp_path)
+    assert caught.value.code == "CONFIG_NAME_INVALID"
