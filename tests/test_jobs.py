@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -103,7 +104,7 @@ def test_load_job_by_name_requires_filename_match(tmp_path: Path) -> None:
     payload = minimal_job()
     payload["name"] = "different_name"
     (jobs / "test_job.json").write_text(
-        __import__("json").dumps(payload),
+        json.dumps(payload),
         encoding="utf-8",
     )
     with pytest.raises(ConfigError) as caught:
@@ -116,7 +117,7 @@ def test_load_job_by_name_accepts_matching_name(tmp_path: Path) -> None:
     jobs = tmp_path / "jobs"
     jobs.mkdir()
     (jobs / "test_job.json").write_text(
-        __import__("json").dumps(minimal_job()),
+        json.dumps(minimal_job()),
         encoding="utf-8",
     )
     assert load_job_by_name("test_job", tmp_path).name == "test_job"
@@ -128,7 +129,7 @@ def test_list_job_names_is_sorted_and_ignores_non_json(tmp_path: Path) -> None:
     for name in ("zeta", "alpha"):
         payload = minimal_job()
         payload["name"] = name
-        (jobs / f"{name}.json").write_text(__import__("json").dumps(payload), encoding="utf-8")
+        (jobs / f"{name}.json").write_text(json.dumps(payload), encoding="utf-8")
     (jobs / "notes.txt").write_text("ignored", encoding="utf-8")
     assert list_job_names(tmp_path) == ("alpha", "zeta")
 
@@ -141,7 +142,7 @@ def test_list_job_names_rejects_symlink_json_when_supported(tmp_path: Path) -> N
     jobs = tmp_path / "jobs"
     jobs.mkdir()
     target = tmp_path / "outside.json"
-    target.write_text(__import__("json").dumps(minimal_job()), encoding="utf-8")
+    target.write_text(json.dumps(minimal_job()), encoding="utf-8")
     link = jobs / "linked.json"
     try:
         link.symlink_to(target)
