@@ -10,6 +10,7 @@ from tradingview_screening.common.errors import AppError
 from tradingview_screening.jobs.us_sector import (
     aggregate_us_sector_rows,
     build_us_sector_summary,
+    require_complete_coverage,
 )
 
 
@@ -138,3 +139,25 @@ def test_public_envelope_requires_timezone_aware_time() -> None:
     with pytest.raises(AppError) as caught:
         build_us_sector_summary([row("A")], retrieved_at=datetime(2026, 9, 27, 7, 0))
     assert caught.value.code == "US_SECTOR_TIME_INVALID"
+
+
+def test_complete_coverage_accepts_exact_count() -> None:
+    require_complete_coverage(returned_count=1000, total_count=1000)
+
+
+def test_incomplete_coverage_is_rejected() -> None:
+    with pytest.raises(AppError) as caught:
+        require_complete_coverage(returned_count=1000, total_count=5432)
+    assert caught.value.code == "US_SECTOR_COVERAGE_INCOMPLETE"
+
+
+@pytest.mark.parametrize(
+    ("returned_count", "total_count"),
+    [(True, 1), (1, True), (-1, 1), (2, 1)],
+)
+def test_invalid_coverage_counts_are_schema_mismatch(
+    returned_count: int, total_count: int,
+) -> None:
+    with pytest.raises(AppError) as caught:
+        require_complete_coverage(returned_count=returned_count, total_count=total_count)
+    assert caught.value.code == "MCP_SCHEMA_MISMATCH"
