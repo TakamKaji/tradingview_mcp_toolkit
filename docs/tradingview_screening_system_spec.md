@@ -6,7 +6,7 @@
 副対象: macOS / 通常のローカルPython
 正本管理: Google Drive版を正本とし、Repository内の同名ファイルは実装用スナップショットとして同期する。仕様変更はDrive正本を先に更新する。
 
-Phase 4のOAuth bootstrap再設計とPhase 5の35 typed wrappers・実inputSchema互換性・Response方針は、2026-09-26にGoogle Drive正本へ同期済み。
+Phase 4のOAuth bootstrap再設計、Phase 5の35 typed wrappers・実inputSchema互換性・Response方針、Phase 6のScreening実行・結果正規化・保存/latest契約は、2026-09-26にGoogle Drive正本へ同期済み。
 
 ---
 
