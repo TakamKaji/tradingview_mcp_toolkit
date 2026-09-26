@@ -28,7 +28,7 @@ class WatchlistConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: StrictBool
-    name: StrictStr | None = None
+    name: StrictStr | None = Field(default=None, max_length=500)
 
     @field_validator("name")
     @classmethod
