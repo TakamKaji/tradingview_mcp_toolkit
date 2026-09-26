@@ -23,23 +23,25 @@ from .schema import JobDefinition
 
 def _lock_path(project_root: Path, name: str) -> Path:
     definition_path(project_root / "jobs", name, project_root=project_root)
-    root = project_root.resolve()
     local = project_root / ".local"
     folder = local / "job_locks"
-    if (
-        local.is_symlink() or local.resolve() != root / ".local"
-        or folder.is_symlink() or folder.resolve() != root / ".local" / "job_locks"
-    ):
-        raise AppError("JOB_LOCK_ERROR", "Job lock path is unsafe")
     try:
+        root = project_root.resolve()
+        if (
+            local.is_symlink() or local.resolve() != root / ".local"
+            or folder.is_symlink() or folder.resolve() != root / ".local" / "job_locks"
+        ):
+            raise AppError("JOB_LOCK_ERROR", "Job lock path is unsafe")
         folder.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
+        digest = hashlib.sha256(name.encode("utf-8")).hexdigest()
+        path = folder / f"{digest}.lock"
+        if path.is_symlink() or path.resolve() != folder.resolve() / path.name:
+            raise AppError("JOB_LOCK_ERROR", "Job lock path is unsafe")
+        return path
+    except AppError:
+        raise
+    except (OSError, RuntimeError) as exc:
         raise AppError("JOB_LOCK_ERROR", "Cannot prepare Job lock") from exc
-    digest = hashlib.sha256(name.encode("utf-8")).hexdigest()
-    path = folder / f"{digest}.lock"
-    if path.is_symlink() or path.resolve() != folder.resolve() / path.name:
-        raise AppError("JOB_LOCK_ERROR", "Job lock path is unsafe")
-    return path
 
 
 def _envelope(name: str, job: JobDefinition | None, started: float) -> dict[str, Any]:
