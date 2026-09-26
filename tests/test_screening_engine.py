@@ -165,6 +165,7 @@ def test_more_rows_than_requested_is_schema_mismatch() -> None:
     {"success": True},
     {"success": True, "data": {"rows": {}, "totalCount": 1}},
     {"success": True, "data": {"rows": [], "totalCount": "0"}},
+    {"success": True, "data": {"rows": [{"symbol": "TSE:7203", "name": "x", "close": 1}], "totalCount": 0}},
     {"success": True, "data": {"rows": [{"symbol": "TSE:7203", "name": "x"}], "totalCount": 1}},
     {"success": True, "data": {"rows": [{"name": "x", "close": 1}], "totalCount": 1}},
 ])
