@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from datetime import datetime
 from collections.abc import Iterable
 from typing import Any
 
 from tradingview_screening.common.errors import AppError
 
 BUILTIN_NAME = "us_sector_daily"
+SESSION_ASSUMPTION = (
+    "Run after US regular session close; TradingView change snapshot is used as returned."
+)
 
 
 def _change_value(value: object) -> float:
@@ -95,4 +99,32 @@ def aggregate_us_sector_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
             }
             for item in ordered
         ],
+    }
+
+
+def build_us_sector_summary(
+    rows: Iterable[dict[str, Any]], *, retrieved_at: datetime,
+) -> dict[str, Any]:
+    """Build the stable public envelope from normalized US screener rows."""
+    if retrieved_at.tzinfo is None or retrieved_at.utcoffset() is None:
+        raise AppError("US_SECTOR_TIME_INVALID", "US sector retrieval time must be timezone-aware")
+    aggregated = aggregate_us_sector_rows(rows)
+    return {
+        "schemaVersion": 1,
+        "status": "success",
+        "operation": "us_sector_summary",
+        "name": BUILTIN_NAME,
+        "retrievedAt": retrieved_at.isoformat(),
+        "source": "tradingview_official_mcp",
+        "metadata": {
+            "market": "america",
+            "symbolTypes": ["stock"],
+            "changeMetric": "tradingview_change_snapshot_percent",
+            "validSymbolCount": aggregated["validSymbolCount"],
+            "excludedRowCount": aggregated["excludedRowCount"],
+            "sectorCount": aggregated["sectorCount"],
+            "sessionAssumption": SESSION_ASSUMPTION,
+        },
+        "results": aggregated["results"],
+        "errors": [],
     }
