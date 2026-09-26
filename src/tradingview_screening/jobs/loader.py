@@ -28,7 +28,14 @@ def load_job(path: Path) -> JobDefinition:
 
 
 def load_job_by_name(name: str, project_root: Path) -> JobDefinition:
-    return load_job(definition_path(project_root / "jobs", name, project_root=project_root))
+    job = load_job(definition_path(project_root / "jobs", name, project_root=project_root))
+    if job.name != name:
+        raise ConfigError(
+            "CONFIG_VALIDATION_ERROR",
+            "Job name does not match filename",
+            "name",
+        )
+    return job
 
 
 def validate_job_screening_reference(
