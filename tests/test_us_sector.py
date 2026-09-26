@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from tradingview_screening.common.errors import AppError
-from tradingview_screening.jobs.us_sector import aggregate_us_sector_rows
+from tradingview_screening.jobs.us_sector import (
+    aggregate_us_sector_rows,
+    build_us_sector_summary,
+)
 
 
 def row(symbol: str, sector: object = "Technology", change: object = 1.0) -> dict:
@@ -112,3 +117,24 @@ def test_input_order_does_not_change_output() -> None:
         row("C", "Technology", 0.0),
     ]
     assert aggregate_us_sector_rows(rows) == aggregate_us_sector_rows(reversed(rows))
+
+
+def test_public_envelope_contains_session_contract() -> None:
+    retrieved_at = datetime(2026, 9, 27, 7, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+    output = build_us_sector_summary([row("A", change=1.5)], retrieved_at=retrieved_at)
+    assert output["operation"] == "us_sector_summary"
+    assert output["name"] == "us_sector_daily"
+    assert output["retrievedAt"] == "2026-09-27T07:00:00+09:00"
+    assert output["source"] == "tradingview_official_mcp"
+    assert output["metadata"]["market"] == "america"
+    assert output["metadata"]["symbolTypes"] == ["stock"]
+    assert output["metadata"]["changeMetric"] == "tradingview_change_snapshot_percent"
+    assert "regular session close" in output["metadata"]["sessionAssumption"]
+    assert output["results"][0]["meanChange"] == 1.5
+    assert output["errors"] == []
+
+
+def test_public_envelope_requires_timezone_aware_time() -> None:
+    with pytest.raises(AppError) as caught:
+        build_us_sector_summary([row("A")], retrieved_at=datetime(2026, 9, 27, 7, 0))
+    assert caught.value.code == "US_SECTOR_TIME_INVALID"
