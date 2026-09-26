@@ -267,6 +267,10 @@ def apply_schedules(project_root: Path) -> dict[str, Any]:
             })
         except AppError as exc:
             payload["status"] = "failed"
+            payload["items"].append({
+                "jobName": job.name, "taskName": task_name, "result": "failed",
+                "error": {"code": exc.code, "message": exc.message},
+            })
             payload["errors"].append({"code": exc.code, "message": exc.message})
             break
     return payload
