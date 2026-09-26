@@ -43,7 +43,7 @@ def list_job_names(project_root: Path) -> tuple[str, ...]:
 
     names: list[str] = []
     for path in entries:
-        if path.suffix.lower() != ".json":
+        if path.suffix != ".json":
             continue
         if path.is_symlink() or not path.is_file():
             raise ConfigError("CONFIG_NAME_INVALID", "Invalid job definition path", "name")
