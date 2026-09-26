@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from tradingview_screening.common.errors import ConfigError
-from tradingview_screening.jobs.loader import load_job, validate_job
+from tradingview_screening.jobs.loader import load_job, load_job_by_name, validate_job
 
 
 def minimal_job() -> dict:
@@ -95,3 +95,28 @@ def test_required_job_field(location: str, field: str) -> None:
     with pytest.raises(ConfigError) as caught:
         validate_job(data)
     assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+
+
+def test_load_job_by_name_requires_filename_match(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    payload = minimal_job()
+    payload["name"] = "different_name"
+    (jobs / "test_job.json").write_text(
+        __import__("json").dumps(payload),
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError) as caught:
+        load_job_by_name("test_job", tmp_path)
+    assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+    assert caught.value.field == "name"
+
+
+def test_load_job_by_name_accepts_matching_name(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    (jobs / "test_job.json").write_text(
+        __import__("json").dumps(minimal_job()),
+        encoding="utf-8",
+    )
+    assert load_job_by_name("test_job", tmp_path).name == "test_job"
