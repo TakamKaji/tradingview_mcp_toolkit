@@ -6,7 +6,7 @@
 副対象: macOS / 通常のローカルPython
 正本管理: Google Drive版を正本とし、Repository内の同名ファイルは実装用スナップショットとして同期する。仕様変更はDrive正本を先に更新する。
 
-Phase 4のOAuth bootstrap再設計、Phase 5の35 typed wrappers・実inputSchema互換性・Response方針、Phase 6のScreening実行・結果正規化・保存/latest契約は、2026-09-26にGoogle Drive正本へ同期済み。
+Phase 4〜6の契約とPhase 7の管理Watchlist同期契約（18.4〜18.7）は、2026-09-26にGoogle Drive正本へ同期済み。
 
 ---
 
@@ -961,11 +961,50 @@ Watchlist名だけで所有判定しない。アプリが `create_watchlist` で
 ルール:
 
 - mappingが無い場合、既存Watchlistを名前一致だけで採用しない。必要なら新規作成して返却IDを記録する。
-- mappingされたIDがTradingView側に存在しない場合は、新規作成してmappingを更新する。
+- mappingされたIDの不存在を確実に識別できた場合だけ、新規作成してmappingを更新する。現在の曖昧なProvider応答は18.5のとおり停止する。
 - `expectedName` は診断用であり所有権判定には使用しない。
 - ユーザー既存Watchlistへ推測でWriteしない。
 - `delete_watchlist` は通常同期フローで使わない。
 - mappingはsecretではないがGit管理外とする。
+
+---
+
+## 18.4 Phase 7 Python APIと入力
+
+- `screening.watchlist_sync.sync_screening_watchlist(screening, normalized_result, client, project_root, *, lock_timeout=10)` を後続の呼出元から再利用する。Phase 7ではWatchlist CLIを追加せず、既存 `screen` はReadと結果保存だけを行う。Job Runner / SchedulerはPhase 8へ残す。
+- watchlist未指定またはenabled=falseでは副作用なしでsuccessとskippedを返す。enabled=true/name必須の既存Validationを維持する。
+- 入力はPhase 6の正規化済みsuccess Envelope。name・schemaVersion・metadata/results件数等を検証し、failed / partial / errors付き結果はWrite前に拒否する。
+- `results[*].symbol` は非空のEXCHANGE:TICKER文字列で、空白・欠落・不正型等が1件でもあれば全体を拒否する。文字列を変換せず、重複を除去しsortして安定化する。
+- 正常successの0件だけは空集合として扱い、管理IDの全銘柄をremove対象にする。Provider失敗を空結果として同期しない。
+
+## 18.5 Provider正規化と不存在の境界
+
+- 2026-09-26に専用テストWatchlistだけでcreate/get/add/removeとcleanupを実測した。create/getは `structured_content.watchlist.id` が整数、`name` が文字列、`symbols` が文字列配列。add/removeは `watchlist_id` が文字列、`symbols` が配列。成功応答にsuccess fieldは存在しなかった。
+- IDはcreateが返した整数を10進文字列として保存する。IDを生成・推測しない。未知の追加fieldは許容し、上位へ渡すのはID/name/symbols等の必要最小限のみ。contentのJSON再parseは禁止。
+- add/remove応答のsymbolsが全状態か操作対象かを推測せず、IDとshapeを検証した後にgetで実状態を確認する。Write後Readが失敗・不整合なら完了扱いにしない。
+- 削除済みテストIDへのgetは `is_error=true`、structured_contentなしだった。エラーメッセージは不存在と所有権/公開アクセス不能を区別しない。したがって一般の `MCP_TOOL_ERROR` を不存在扱いせず、mappingを保持して停止する。
+- 再作成はintegrationが確実な `WATCHLIST_NOT_FOUND` として識別できる場合だけ許可する。現Providerではその識別可能な応答は未確認であり、自動再作成の実運用経路は未確認。transport/timeout/権限/schema不整合を再作成へ流さない。
+
+## 18.6 mappingとlock
+
+- `.local/managed_watchlists.json` はschemaVersion=1と既定構造を厳格Validationし、未知field・空ID・不正JSONは失敗にする。expectedNameは診断用であり、現在名との一致をownership根拠にしない。
+- mapping未登録なら名前検索せずcreateする。createの返却IDをmappingへ保存できてから差分Writeへ進む。通常同期ではlist_watchlists / get_active_watchlist / update_watchlist / delete_watchlistを使用しない。
+- lockは `.local/watchlist_locks/` 配下。screening名とwatchlist IDをhash化して安全なファイル名にする。
+- screening単位のownership lock内でmappingを再確認し、同時createを防ぐ。watchlist ID lockはget-currentから差分Write・確認Readまで保持する。
+- 単一mappingファイルのread-modify-writeには短い共通lockを使用し、異なるScreeningの更新を失わないよう再読込してmergeする。リモート通信中は共通mapping lockを保持せず、異なるWatchlistは並行可能にする。
+- filelockによる待機はasync呼出元を阻害せず、timeout/failureをAppErrorにする。キャンセル時も後から取得したlockを放置しない。
+- mappingは同一ディレクトリのtempへwrite/flush/fsync後にatomic replaceする。symlink/junction/path escapeを拒否し、`.local/` 外へ書かない。mappingとlockは非secretのGit管理外データ。
+
+## 18.7 差分・failure recovery・結果
+
+- to_add = desired-current、to_remove = current-desired、unchanged = desired∩current。安定したsort順で必要差分だけを送る。順序差/完全一致ならWriteしない。
+- create/add/removeは既存typed wrapper → _call_tool → RequestGovernorのみを使い、retry=False/cacheなしを維持する。独自通信Limiter/Retryを追加しない。
+- add後とremove後にgetで状態を確認する。add完了確認後にremoveが失敗した場合はpartialとし、確定したaddedだけを報告する。timeout等で不明な操作はadded/removedに計上しない。
+- Writeの自動再送・自動rollback・delete/recreateによる同期は禁止。
+- create成功後のmapping保存失敗は明示的なmapping保存エラーと作成済IDを返す。Provider側を自動deleteせず、続くadd/removeも行わない。次回も同名Watchlistを自動採用しない。
+- 同期結果はschemaVersion/status/operation=watchlist_sync/screening/watchlistId/watchlistName/created/added/removed/unchangedCount/errorsを持つ。無効設定によるskipはsuccessとskippedで表現する。
+- 同期差分Write前の既知の失敗はAppErrorとして伝播する。差分Write中の失敗はfailed/partialの結果に正規化する。生Provider本文やraw SDK objectを結果へ含めない。
+- 実Writeテストの削除cleanupは、その実行で新規作成した専用テストIDに限る。通常機能へWatchlist削除を追加しない。
 
 ---
 
@@ -1249,7 +1288,7 @@ dependencies = [
   "tenacity>=9,<10",
   "cachetools>=5,<8",
   "keyring>=25,<26",
-  "filelock>=3,<5",
+  "filelock>=3.12.1,<5",
   "tzdata>=2025.2"
 ]
 

@@ -17,7 +17,7 @@ dependencies = [
   "tenacity>=9,<10",
   "cachetools>=5,<8",
   "keyring>=25,<26",
-  "filelock>=3,<5",
+  "filelock>=3.12.1,<5",
   "tzdata>=2025.2",
 ]
 

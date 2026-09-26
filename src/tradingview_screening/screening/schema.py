@@ -28,7 +28,7 @@ class WatchlistConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: StrictBool
-    name: StrictStr | None = None
+    name: StrictStr | None = Field(default=None, max_length=500)
 
     @field_validator("name")
     @classmethod
@@ -92,7 +92,8 @@ class ScreeningDefinition(BaseModel):
                     raise ValueError(f"special filter {field} requires a non-empty string")
                 continue
             if isinstance(filter_value, str):
-                raise ValueError(f"filter {field} requires a numeric [min, max] range")
+                # Pydantic field validators convert ValueError, not TypeError, to ValidationError.
+                raise ValueError(f"filter {field} requires a numeric [min, max] range")  # noqa: TRY004
             minimum, maximum = filter_value
             if minimum is None and maximum is None:
                 raise ValueError(f"filter {field} requires a bound")
