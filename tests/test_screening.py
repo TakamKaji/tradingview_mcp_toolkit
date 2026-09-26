@@ -147,6 +147,7 @@ def test_invalid_filters(filters: object) -> None:
     [
         {"enabled": True},
         {"enabled": True, "name": " "},
+        {"enabled": True, "name": "X" * 501},
         {"enabled": 1, "name": "Test"},
     ],
 )
