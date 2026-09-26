@@ -94,6 +94,17 @@ def test_mapping_preserves_filters_and_ignores_watchlist() -> None:
     }
 
 
+def test_mapping_preserves_special_screener_filters() -> None:
+    data = definition()
+    data["filters"] = {
+        "sector": "Technology",
+        "index": "Nikkei 225",
+        "price_earnings_ttm": [None, 15],
+    }
+    request = to_screener_request(validate_screening(data))
+    assert request.model_dump(mode="json", exclude_unset=True)["filters"] == data["filters"]
+
+
 def test_mapping_omits_optional_sort_without_sending_null() -> None:
     data = definition()
     del data["sortBy"]
