@@ -81,4 +81,4 @@ Unit Test後には別の新規専用テストWatchlistで、同期Python APIの�
 
 空入力は削除経路の確認用に、取得した正常EnvelopeのresultsとreturnedCountを空へ変更したものです。Providerがその時点で0件を返したという意味ではありません。実partial、Write timeout/429、macOS実機は未確認で、失敗時処理はオフラインUnit Testで検証しています。
 
-通常APIにWatchlist削除機能はありません。Job Runner/Scheduler等のPhase 8も実装していません。
+通常APIにWatchlist削除機能はありません。Phase 8のJob Runnerはこの同期APIを再利用します。[Schedule Manual](SCHEDULE_MANUAL.md)を参照してください。

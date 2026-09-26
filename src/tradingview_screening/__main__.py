@@ -17,6 +17,8 @@ from .integrations.tradingview.auth import KeyringTokenStorage
 from .integrations.tradingview.client import ENDPOINT, TradingViewClient
 from .integrations.tradingview.oauth_bootstrap import bootstrap_oauth
 from .integrations.tradingview.tool_catalog import EXPECTED_TOOLS
+from .jobs.runner import failed_job, job_exit_code, list_jobs, run_job
+from .jobs.scheduler import apply_schedules, list_schedules, remove_schedule
 from .screening.engine import run_screening
 from .screening.results import TOKYO, latest_result, save_result
 from .screening.schema import ScreeningDefinition
@@ -46,6 +48,19 @@ def build_parser() -> argparse.ArgumentParser:
     result_operations = results.add_subparsers(dest="results_command", required=True, parser_class=Parser)
     latest = result_operations.add_parser("latest")
     latest.add_argument("screening_name", nargs="?")
+    run = commands.add_parser("run")
+    run.add_argument("job_name")
+    jobs = commands.add_parser("jobs")
+    jobs_operations = jobs.add_subparsers(dest="jobs_command", required=True, parser_class=Parser)
+    jobs_operations.add_parser("list")
+    schedule = commands.add_parser("schedule")
+    schedule_operations = schedule.add_subparsers(
+        dest="schedule_command", required=True, parser_class=Parser
+    )
+    schedule_operations.add_parser("apply")
+    schedule_operations.add_parser("list")
+    remove = schedule_operations.add_parser("remove")
+    remove.add_argument("job_name")
     return parser
 
 
@@ -152,6 +167,57 @@ def main(argv: list[str] | None = None) -> int:
         _emit(_failed("cli", error))
         print(error.message, file=sys.stderr)
         return 2
+    if parsed.command in {"run", "jobs", "schedule"}:
+        operation = (
+            "job" if parsed.command == "run" else
+            "jobs_list" if parsed.command == "jobs" else f"schedule_{parsed.schedule_command}"
+        )
+        started = time.monotonic()
+        try:
+            project_root = Path.cwd()
+            if parsed.command == "run":
+                payload = asyncio.run(run_job(parsed.job_name, project_root))
+                code = job_exit_code(payload)
+            elif parsed.command == "jobs":
+                payload = list_jobs(project_root)
+                code = 0
+            elif parsed.schedule_command == "apply":
+                payload = apply_schedules(project_root)
+                code = 0 if payload["status"] == "success" else 1
+            elif parsed.schedule_command == "list":
+                payload = list_schedules(project_root)
+                code = 0
+            else:
+                payload = remove_schedule(parsed.job_name, project_root)
+                code = 0
+            _emit(payload)
+            if code:
+                errors = payload.get("errors") or []
+                for error in errors:
+                    print(f"{error['code']}: {error['message']}", file=sys.stderr)
+            return code
+        except (ConfigError, ValidationError) as exc:
+            error = (
+                AppError(exc.code, exc.message) if isinstance(exc, ConfigError)
+                else AppError("CONFIG_VALIDATION_ERROR", "Invalid local configuration")
+            )
+            code = 2
+        except AppError as exc:
+            error = exc
+            code = (
+                3 if exc.code == "AUTH_REQUIRED" else
+                2 if exc.code.startswith("CONFIG_") else 1
+            )
+        except Exception:  # noqa: BLE001 - one secret-free JSON error at CLI boundary.
+            error = AppError("JOB_EXECUTION_ERROR", "Job command failed")
+            code = 1
+        payload = (
+            failed_job(parsed.job_name, error, started=started)
+            if parsed.command == "run" else _failed(operation, error)
+        )
+        _emit(payload)
+        print(f"{error.code}: {error.message}", file=sys.stderr)
+        return code
     if parsed.command in {"screen", "results"}:
         name = parsed.screening_name
         project_root = Path.cwd()

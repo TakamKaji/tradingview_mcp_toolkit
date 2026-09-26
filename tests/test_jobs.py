@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 from tradingview_screening.common.errors import ConfigError
-from tradingview_screening.jobs.loader import load_job, validate_job
+from tradingview_screening.jobs.loader import (
+    list_job_names,
+    load_job,
+    load_job_by_name,
+    validate_job,
+    validate_job_screening_reference,
+)
 
 
 def minimal_job() -> dict:
@@ -95,3 +102,108 @@ def test_required_job_field(location: str, field: str) -> None:
     with pytest.raises(ConfigError) as caught:
         validate_job(data)
     assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+
+
+def test_load_job_by_name_requires_filename_match(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    payload = minimal_job()
+    payload["name"] = "different_name"
+    (jobs / "test_job.json").write_text(
+        json.dumps(payload),
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError) as caught:
+        load_job_by_name("test_job", tmp_path)
+    assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+    assert caught.value.field == "name"
+
+
+def test_load_job_by_name_accepts_matching_name(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    (jobs / "test_job.json").write_text(
+        json.dumps(minimal_job()),
+        encoding="utf-8",
+    )
+    assert load_job_by_name("test_job", tmp_path).name == "test_job"
+
+
+def test_list_job_names_is_sorted_and_ignores_non_json(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    for name in ("zeta", "alpha"):
+        payload = minimal_job()
+        payload["name"] = name
+        (jobs / f"{name}.json").write_text(json.dumps(payload), encoding="utf-8")
+    (jobs / "notes.txt").write_text("ignored", encoding="utf-8")
+    assert list_job_names(tmp_path) == ("alpha", "zeta")
+
+
+def test_list_job_names_ignores_uppercase_json_extension(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    payload = minimal_job()
+    payload["name"] = "upper"
+    (jobs / "upper.JSON").write_text(json.dumps(payload), encoding="utf-8")
+    assert list_job_names(tmp_path) == ()
+
+
+def test_list_job_names_missing_directory_is_empty(tmp_path: Path) -> None:
+    assert list_job_names(tmp_path) == ()
+
+
+def test_list_job_names_rejects_symlink_json_when_supported(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    target = tmp_path / "outside.json"
+    target.write_text(json.dumps(minimal_job()), encoding="utf-8")
+    link = jobs / "linked.json"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("Creating symlinks is unavailable")
+    with pytest.raises(ConfigError) as caught:
+        list_job_names(tmp_path)
+    assert caught.value.code == "CONFIG_NAME_INVALID"
+
+
+def test_list_job_names_rejects_symlink_directory_within_root(tmp_path: Path) -> None:
+    actual = tmp_path / "actual"
+    actual.mkdir()
+    link = tmp_path / "jobs"
+    try:
+        link.symlink_to(actual, target_is_directory=True)
+    except OSError:
+        pytest.skip("Creating symlinks is unavailable")
+    with pytest.raises(ConfigError) as caught:
+        list_job_names(tmp_path)
+    assert caught.value.code == "CONFIG_NAME_INVALID"
+
+
+def test_direct_job_load_rejects_symlink_within_root(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    source = jobs / "source.json"
+    source.write_text(json.dumps(minimal_job()), encoding="utf-8")
+    link = jobs / "test_job.json"
+    try:
+        link.symlink_to(source)
+    except OSError:
+        pytest.skip("Creating symlinks is unavailable")
+    with pytest.raises(ConfigError) as caught:
+        load_job_by_name("test_job", tmp_path)
+    assert caught.value.code == "CONFIG_NAME_INVALID"
+
+
+def test_screening_reference_requires_filename_name_match(tmp_path: Path) -> None:
+    sample = Path(__file__).resolve().parents[1] / "screenings" / "sample_standard_screen.json"
+    payload = json.loads(sample.read_text(encoding="utf-8"))
+    screenings = tmp_path / "screenings"
+    screenings.mkdir()
+    (screenings / "test_screen.json").write_text(json.dumps(payload), encoding="utf-8")
+    job = validate_job(minimal_job())
+    with pytest.raises(ConfigError) as caught:
+        validate_job_screening_reference(job, tmp_path)
+    assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+    assert caught.value.field == "task.definition"

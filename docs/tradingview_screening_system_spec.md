@@ -1,6 +1,6 @@
 # TradingView MCP Screening Tool — Implementation Specification
 
-更新日: 2026-09-26
+更新日: 2026-09-27
 状態: V1 実装仕様
 主対象: Windows / Python
 副対象: macOS / 通常のローカルPython
@@ -9,6 +9,8 @@
 Phase 4〜6の契約とPhase 7の管理Watchlist同期契約（18.4〜18.7）は、2026-09-26にGoogle Drive正本へ同期済み。
 
 ---
+
+Phase 8のJob Runner / Scheduler契約（11.5）は2026-09-27にGoogle Drive正本へ反映し、実装用スナップショットへ同期した。
 
 ## 0. この仕様書の使い方
 
@@ -597,6 +599,28 @@ V1で正式サポートするschedule typeは `daily` のみとする。
 - Task Scheduler実行中に認証切れとなってもブラウザを自動起動しない。`AUTH_REQUIRED` と終了コード3で終了する。
 
 ---
+
+
+## 11.5 Phase 8実装契約
+
+- 手動 `run <job>` はenabled=falseでも実行可能。enabledはschedule applyの登録可否を制御する。実行は共通Job Runnerで行い、Screening・保存・Watchlist同期まで同一Job lockを保持する。
+- `jobs list` はflatに決定順で列挙し、全JobとScreening参照・filename/internal nameを検証する。1件でも不正なら全体をfailed、終了コード2とし、黙ってskipしない。
+- `builtin` はPhase 8ではJOB_TASK_UNAVAILABLE。enabledなbuiltinはschedule applyの事前検証で拒否する。Phase 9本体は実装しない。
+- Job lockは `.local/job_locks/<sha256(job_name)>.lock`。timeout=0で競合時のみalready_running/exit0。path・権限等のlock故障を競合扱いしない。
+- Job Envelopeはoperation=jobとし、Screening結果・保存済みか・相対resultPath・Watchlist同期の確定結果を区別する。save/sync未指定操作を実行済みとしない。下位failedまたはstep例外はJob failed、下位partialはJob partial。正常ScreeningのみWatchlistへ渡す。エラーはsecret-freeで、AUTH_REQUIREDはexit3、configはexit2、runtimeはexit1、partialはexit0。保存失敗後のWatchlist Writeは行わない。
+- Scheduler adapterは標準Windows PowerShellからTask Scheduler COMを使う。固定scriptへJSONデータを渡し、shell=Trueやlocalized text解析を使わない。Taskはルートフォルダの管理Prefixと安全なJob名の完全一致だけを操作する。
+- Task principalは現在のWindowsユーザー、InteractiveToken、LeastPrivilegeとする。管理者・パスワード登録は不要だが、そのユーザーがログオンしている間だけ動く。ログオフ中の自動実行はPhase 8の対応範囲外。S4Uはネットワーク利用制約があるため使わない。
+- Task actionは共通 `app.bat run <job>` を非対話で起動し、working directoryはRepository root。Embedded Pythonと通常ユーザーのCredential Managerを使う。Job別BAT、system Python、ブラウザOAuth、DCRを使用しない。
+- V1のScheduler登録対応timezoneは `Asia/Tokyo` のみ。日次StartBoundaryに明示的な `+09:00` を付ける。Windows local timezoneへ読み替えず、IANA→Windows変換表も推測しない。他のIANA timezone（DST地域を含む）はSchemaで有効でもschedule applyではSCHEDULE_TIMEZONE_UNSUPPORTEDとして拒否する。手動runの制限ではない。日本のtimezone規則が将来変わる場合は対応を見直す。
+- schedule applyは全定義・有効Jobの実行可否・timezoneを事前検証してから作成/更新する。同名Taskへ安全なupdateを許容し、disabled/定義消失による自動削除をしない。Task操作途中の失敗では完了済み操作を保持してfailedを返し、自動rollbackしない。
+- schedule removeはJob JSONがなくても安全な名前から完全一致Taskを削除可能。不在は機械可読な結果で返す。schedule listは管理Prefix内だけを返す。Windows以外は明示unsupported。
+
+- AUTH_REQUIREDはpartial結果でもexit3を優先する。JOB_TASK_UNAVAILABLEとScheduler unsupportedはruntime errorとしてexit1とする。
+- Task起動は非表示PowerShellの薄いwrapperから共通app.batを起動し、終了コードを伝播する。launcher起動失敗もexit1であり、成功扱いしない。Repository pathの空白は許容するが、cmdで意味を持つ危険文字を含むpathは登録前に拒否する。
+- WindowsのTask名は大文字小文字を区別しないため、caseだけ異なる既存名との衝突はapply/removeとも拒否する。不在以外のCOM異常を不存在として扱わない。
+
+- Microsoft参照: [StartBoundary](https://learn.microsoft.com/en-us/windows/win32/taskschd/trigger-startboundary)、[RegisterTaskDefinition](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskfolder-registertaskdefinition)、[WorkingDirectory](https://learn.microsoft.com/en-us/windows/win32/taskschd/execaction-workingdirectory)。
+
 
 # 12. TradingView MCP Integration
 

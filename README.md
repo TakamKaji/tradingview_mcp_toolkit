@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 7までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、名前付きScreeningの実行・結果JSON保存・最新結果取得、管理Watchlistへの差分同期Python APIを実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しない構成を主対象とします。macOSなどでは通常のPython環境からも利用できる設計にします。
+現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。Phase 9の米国セクター集計は未実装です。
 
 ## 開発方針
 
@@ -21,7 +21,7 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 
 `setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。
 
-`setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク検証1件のみskipされることがあります。
+`setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク作成を必要とする検証がskipされることがあります。
 
 ### 開発用コマンド
 
@@ -95,7 +95,7 @@ Screening単体は `screening.validators.load_screening_by_name(name, project_ro
 
 この段階の `filters` はIssue #4の対象である `{field: [min, max]}` 形式のみを受け付けます。片側を `null` にできますが、両端 `null`、下限が上限を超える範囲、不正な数値は拒否します。Field名の実在確認と特殊フィルター値の対応は後続フェーズで扱います。
 
-設定の読込・参照検証はローカル処理です。Screening実行、Watchlist同期、定期実行は後続フェーズで実装します。サンプルの有効化フラグだけで外部サービスへの操作は発生しません。
+設定の読込・参照検証はローカル処理です。Screening・Watchlist同期は明示的な実行で、定期実行はschedule applyによる登録後に行われます。
 
 ## 共通通信制御（Phase 3）
 
@@ -220,7 +220,7 @@ Providerの `structured_content.success=false` は、MCPの `is_error` とは別
 
 8件とも `ObservedReadResponse` として応答を検証できましたが、実データ取得が成功したのは4件です。他の27件は実呼出し未確認であり、全35件の成功応答shapeを実機確認したという意味ではありません。
 
-Job Runner・Schedulerは後続Phaseの対象です。Phase 4/5の仕様変更は2026-09-26にGoogle Drive正本へ同期済みです。
+Phase 4/5時点ではJob Runner・Schedulerは後続Phaseでした。現在は以下のPhase 8経路から同じClientを再利用します。
 
 ## Screening実行と保存結果（Phase 6）
 
@@ -277,7 +277,32 @@ Phase 6の仕様変更（実測responseの正規化、cacheHit省略、同秒衝
 
 Unit Test後の実API確認はWindows Embedded Python 3.12.8・通常ユーザーで成功しました。実Screeningの1件を新規Watchlistへ同期し、保存mappingの一致、同じ入力の再同期でWrite 0回、制御した正常空Envelopeで1件removeを確認しています。Writeはすべてretry=False/cacheなしでした。テスト用としてその実行で作成したIDだけをcleanupし、`deleted=true`を確認しました。
 
-Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済みです。既存 `screen` コマンドはReadと結果保存のみで、Watchlist設定がenabledでも同期しません。Watchlist CLI、Job Runner、`run <job>`、Schedulerは追加していません。
+Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済みです。既存 `screen` コマンドはReadと結果保存のみで、Watchlist設定がenabledでも同期しません。Phase 8のJob Runnerから同期APIを再利用します。
+
+## Jobs / Scheduler（Phase 8）
+
+```bat
+app.bat jobs list
+app.bat run sample_screen_daily
+app.bat schedule apply
+app.bat schedule list
+app.bat schedule remove sample_screen_daily
+```
+
+共通Job RunnerがScreening→任意保存→任意Watchlist同期を同じClient sessionで実行します。サンプルJobはsave/watchlistSyncともにtrueなので、runすると管理Watchlistへ実Writeします。詳細は[Schedule Manual](docs/SCHEDULE_MANUAL.md)、AIからの操作は[AI Usage](docs/AI_USAGE.md)を参照してください。
+
+- `enabled`は登録可否。明示的な手動runはfalseでも実行できます。jobs listは不正な定義・参照が1つでもあればexit 2です。
+- 同一Job全体を`.local/job_locks/<sha256(job_name)>.lock`で保護します。重複時は待機せずalready_running/exit 0、異なるJobは独立です。
+- Windows PowerShell経由のTask Scheduler COMを使用。Task名は`TradingViewMcpSupport__<job_name>`。applyは作成/更新のみで、disabled・定義消失による自動削除はしません。removeだけが完全一致Taskを削除します。
+- 通常ユーザーのInteractiveToken・LeastPrivilegeで動き、ユーザーのログオンが必要です。Taskから共通app.batを呼び、system PythonやJob別BATは使いません。
+- dailyのAsia/Tokyoだけを登録対象にし、+09:00を明示します。他IANA/DST timezoneはunsupportedで停止し、ローカル時刻へ読み替えません。
+- Schedulerは保存済みtokenとrefreshのみ。ブラウザOAuth/DCRを起動せず、認証切れはAUTH_REQUIRED/exit 3です。
+- stdoutはJob JSON 1つ。partial/重複skipはexit 0、runtime failureは1、usage/configは2です。保存・同期失敗を成功へ隠しません。
+- builtin本体・米国セクター集計等のPhase 9は未実装です。
+
+2026-09-26〜27、通常Windowsユーザー・Embedded Python 3.12.8で実機確認しました。sample Jobは50件を保存し、新規管理Watchlistへ同期成功。専用Jobでは空白入りディレクトリのTask作成/更新、手動Task起動と06:30の日次トリガー起動、結果1件の生成を確認しました。同一Jobの重複は手動・実Taskともexit 0でskipしました。disabled/定義削除でTaskが残り、明示removeだけで削除されることも確認し、今回作成したTask 2件はcleanup済みです。sampleの管理Watchlistとownership mappingは保持しています。
+
+最終検証は500 passed・4 skipped（すべて従来と同じsymlink作成権限制約）、ruff成功です。Phase 8仕様はGoogle Drive正本を先に更新し、Repositoryへ同期・読み戻し確認済みです。
 
 ## ライセンス
 

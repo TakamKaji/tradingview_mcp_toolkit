@@ -63,4 +63,4 @@ asyncio.run(main())
 
 mappingを手で既存Watchlist IDに置換してownershipを移す運用は行わないでください。詳細は [WATCHLIST_SYNC.md](WATCHLIST_SYNC.md) を参照してください。
 
-Phase 8のJob Runner、`run <job>`、`jobs list`、Schedulerは未実装です。
+Phase 8では`app.bat run <job>`から取得・任意保存・任意Watchlist同期をまとめて呼べます。`screen`単体は引き続きReadと保存のみです。`jobs list`とSchedulerは[Schedule Manual](SCHEDULE_MANUAL.md)を参照してください。
