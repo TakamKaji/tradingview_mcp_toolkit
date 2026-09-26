@@ -258,7 +258,7 @@ Unit Test後の実CLI確認も、Embedded Python 3.12.8・管理者権限なし�
 
 Phase 5で観測した日本市場scannerの429は今回の実確認では発生していません。Provider業務失敗、transport/OAuth失敗、schema不整合は別に扱い、失敗全体をpartialへ変換しません。RequestGovernorはcache利用情報を返さないため、metadataの `cacheHit` は省略します。
 
-Phase 6の仕様変更はRepository snapshotへ反映しています。Google Drive正本更新が必要です（外部書き込みの自動承認レビューで拒否されたため未更新）。変更内容は実測responseの正規化、cacheHit省略、同秒衝突・atomic保存・latestの契約です。
+Phase 6の仕様変更（実測responseの正規化、cacheHit省略、同秒衝突・atomic保存・latestの契約）は、2026-09-26にGoogle Drive正本へ同期済みです。
 
 ## ライセンス
 
