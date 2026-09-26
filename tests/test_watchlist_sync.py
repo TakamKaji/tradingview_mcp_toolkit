@@ -67,6 +67,8 @@ class FakeClient:
         self.fail_action: str | None = None
         self.fail_after_apply = False
         self.get_delay = 0.0
+        self.get_call_count = 0
+        self.fail_get_on_call: int | None = None
         self.active_gets = 0
         self.max_active_gets = 0
 
@@ -83,12 +85,13 @@ class FakeClient:
     async def get_watchlist(self, request: Any) -> TypedToolResponse:
         identifier = request.watchlist_id
         self.calls.append(("get", identifier, ()))
+        self.get_call_count += 1
         self.active_gets += 1
         self.max_active_gets = max(self.max_active_gets, self.active_gets)
         try:
             if self.get_delay:
                 await asyncio.sleep(self.get_delay)
-            if self.fail_action == "get":
+            if self.fail_action == "get" or self.fail_get_on_call == self.get_call_count:
                 raise AppError("MCP_TOOL_ERROR", "MCP tool returned an error")
             if identifier not in self.watchlists:
                 raise AppError("MCP_TOOL_ERROR", "MCP tool returned an error")
@@ -270,6 +273,36 @@ def test_ambiguous_add_timeout_is_unconfirmed_and_never_retried(
     assert output["errors"][0]["code"] == "WATCHLIST_WRITE_UNCONFIRMED"
     assert [call[0] for call in client.calls].count("add") == 1
     assert all(call[0] != "remove" for call in client.calls)
+
+
+def test_add_success_confirmation_read_failure_is_unconfirmed(tmp_path: Path) -> None:
+    client = FakeClient()
+    client.watchlists["42"] = []
+    client.names["42"] = "Managed"
+    client.fail_get_on_call = 2
+    asyncio.run(map_id(tmp_path, "sample", "42"))
+    output = asyncio.run(sync_screening_watchlist(screening(), result(), client, tmp_path))
+    assert output["status"] == "failed"
+    assert output["added"] == []
+    assert output["errors"][0]["code"] == "WATCHLIST_WRITE_UNCONFIRMED"
+    assert client.watchlists["42"] == ["TSE:7203"]
+    assert [call[0] for call in client.calls].count("add") == 1
+
+
+def test_remove_success_confirmation_read_failure_is_unconfirmed(tmp_path: Path) -> None:
+    client = FakeClient()
+    client.watchlists["42"] = ["TSE:7203"]
+    client.names["42"] = "Managed"
+    client.fail_get_on_call = 2
+    asyncio.run(map_id(tmp_path, "sample", "42"))
+    output = asyncio.run(sync_screening_watchlist(
+        screening(), result(symbols=[]), client, tmp_path,
+    ))
+    assert output["status"] == "failed"
+    assert output["removed"] == []
+    assert output["errors"][0]["code"] == "WATCHLIST_WRITE_UNCONFIRMED"
+    assert client.watchlists["42"] == []
+    assert [call[0] for call in client.calls].count("remove") == 1
 
 
 def test_create_success_mapping_save_failure_reports_created_id(
