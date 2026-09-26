@@ -28,6 +28,7 @@ def normalize_screener(response: ObservedReadResponse, columns: list[str]) -> li
         or isinstance(total_count, bool)
         or not isinstance(total_count, int)
         or total_count < 0
+        or total_count < len(rows)
     ):
         raise AppError("MCP_SCHEMA_MISMATCH", "MCP screener response schema changed")
     results: list[dict[str, Any]] = []
