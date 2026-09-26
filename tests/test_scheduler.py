@@ -132,7 +132,9 @@ def test_apply_partial_failure_keeps_completed_items(
     monkeypatch.setattr(scheduler, "_bridge", bridge)
     result = scheduler.apply_schedules(tmp_path)
     assert result["status"] == "failed"
-    assert [item["jobName"] for item in result["items"]] == ["alpha"]
+    assert [item["jobName"] for item in result["items"]] == ["alpha", "zeta"]
+    assert result["items"][1]["result"] == "failed"
+    assert result["items"][1]["error"]["code"] == "SCHEDULE_OPERATION_ERROR"
     assert calls == ["alpha", "zeta"]
     assert result["errors"][0]["code"] == "SCHEDULE_OPERATION_ERROR"
 
