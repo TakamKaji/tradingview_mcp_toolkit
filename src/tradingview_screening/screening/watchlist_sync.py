@@ -143,27 +143,61 @@ async def _sync_existing(
     if to_add:
         try:
             await add_managed_symbols(client, snapshot.watchlist_id, to_add)
-            after_add = await get_managed_watchlist(client, snapshot.watchlist_id)
-            if set(_safe_current(after_add)) != set(current) | set(to_add):
-                raise AppError("WATCHLIST_STATE_UNCONFIRMED", "Watchlist add result could not be confirmed")
-            added = to_add
         except (AppError, TimeoutError, TransientRequestError, ConnectionResetError) as exc:
             return _result(
                 screening, status="failed", snapshot=snapshot, created=created,
                 unchanged_count=unchanged, error=_safe_error(exc, write=True),
             )
+        try:
+            after_add = await get_managed_watchlist(client, snapshot.watchlist_id)
+        except (AppError, TimeoutError, TransientRequestError, ConnectionResetError):
+            return _result(
+                screening, status="failed", snapshot=snapshot, created=created,
+                unchanged_count=unchanged,
+                error=AppError(
+                    "WATCHLIST_WRITE_UNCONFIRMED",
+                    "Watchlist write result could not be confirmed",
+                ),
+            )
+        if set(_safe_current(after_add)) != set(current) | set(to_add):
+            return _result(
+                screening, status="failed", snapshot=snapshot, created=created,
+                unchanged_count=unchanged,
+                error=AppError(
+                    "WATCHLIST_STATE_UNCONFIRMED",
+                    "Watchlist add result could not be confirmed",
+                ),
+            )
+        added = to_add
     if to_remove:
         try:
             await remove_managed_symbols(client, snapshot.watchlist_id, to_remove)
-            after_remove = await get_managed_watchlist(client, snapshot.watchlist_id)
-            expected = (set(current) | set(added)) - set(to_remove)
-            if set(_safe_current(after_remove)) != expected:
-                raise AppError("WATCHLIST_STATE_UNCONFIRMED", "Watchlist remove result could not be confirmed")
         except (AppError, TimeoutError, TransientRequestError, ConnectionResetError) as exc:
             return _result(
                 screening, status="partial" if added else "failed", snapshot=snapshot,
                 created=created, added=added, unchanged_count=unchanged,
                 error=_safe_error(exc, write=True),
+            )
+        try:
+            after_remove = await get_managed_watchlist(client, snapshot.watchlist_id)
+        except (AppError, TimeoutError, TransientRequestError, ConnectionResetError):
+            return _result(
+                screening, status="partial" if added else "failed", snapshot=snapshot,
+                created=created, added=added, unchanged_count=unchanged,
+                error=AppError(
+                    "WATCHLIST_WRITE_UNCONFIRMED",
+                    "Watchlist write result could not be confirmed",
+                ),
+            )
+        expected = (set(current) | set(added)) - set(to_remove)
+        if set(_safe_current(after_remove)) != expected:
+            return _result(
+                screening, status="partial" if added else "failed", snapshot=snapshot,
+                created=created, added=added, unchanged_count=unchanged,
+                error=AppError(
+                    "WATCHLIST_STATE_UNCONFIRMED",
+                    "Watchlist remove result could not be confirmed",
+                ),
             )
     return _result(
         screening, status="success", snapshot=snapshot, created=created,
