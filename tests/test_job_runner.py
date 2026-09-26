@@ -342,6 +342,24 @@ def test_lock_path_failure_is_not_already_running(tmp_path: Path) -> None:
     assert caught.value.code == "JOB_LOCK_ERROR"
 
 
+def test_lock_resolve_failure_is_normalized(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = root_with_job(tmp_path)
+    original_resolve = Path.resolve
+
+    def fail_local_resolve(path: Path, *args: object, **kwargs: object) -> Path:
+        if path == root / ".local":
+            raise OSError("untrusted path failure")
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", fail_local_resolve)
+    with pytest.raises(AppError) as caught:
+        runner._lock_path(root, "daily")
+    assert caught.value.code == "JOB_LOCK_ERROR"
+    assert "untrusted" not in caught.value.message
+
+
 def test_lock_release_failure_preserves_completed_result(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
