@@ -27,6 +27,34 @@ def load_job(path: Path) -> JobDefinition:
     return validate_job(read_json(path, kind="job"))
 
 
+def list_job_names(project_root: Path) -> tuple[str, ...]:
+    """Return safe flat Job definition names in deterministic order."""
+    directory = project_root / "jobs"
+    try:
+        root = project_root.resolve()
+        base = directory.resolve()
+        if not base.is_relative_to(root):
+            raise ConfigError("CONFIG_NAME_INVALID", "Invalid job definition path", "name")
+        entries = tuple(directory.iterdir())
+    except FileNotFoundError:
+        return ()
+    except OSError as exc:
+        raise ConfigError("CONFIG_FILE_READ_ERROR", "Cannot read job definitions") from exc
+
+    names: list[str] = []
+    for path in entries:
+        if path.suffix.lower() != ".json":
+            continue
+        if path.is_symlink() or not path.is_file():
+            raise ConfigError("CONFIG_NAME_INVALID", "Invalid job definition path", "name")
+        name = path.stem
+        expected = definition_path(directory, name, project_root=project_root)
+        if path.resolve() != expected:
+            raise ConfigError("CONFIG_NAME_INVALID", "Invalid job definition path", "name")
+        names.append(name)
+    return tuple(sorted(names))
+
+
 def load_job_by_name(name: str, project_root: Path) -> JobDefinition:
     job = load_job(definition_path(project_root / "jobs", name, project_root=project_root))
     if job.name != name:
