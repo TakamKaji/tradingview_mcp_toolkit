@@ -140,6 +140,15 @@ def test_list_job_names_is_sorted_and_ignores_non_json(tmp_path: Path) -> None:
     assert list_job_names(tmp_path) == ("alpha", "zeta")
 
 
+def test_list_job_names_ignores_uppercase_json_extension(tmp_path: Path) -> None:
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    payload = minimal_job()
+    payload["name"] = "upper"
+    (jobs / "upper.JSON").write_text(json.dumps(payload), encoding="utf-8")
+    assert list_job_names(tmp_path) == ()
+
+
 def test_list_job_names_missing_directory_is_empty(tmp_path: Path) -> None:
     assert list_job_names(tmp_path) == ()
 
