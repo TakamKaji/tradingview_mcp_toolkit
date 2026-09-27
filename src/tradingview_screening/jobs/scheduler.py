@@ -16,7 +16,7 @@ from tradingview_screening.common.config import definition_path
 from tradingview_screening.common.errors import AppError, ConfigError
 from tradingview_screening.screening.results import TOKYO
 
-from .builtin import BUILTINS
+from .builtin import validate_builtin_job
 from .loader import list_job_names, load_job_by_name, validate_job_screening_reference
 from .schema import JobDefinition
 
@@ -237,12 +237,7 @@ def apply_schedules(project_root: Path) -> dict[str, Any]:
     jobs = _validated_jobs(project_root)
     for job in jobs:
         if job.enabled and job.task.type == "builtin":
-            if job.task.definition not in BUILTINS:
-                raise AppError("JOB_TASK_UNAVAILABLE", "Builtin Job cannot be scheduled")
-            if job.output.watchlistSync:
-                raise ConfigError(
-                    "CONFIG_VALIDATION_ERROR", "Builtin Job cannot sync a Watchlist", "output.watchlistSync"
-                )
+            validate_builtin_job(job)
         if job.enabled and job.schedule.timezone != "Asia/Tokyo":
             raise AppError(
                 "SCHEDULE_TIMEZONE_UNSUPPORTED", "Job timezone is unsupported for scheduling"
