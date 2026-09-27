@@ -1674,39 +1674,15 @@ Job JSONを追加するだけでBAT編集なしに定期Taskへ反映できる�
 
 ## Phase 10 — Windows Embedded setup / Docs
 
-Phase 9のBuilt-in US sector summaryとは独立して先行実装できる。
-
 1. `setup.bat`
-   - Python 3.12.8 Embedded amd64をRepository配下へ取得
-   - system Pythonを要求しない
-   - 不完全なruntime（target directoryはあるが`python.exe`がない）は再実行時に再構築
-   - pip / build backend / project dependenciesをEmbedded Pythonへ導入
-   - 最後に共通`app.bat --help`でentrypointを検証
-   - 非対話用`--no-pause`を提供
 2. `app.bat`
-   - `setenv.bat`経由でEmbedded Pythonを選択
-   - system Pythonへのfallback禁止
-   - 通常CLI / Schedulerの共通entrypoint
 3. `README.md`
-   - fresh install
-   - `mcp status` / `mcp auth` / `mcp tools`
-   - read-only public sample
 4. docs一式
-   - Windows Embedded setup
-   - Scheduler / AI利用時のsafe sample導線
 5. Public sample
-   - `jobs/public_sample_screen_daily.json`
-   - `enabled=false`
-   - `output.save=true`
-   - `output.watchlistSync=false`
-   - 既存Public Screeningを参照
-   - 手動runは可能、`schedule apply`では登録されない
 
 ### 完了条件
 
-Python未インストール相当のclean Windows環境で、通常ユーザー権限の`setup.bat` → `app.bat mcp status`まで到達できる。初回未認証時の`AUTH_REQUIRED` / exit 3は正常な到達とみなし、ブラウザ認証は`app.bat mcp auth`を明示実行した場合だけ開始する。
-
-Repository上ではbootstrap / public sample契約をUnit Testで固定する。fresh-machine smokeはUnit Testで代替しない。
+Python未インストールWindows環境で、`setup.bat` → `app.bat mcp status` まで到達できる。
 
 ---
 
