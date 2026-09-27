@@ -221,7 +221,6 @@ def test_unknown_builtin_does_not_open_client(tmp_path: Path, monkeypatch: pytes
     assert result["errors"][0]["code"] == "JOB_TASK_UNAVAILABLE"
 
 
-
 def test_jobs_list_accepts_known_builtin(tmp_path: Path) -> None:
     make_job(tmp_path, save=False)
     payload = runner.list_jobs(tmp_path)
