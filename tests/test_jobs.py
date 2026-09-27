@@ -41,6 +41,21 @@ def test_sample_job() -> None:
     assert load_job(path).task.definition == "sample_standard_screen"
 
 
+def test_public_sample_job_is_read_only_and_not_scheduled_by_default() -> None:
+    root = Path(__file__).resolve().parents[1]
+    job = load_job_by_name("public_sample_screen_daily", root)
+
+    assert job.enabled is False
+    assert job.task.type == "screening"
+    assert job.task.definition == "sample_standard_screen"
+    assert job.output.save is True
+    assert job.output.watchlistSync is False
+
+    screening = validate_job_screening_reference(job, root)
+    assert screening is not None
+    assert screening.name == "sample_standard_screen"
+
+
 @pytest.mark.parametrize(
     ("location", "field", "value"),
     [
