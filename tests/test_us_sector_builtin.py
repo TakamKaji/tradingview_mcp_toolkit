@@ -233,9 +233,10 @@ def test_jobs_list_accepts_known_builtin(tmp_path: Path) -> None:
 
 def test_jobs_list_rejects_unknown_builtin(tmp_path: Path) -> None:
     make_job(tmp_path, save=False, definition="unknown")
-    with pytest.raises(AppError) as caught:
+    with pytest.raises(ConfigError) as caught:
         runner.list_jobs(tmp_path)
-    assert caught.value.code == "JOB_TASK_UNAVAILABLE"
+    assert caught.value.code == "CONFIG_REFERENCE_NOT_FOUND"
+    assert caught.value.field == "task.definition"
 
 
 def test_jobs_list_rejects_builtin_watchlist_sync(tmp_path: Path) -> None:
