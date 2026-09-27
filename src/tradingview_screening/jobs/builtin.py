@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
+from tradingview_screening.common.errors import AppError, ConfigError
 from tradingview_screening.integrations.tradingview.client import TradingViewClient
 from tradingview_screening.integrations.tradingview.schemas import (
     GetScreenerColumnsRequest,
@@ -17,6 +18,7 @@ from tradingview_screening.integrations.tradingview.us_sector_normalization impo
 )
 from tradingview_screening.screening.results import TOKYO
 
+from .schema import JobDefinition
 from .us_sector import (
     build_us_sector_summary,
     require_complete_coverage,
@@ -46,3 +48,17 @@ async def run_us_sector_daily(client: TradingViewClient) -> dict[str, Any]:
 BUILTINS: dict[str, Callable[[TradingViewClient], Awaitable[dict[str, Any]]]] = {
     "us_sector_daily": run_us_sector_daily,
 }
+
+
+def validate_builtin_job(job: JobDefinition) -> None:
+    """Validate the local contract for one builtin Job without opening a provider client."""
+    if job.task.type != "builtin":
+        return
+    if job.task.definition not in BUILTINS:
+        raise AppError("JOB_TASK_UNAVAILABLE", "Builtin Job is unavailable")
+    if job.output.watchlistSync:
+        raise ConfigError(
+            "CONFIG_VALIDATION_ERROR",
+            "Builtin Job cannot sync a Watchlist",
+            "output.watchlistSync",
+        )
