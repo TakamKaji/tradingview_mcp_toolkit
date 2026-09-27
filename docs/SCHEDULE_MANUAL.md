@@ -4,6 +4,7 @@ Jobは`jobs/<job_name>.json`へ追加します。共通`app.bat`と`setenv.bat`�
 
 ```bat
 app.bat jobs list
+app.bat run public_sample_screen_daily
 app.bat run sample_screen_daily
 app.bat schedule apply
 app.bat schedule list
@@ -14,7 +15,7 @@ Python環境からは`python -m tradingview_screening`に同じ引数を渡せ�
 
 ## Job定義
 
-既存の`jobs/sample_screen_daily.json`がサンプルです。filenameと内部nameを一致させ、task.definitionにScreening名を指定します。Screening側もfilename/internal nameを一致させます。一覧は名前順で、壊れたJSON・不正定義・参照不正が1つでもあれば全体を失敗（exit 2）にします。
+初回確認用は`jobs/public_sample_screen_daily.json`です。enabled=false / save=true / watchlistSync=falseのため、手動runはできますがTask Schedulerへ登録されず、TradingView Watchlistにも書き込みません。`jobs/sample_screen_daily.json`はsave/watchlistSyncともにtrueの運用サンプルです。filenameと内部nameを一致させ、task.definitionにScreening名を指定します。Screening側もfilename/internal nameを一致させます。一覧は名前順で、壊れたJSON・不正定義・参照不正が1つでもあれば全体を失敗（exit 2）にします。
 
 - `enabled`はSchedulerへの登録可否です。明示的な`run`はfalseでも実行できます。
 - `output.save=true`で標準Screening結果を`results/YYYY-MM-DD/`へ保存します。falseでは保存しません。
