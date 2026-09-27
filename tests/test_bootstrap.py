@@ -30,6 +30,8 @@ def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_u
     assert 'if /I "%~1"=="--no-pause" set "NO_PAUSE=1"' in setup
     assert 'if exist "%TARGET_DIR%\\python.exe"' in setup
     assert 'rmdir /s /q "%TARGET_DIR%"' in setup
+    assert 'set "PTH_FILEPATH=%TARGET_DIR%\\%PTH_FILENAME%"' in setup
+    assert "Always enable site on rerun" in setup
     assert "if not defined NO_PAUSE pause" in setup
 
 
