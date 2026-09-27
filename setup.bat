@@ -49,10 +49,18 @@ if exist "%TARGET_DIR%\python.exe" (
 
     del /q "%DOWNLOAD_PATH%" >nul 2>&1
 
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$path = '%TARGET_DIR%\%PTH_FILENAME%'; $content = (Get-Content -LiteralPath $path -Raw) -replace '#import site', 'import site'; $encoding = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($path, $content, $encoding)"
-    if errorlevel 1 goto :error
 )
+
+set "PTH_FILEPATH=%TARGET_DIR%\%PTH_FILENAME%"
+if not exist "%PTH_FILEPATH%" (
+    echo Embedded Python path configuration was not found: %PTH_FILEPATH%
+    goto :error
+)
+
+rem Always enable site on rerun as well. A previous setup may have stopped after extraction.
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$path = '%PTH_FILEPATH%'; $content = (Get-Content -LiteralPath $path -Raw) -replace '#import site', 'import site'; $encoding = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($path, $content, $encoding)"
+if errorlevel 1 goto :error
 
 call "%~dp0setenv.bat"
 if errorlevel 1 goto :error
