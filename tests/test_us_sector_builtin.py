@@ -8,7 +8,7 @@ from typing import Any, Self
 
 import pytest
 
-from tradingview_screening.common.errors import AppError
+from tradingview_screening.common.errors import AppError, ConfigError
 from tradingview_screening.integrations.tradingview.schemas import (
     ObservedReadData,
     ObservedReadResponse,
@@ -219,6 +219,31 @@ def test_unknown_builtin_does_not_open_client(tmp_path: Path, monkeypatch: pytes
     monkeypatch.setattr(runner, "TradingViewClient", lambda: pytest.fail("No client"))
     result = asyncio.run(runner.run_job("sector", tmp_path))
     assert result["errors"][0]["code"] == "JOB_TASK_UNAVAILABLE"
+
+
+
+def test_jobs_list_accepts_known_builtin(tmp_path: Path) -> None:
+    make_job(tmp_path, save=False)
+    payload = runner.list_jobs(tmp_path)
+    assert payload["status"] == "success"
+    assert payload["jobs"][0]["task"] == {
+        "type": "builtin", "definition": "us_sector_daily",
+    }
+
+
+def test_jobs_list_rejects_unknown_builtin(tmp_path: Path) -> None:
+    make_job(tmp_path, save=False, definition="unknown")
+    with pytest.raises(AppError) as caught:
+        runner.list_jobs(tmp_path)
+    assert caught.value.code == "JOB_TASK_UNAVAILABLE"
+
+
+def test_jobs_list_rejects_builtin_watchlist_sync(tmp_path: Path) -> None:
+    make_job(tmp_path, save=False, sync=True)
+    with pytest.raises(ConfigError) as caught:
+        runner.list_jobs(tmp_path)
+    assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+    assert caught.value.field == "output.watchlistSync"
 
 
 def test_provider_failure_does_not_save(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
