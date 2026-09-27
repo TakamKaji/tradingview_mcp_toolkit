@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "us_sector_morning",
-  "enabled": false,
+  "enabled": true,
   "task": {
     "type": "builtin",
     "definition": "us_sector_daily"
