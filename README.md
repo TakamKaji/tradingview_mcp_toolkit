@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。Phase 9の米国セクター集計は未実装です。
+現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Phase 9の米国セクター集計は保留し、独立して進められるPhase 10のWindows Embedded setup / Public Docsを先行整備しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
 
 ## 開発方針
 
@@ -16,10 +16,19 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 ## Windows セットアップ
 
 1. リポジトリをcloneする。
-2. `setup.bat` を実行する。
-3. 完了後、`console.bat` を開く。
+2. 通常ユーザー権限で `setup.bat` を実行する。
+3. `app.bat mcp status` で共通CLIへ到達できることを確認する。
+4. 初回未認証なら `AUTH_REQUIRED` / exit 3になるため、`app.bat mcp auth` を実行する。
+5. 認証後に `app.bat mcp status` と `app.bat mcp tools` を確認する。
+6. 書き込みを伴わない公開サンプルは `app.bat run public_sample_screen_daily` で試す。
 
-`setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。
+`setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。途中で `runtime/python-3.12.8/` だけが作られ、`python.exe` が存在しない不完全なruntimeは再実行時に削除して再構築します。非対話実行では `setup.bat --no-pause` を利用できます。
+
+`mcp status` は未認証でもブラウザを開きません。初回認証だけを `mcp auth` で明示的に開始し、OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。
+
+公開用の `public_sample_screen_daily` は `enabled=false` / `save=true` / `watchlistSync=false` です。手動runは可能ですが `schedule apply` の登録対象にならず、TradingView WatchlistへのWriteも行いません。既存の `sample_screen_daily` はWatchlist同期を行う運用サンプルなので、初回確認では使い分けてください。
+
+詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。
 
 `setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク作成を必要とする検証がskipされることがあります。
 
@@ -71,7 +80,7 @@ Development:
 
 ## 設定定義（Phase 2）
 
-公開サンプルは `screenings/sample_standard_screen.json` と、それを参照する `jobs/sample_screen_daily.json` です。全モデルで未知キーを拒否し、JobのtimezoneはIANA名を明示する必要があります。
+公開Screeningは `screenings/sample_standard_screen.json` です。初回確認向けの安全なJobは `jobs/public_sample_screen_daily.json` で、Scheduler登録とWatchlist同期を既定で無効にしています。`jobs/sample_screen_daily.json` は同じScreeningを参照しますが、定期登録とWatchlist同期を行う運用サンプルです。全モデルで未知キーを拒否し、JobのtimezoneはIANA名を明示する必要があります。
 
 リポジトリのルートを起点に、Pythonから次のように検証できます。
 
@@ -85,7 +94,7 @@ from tradingview_screening.jobs.loader import (
 )
 
 try:
-    job = load_job_by_name("sample_screen_daily", Path.cwd())
+    job = load_job_by_name("public_sample_screen_daily", Path.cwd())
     screening = validate_job_screening_reference(job, Path.cwd())
 except ConfigError as error:
     print(error.to_dict())
@@ -283,13 +292,14 @@ Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済み�
 
 ```bat
 app.bat jobs list
+app.bat run public_sample_screen_daily
 app.bat run sample_screen_daily
 app.bat schedule apply
 app.bat schedule list
 app.bat schedule remove sample_screen_daily
 ```
 
-共通Job RunnerがScreening→任意保存→任意Watchlist同期を同じClient sessionで実行します。サンプルJobはsave/watchlistSyncともにtrueなので、runすると管理Watchlistへ実Writeします。詳細は[Schedule Manual](docs/SCHEDULE_MANUAL.md)、AIからの操作は[AI Usage](docs/AI_USAGE.md)を参照してください。
+共通Job RunnerがScreening→任意保存→任意Watchlist同期を同じClient sessionで実行します。`public_sample_screen_daily` は初回確認用のread-only Jobです。`sample_screen_daily` はsave/watchlistSyncともにtrueなので、runすると管理Watchlistへ実Writeします。詳細は[Schedule Manual](docs/SCHEDULE_MANUAL.md)、AIからの操作は[AI Usage](docs/AI_USAGE.md)を参照してください。
 
 - `enabled`は登録可否。明示的な手動runはfalseでも実行できます。jobs listは不正な定義・参照が1つでもあればexit 2です。
 - 同一Job全体を`.local/job_locks/<sha256(job_name)>.lock`で保護します。重複時は待機せずalready_running/exit 0、異なるJobは独立です。
@@ -303,6 +313,12 @@ app.bat schedule remove sample_screen_daily
 2026-09-26〜27、通常Windowsユーザー・Embedded Python 3.12.8で実機確認しました。sample Jobは50件を保存し、新規管理Watchlistへ同期成功。専用Jobでは空白入りディレクトリのTask作成/更新、手動Task起動と06:30の日次トリガー起動、結果1件の生成を確認しました。同一Jobの重複は手動・実Taskともexit 0でskipしました。disabled/定義削除でTaskが残り、明示removeだけで削除されることも確認し、今回作成したTask 2件はcleanup済みです。sampleの管理Watchlistとownership mappingは保持しています。
 
 最終検証は500 passed・4 skipped（すべて従来と同じsymlink作成権限制約）、ruff成功です。Phase 8仕様はGoogle Drive正本を先に更新し、Repositoryへ同期・読み戻し確認済みです。
+
+## Windows配布と公開導線（Phase 10）
+
+Phase 10はPhase 9のbuiltin米国セクター集計から独立して先行できます。Windowsでは `setup.bat` がEmbedded Python、pip、依存導入までを担当し、通常実行は共通 `app.bat` へ統一します。公開用の初回JobはWatchlistへ書き込まず、定期登録も自動では行いません。
+
+Repository上のbootstrap契約はUnit Testで固定しますが、Phase 10の最終受け入れではPython未導入相当のclean Windows環境で `setup.bat` → `app.bat mcp status` までのfresh-machine smokeを別途確認します。Phase 9の未実装はこの導線を妨げません。
 
 ## ライセンス
 
