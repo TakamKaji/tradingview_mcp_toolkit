@@ -101,7 +101,16 @@ def list_jobs(project_root: Path) -> dict[str, Any]:
         if job.task.type == "screening":
             validate_job_screening_reference(job, project_root)
         else:
-            validate_builtin_job(job)
+            try:
+                validate_builtin_job(job)
+            except AppError as exc:
+                if exc.code == "JOB_TASK_UNAVAILABLE":
+                    raise ConfigError(
+                        "CONFIG_REFERENCE_NOT_FOUND",
+                        "Referenced builtin is unavailable",
+                        "task.definition",
+                    ) from exc
+                raise
         jobs.append({
             "name": job.name,
             "enabled": job.enabled,
