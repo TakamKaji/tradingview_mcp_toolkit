@@ -17,7 +17,7 @@ from tradingview_screening.screening.engine import run_screening
 from tradingview_screening.screening.results import TOKYO, save_result, write_json_result
 from tradingview_screening.screening.watchlist_sync import sync_screening_watchlist
 
-from .builtin import BUILTINS
+from .builtin import BUILTINS, validate_builtin_job
 from .loader import list_job_names, load_job_by_name, validate_job_screening_reference
 from .schema import JobDefinition
 
@@ -100,6 +100,8 @@ def list_jobs(project_root: Path) -> dict[str, Any]:
         job = load_job_by_name(name, project_root)
         if job.task.type == "screening":
             validate_job_screening_reference(job, project_root)
+        else:
+            validate_builtin_job(job)
         jobs.append({
             "name": job.name,
             "enabled": job.enabled,
@@ -158,13 +160,8 @@ async def run_job(name: str, project_root: Path) -> dict[str, Any]:
         raise AppError("JOB_LOCK_ERROR", "Cannot acquire Job lock") from exc
     try:
         if job.task.type == "builtin":
-            builtin = BUILTINS.get(job.task.definition)
-            if builtin is None:
-                raise AppError("JOB_TASK_UNAVAILABLE", "Builtin Job is unavailable")
-            if job.output.watchlistSync:
-                raise ConfigError(
-                    "CONFIG_VALIDATION_ERROR", "Builtin Job cannot sync a Watchlist", "output.watchlistSync"
-                )
+            validate_builtin_job(job)
+            builtin = BUILTINS[job.task.definition]
             async with TradingViewClient() as client:
                 result = await builtin(client)
             if (
