@@ -22,4 +22,14 @@ Taskは`TradingViewMcpSupport__<job_name>`です。applyは有効Jobの作成/�
 
 SchedulerはWindows通常ユーザーのログオン中に実行し、保存済みOAuth tokenとrefreshだけを使います。認証切れ時にブラウザ・DCR・mcp authを自動起動しません。対応timezoneはdailyのAsia/Tokyo（明示+09:00）のみで、他IANA/DSTをローカル時刻へ読み替えません。
 
-`screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。builtinの本体とPhase 9米国セクター集計は未実装です。詳しくは[Schedule Manual](SCHEDULE_MANUAL.md)、[Screening Manual](SCREENING_MANUAL.md)、[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。
+`screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。`results latest`はScreening結果用です。builtin保存結果はJob JSONの相対resultPathで参照します。詳しくは[Schedule Manual](SCHEDULE_MANUAL.md)、[Screening Manual](SCREENING_MANUAL.md)、[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。
+
+## 米国セクターbuiltin
+
+Phase 9の`us_sector_daily`は、`america / stock`全Universeのsector/changeを1 symbol = 1票で集計する契約です。sample Jobは`us_sector_morning`、07:00 JST。`meanChange`は算術平均、`sampleSize`は有効unique symbol数。同率はcompetition ranking（1, 1, 3）とsector名昇順。同値重複は1票、矛盾は失敗、欠損は除外し、不正型を欠損扱いしません。
+
+**2026-09-27時点ではProvider制約により全Universe取得とlive保存は未達です。** sector/change列のstock対応は確認できましたが、filterなし取得はProviderが拒否しました。公式schemaは上限1000件で、pagination・完全partition契約は未確認です。先頭1000件を全米株として表示したり、S&P 500やNASDAQ、任意filterへ変更して実行成功を作ったりしないでください。
+
+full coverageを安全に確認できるまでliveの`app.bat run us_sector_morning`は実行しません。確認できた後は共通CLIを使用します。成功応答の件数不足は`US_SECTOR_COVERAGE_INCOMPLETE`で保存せず停止します。取得・列確認は同一Clientと既存RequestGovernor経由です。builtinのwatchlistSync=trueは設定エラーで、Watchlist Writeは行いません。
+
+米国regular session終了後のsnapshotを使う運用前提はsessionAssumptionに記録し、retrievedAtを必ず確認してください。休日・早期終了判定やOHLCV再計算はなく、集計へニュース解釈・投資判断を追加しません。詳細は[Results](RESULTS.md)を参照してください。Phase 10のsetup・Public配布最終化は対象外です。

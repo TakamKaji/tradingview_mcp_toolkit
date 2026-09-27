@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from datetime import datetime
 from collections.abc import Iterable
+from datetime import datetime
+from statistics import mean as statistics_mean
 from typing import Any
 
 from tradingview_screening.common.errors import AppError
@@ -19,7 +20,10 @@ SESSION_ASSUMPTION = (
 def _change_value(value: object) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise AppError("MCP_SCHEMA_MISMATCH", "US sector change value is invalid")
-    change = float(value)
+    try:
+        change = float(value)
+    except OverflowError as exc:
+        raise AppError("MCP_SCHEMA_MISMATCH", "US sector change value is invalid") from exc
     if not math.isfinite(change):
         raise AppError("MCP_SCHEMA_MISMATCH", "US sector change value is invalid")
     return change
@@ -40,12 +44,12 @@ def aggregate_us_sector_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
 
         sector_raw = row.get("sector")
         change_raw = row.get("change")
-        if sector_raw is None or change_raw is None:
-            normalized = (None, None)
-        else:
-            if not isinstance(sector_raw, str) or not sector_raw.strip():
-                raise AppError("MCP_SCHEMA_MISMATCH", "US sector name is invalid")
-            normalized = (sector_raw.strip(), _change_value(change_raw))
+        if sector_raw is not None and (not isinstance(sector_raw, str) or not sector_raw.strip()):
+            raise AppError("MCP_SCHEMA_MISMATCH", "US sector name is invalid")
+        normalized = (
+            sector_raw.strip() if sector_raw is not None else None,
+            _change_value(change_raw) if change_raw is not None else None,
+        )
 
         previous = seen.get(symbol)
         if previous is not None:
@@ -56,7 +60,7 @@ def aggregate_us_sector_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
                 )
             continue
         seen[symbol] = normalized
-        if normalized == (None, None):
+        if None in normalized:
             excluded += 1
 
     values: dict[str, list[float]] = defaultdict(list)
@@ -69,7 +73,7 @@ def aggregate_us_sector_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
         (
             {
                 "sector": sector,
-                "meanChange": sum(changes) / len(changes),
+                "meanChange": statistics_mean(sorted(changes)),
                 "sampleSize": len(changes),
             }
             for sector, changes in values.items()

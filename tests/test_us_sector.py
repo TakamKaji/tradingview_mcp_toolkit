@@ -120,6 +120,29 @@ def test_input_order_does_not_change_output() -> None:
     assert aggregate_us_sector_rows(rows) == aggregate_us_sector_rows(reversed(rows))
 
 
+def test_extreme_finite_values_have_order_independent_finite_mean() -> None:
+    rows = [row("A", change=1e308), row("B", change=1e308), row("C", change=-1e308)]
+    forward = aggregate_us_sector_rows(rows)
+    backward = aggregate_us_sector_rows(reversed(rows))
+    assert forward == backward
+    assert math.isfinite(forward["results"][0]["meanChange"])
+
+
+@pytest.mark.parametrize("rows", [
+    [row("A", sector=None, change=True)],
+    [row("A", sector=2, change=None)],
+    [row("A", sector=None, change=float("nan"))],
+    [row("A", sector=" ", change=None)],
+    [row("A", change=10**1000)],
+    [row("A", sector=None, change=1.0), row("A", sector=None, change=2.0)],
+    [row("A", sector="Technology", change=None), row("A", sector="Energy", change=None)],
+])
+def test_missing_side_does_not_hide_invalid_or_conflicting_value(rows: list[dict]) -> None:
+    with pytest.raises(AppError) as caught:
+        aggregate_us_sector_rows(rows)
+    assert caught.value.code == "MCP_SCHEMA_MISMATCH"
+
+
 def test_public_envelope_contains_session_contract() -> None:
     retrieved_at = datetime(2026, 9, 27, 7, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
     output = build_us_sector_summary([row("A", change=1.5)], retrieved_at=retrieved_at)
@@ -137,7 +160,7 @@ def test_public_envelope_contains_session_contract() -> None:
 
 def test_public_envelope_requires_timezone_aware_time() -> None:
     with pytest.raises(AppError) as caught:
-        build_us_sector_summary([row("A")], retrieved_at=datetime(2026, 9, 27, 7, 0))
+        build_us_sector_summary([row("A")], retrieved_at=datetime.fromisoformat("2026-09-27T07:00:00"))
     assert caught.value.code == "US_SECTOR_TIME_INVALID"
 
 

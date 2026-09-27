@@ -110,7 +110,21 @@ def save_result(payload: dict[str, Any], project_root: Path) -> Path:
     executed = _executed_at(payload, name=name)
     if executed is None:
         raise AppError("RESULT_WRITE_ERROR", "Screening result is invalid")
-    local = executed.astimezone(TOKYO)
+    return write_json_result(payload, name=name, executed_at=executed, project_root=project_root)
+
+
+def write_json_result(
+    payload: dict[str, Any], *, name: str, executed_at: datetime, project_root: Path,
+) -> Path:
+    """Publish finite JSON atomically with a safe Job or Screening filename."""
+    try:
+        _valid_name(name, project_root)
+        if executed_at.tzinfo is None or executed_at.utcoffset() is None:
+            raise ValueError("Naive result time")
+        local = executed_at.astimezone(TOKYO)
+        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+    except (ConfigError, OverflowError, TypeError, ValueError) as exc:
+        raise AppError("RESULT_WRITE_ERROR", "Result is invalid") from exc
     result_root = project_root / "results"
     if result_root.is_symlink() or not result_root.resolve().is_relative_to(project_root.resolve()):
         raise AppError("RESULT_WRITE_ERROR", "Cannot save screening result")
@@ -120,7 +134,6 @@ def save_result(payload: dict[str, Any], project_root: Path) -> Path:
     temporary: Path | None = None
     try:
         folder.mkdir(parents=True, exist_ok=True)
-        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=folder, suffix=".tmp", delete=False) as temp:
             temporary = Path(temp.name)
             temp.write(body)

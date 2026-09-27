@@ -17,18 +17,18 @@ Python環境からは`python -m tradingview_screening`に同じ引数を渡せ�
 既存の`jobs/sample_screen_daily.json`がサンプルです。filenameと内部nameを一致させ、task.definitionにScreening名を指定します。Screening側もfilename/internal nameを一致させます。一覧は名前順で、壊れたJSON・不正定義・参照不正が1つでもあれば全体を失敗（exit 2）にします。
 
 - `enabled`はSchedulerへの登録可否です。明示的な`run`はfalseでも実行できます。
-- `output.save=true`で標準Screening結果を`results/YYYY-MM-DD/`へ保存します。falseでは保存しません。
+- `output.save=true`で標準Screening結果またはbuiltin summaryを`results/YYYY-MM-DD/`へ保存します。falseでは保存しません。
 - `output.watchlistSync=true`で正常なScreening結果をPhase 7の管理Watchlist同期へ渡します。falseではWatchlist Toolを呼びません。Screening側のwatchlist無効設定も尊重します。
 - Watchlist所有権は保存済みIDのみです。同名の既存Watchlistを採用しません。正常0件は管理Watchlistから全銘柄をremoveするため、条件を確認してください。[同期契約](WATCHLIST_SYNC.md)
-- `builtin`はPhase 8では`JOB_TASK_UNAVAILABLE`です。有効なbuiltinをschedule applyで登録しません。Phase 9の米国セクター集計は未実装です。
+- `builtin`は`us_sector_daily`だけを明示registryで実行・登録対象にします。未知builtinは`JOB_TASK_UNAVAILABLE`です。builtinの`watchlistSync=true`は`CONFIG_VALIDATION_ERROR`です。
 
 ## 多重起動と結果
 
-手動CLIもTask Schedulerも同じJob Runnerを使います。同一JobのScreening・保存・Watchlist同期が終わるまで、`.local/job_locks/<sha256(job_name)>.lock`を保持します。Phase 7のWatchlist lockとは別です。異なるJobは独立して実行できます。
+手動CLIもTask Schedulerも同じJob Runnerを使います。同一JobのScreening・保存・Watchlist同期、またはbuiltinの列discovery・取得・coverage検証・集計・保存が終わるまで、`.local/job_locks/<sha256(job_name)>.lock`を保持します。Phase 7のWatchlist lockとは別です。異なるJobは独立して実行できます。
 
 競合時は待たずに`status=success`、`metadata.skipped=true`、`reason=already_running`、exit 0を返します。権限・path等のlock故障は競合と区別します。残っているlockファイルだけで実行中とは判断できません。
 
-stdoutは`operation=job`のJSONを1つ返します。Screeningの保存結果とは別のEnvelopeです。保存の有無と相対resultPath、Watchlist同期の確定結果、errorsを確認してください。stderrは人間向け診断です。
+stdoutは`operation=job`のJSONを1つ返します。下位結果は`screening`または`builtin`に格納します。保存の有無と相対resultPath、Watchlist同期の確定結果、errorsを確認してください。stderrは人間向け診断です。
 
 | 状態 | exit |
 | --- | --- |
@@ -63,7 +63,15 @@ Phase 8のScheduler登録はdailyの`Asia/Tokyo`だけをサポートします�
 
 IANAとWindowsのtimezone名を推測で変換しません。日本のtimezone規則が変更された場合は実装を見直します。[Microsoft StartBoundary](https://learn.microsoft.com/en-us/windows/win32/taskschd/trigger-startboundary)、[登録とlogon type](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskfolder-registertaskdefinition)を参照してください。
 
-weekly/monthly/cron、macOS/Linux Scheduler、常駐daemon、Phase 9は実装していません。
+weekly/monthly/cron、macOS/Linux Scheduler、常駐daemonは実装していません。
+
+## us_sector_morningサンプルとcoverage制約
+
+`jobs/us_sector_morning.json`はenabled=true、builtin=us_sector_daily、daily 07:00 / Asia/Tokyo、save=true、watchlistSync=falseです。07:00 JSTは米国regular session終了後の運用例であり、休日・早期終了calendarを導入するものではありません。snapshotを改変せず、retrievedAtとsessionAssumptionを記録します。
+
+2026-09-27時点のProviderはfilterなしのamerica/stock取得を拒否しました。上限1000件とpagination不在も確認され、全Universe取得手段は未確認です。**schedule applyの登録対応は実装済みですが、live集計・保存成功はblocking limitationとして未達です。** 今回のsmokeで実Task登録は行いません。
+
+将来の成功応答でも、全件coverage検証を通過するまで保存しません。coverage不足は`US_SECTOR_COVERAGE_INCOMPLETE` / exit1、Provider業務失敗もexit1です。save=falseなら取得・集計のみ行い、metadata.saved=false / resultPath=nullを返します。集計・欠損・重複・rank契約は[Results](RESULTS.md)を参照してください。
 
 ## 実機確認（2026-09-26〜27）
 

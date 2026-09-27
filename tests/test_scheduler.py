@@ -17,12 +17,13 @@ from tradingview_screening.jobs import scheduler
 def make_job(
     root: Path, *, name: str = "daily", enabled: bool = True,
     timezone: str = "Asia/Tokyo", builtin: bool = False,
+    definition: str = "sample",
 ) -> None:
     (root / "jobs").mkdir(exist_ok=True)
     (root / "app.bat").write_text("@echo off\n", encoding="utf-8")
     (root / "jobs" / f"{name}.json").write_text(json.dumps({
         "schemaVersion": 1, "name": name, "enabled": enabled,
-        "task": {"type": "builtin" if builtin else "screening", "definition": "sample"},
+        "task": {"type": "builtin" if builtin else "screening", "definition": definition},
         "schedule": {"type": "daily", "time": "15:40", "timezone": timezone},
         "output": {"save": False, "watchlistSync": False},
     }), encoding="utf-8")
@@ -104,6 +105,23 @@ def test_builtin_enabled_is_rejected_before_write(
     with pytest.raises(AppError) as caught:
         scheduler.apply_schedules(tmp_path)
     assert caught.value.code == "JOB_TASK_UNAVAILABLE"
+
+
+def test_known_builtin_daily_tokyo_is_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    make_job(tmp_path, name="sector", builtin=True, definition="us_sector_daily")
+    fake_windows(monkeypatch)
+    requests: list[dict[str, Any]] = []
+    def bridge(request: dict[str, Any]) -> dict:
+        requests.append(request)
+        return {"ok": True, "result": "created"}
+    monkeypatch.setattr(scheduler, "_bridge", bridge)
+    result = scheduler.apply_schedules(tmp_path)
+    assert result["status"] == "success"
+    assert result["items"][0]["result"] == "created"
+    assert requests[0]["name"] == "sector"
+    assert requests[0]["startBoundary"].endswith("+09:00")
 
 
 def test_apply_validates_all_jobs_before_any_write(

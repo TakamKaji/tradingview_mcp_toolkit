@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。Phase 9の米国セクター集計は未実装です。
+Phase 8までのScreening・保存・Watchlist同期・Job Runner・Windows Schedulerに、Phase 9の米国セクター集計builtin統合を追加しています。ただし、公式Providerがfilterなし取得を拒否し、全Universe取得手段も確認できていないため、米国セクター集計のlive保存は未達です。1000件だけを全米株集計として返すことはありません。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
 
 ## 開発方針
 
@@ -298,11 +298,21 @@ app.bat schedule remove sample_screen_daily
 - dailyのAsia/Tokyoだけを登録対象にし、+09:00を明示します。他IANA/DST timezoneはunsupportedで停止し、ローカル時刻へ読み替えません。
 - Schedulerは保存済みtokenとrefreshのみ。ブラウザOAuth/DCRを起動せず、認証切れはAUTH_REQUIRED/exit 3です。
 - stdoutはJob JSON 1つ。partial/重複skipはexit 0、runtime failureは1、usage/configは2です。保存・同期失敗を成功へ隠しません。
-- builtin本体・米国セクター集計等のPhase 9は未実装です。
+- Phase 9では`us_sector_daily`だけをbuiltin registryで実行・登録対象にします。Provider coverageの制約は下記を参照してください。
 
 2026-09-26〜27、通常Windowsユーザー・Embedded Python 3.12.8で実機確認しました。sample Jobは50件を保存し、新規管理Watchlistへ同期成功。専用Jobでは空白入りディレクトリのTask作成/更新、手動Task起動と06:30の日次トリガー起動、結果1件の生成を確認しました。同一Jobの重複は手動・実Taskともexit 0でskipしました。disabled/定義削除でTaskが残り、明示removeだけで削除されることも確認し、今回作成したTask 2件はcleanup済みです。sampleの管理Watchlistとownership mappingは保持しています。
 
 最終検証は500 passed・4 skipped（すべて従来と同じsymlink作成権限制約）、ruff成功です。Phase 8仕様はGoogle Drive正本を先に更新し、Repositoryへ同期・読み戻し確認済みです。
+
+## 米国セクター集計（Phase 9・Provider制約あり）
+
+`jobs/us_sector_morning.json`はbuiltin `us_sector_daily`をdaily 07:00 JSTに実行するサンプルです。`schedule apply`で登録できますが、登録成功は集計成功を保証しません。Phase 10のsetup・公開配布最終化は今回の対象外です。
+
+Universeは`america / stock`全体、取得列は`sector / change`です。1 symbol = 1票のequal weightでsector別の算術平均`meanChange`と有効銘柄数`sampleSize`を返します。同率はcompetition ranking（1, 1, 3）、表示順はsector名昇順。同値重複は1票、矛盾重複はエラー、欠損は除外、不正型はエラーです。snapshotをそのまま使い、`retrievedAt`と`sessionAssumption`を残します。OHLCV再計算・休日calendar・ニュース解釈は行いません。
+
+2026-09-27のread-only確認で両列のstock対応は確認済みですが、filterなしのScreenerはProvider業務失敗でした。公式資料と実schemaに上限1000件はあるものの、paginationや完全列挙を保証するpartition契約は確認できていません。実US行・totalCount・全件取得・live保存は未検証です。Universeを変えるfilterは追加せず、成功応答でも`returnedCount < totalCount`なら`US_SECTOR_COVERAGE_INCOMPLETE`で保存前に停止します。重複で件数不足が隠れないようunique symbol数も確認します。
+
+成功時はJob JSONの`builtin`にsummaryを格納し、save=trueなら`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存します。save=falseでは保存せず、builtinのwatchlistSync=trueは設定エラーです。現在のblocking limitationの詳細は[Results](docs/RESULTS.md)と[実装仕様19.3](docs/tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)を参照してください。
 
 ## ライセンス
 
