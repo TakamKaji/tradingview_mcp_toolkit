@@ -21,7 +21,7 @@ Python環境からは`python -m tradingview_screening`に同じ引数を渡せ�
 - `output.save=true`で標準Screening結果を`results/YYYY-MM-DD/`へ保存します。falseでは保存しません。
 - `output.watchlistSync=true`で正常なScreening結果をPhase 7の管理Watchlist同期へ渡します。falseではWatchlist Toolを呼びません。Screening側のwatchlist無効設定も尊重します。
 - Watchlist所有権は保存済みIDのみです。同名の既存Watchlistを採用しません。正常0件は管理Watchlistから全銘柄をremoveするため、条件を確認してください。[同期契約](WATCHLIST_SYNC.md)
-- `builtin`はPhase 8では`JOB_TASK_UNAVAILABLE`です。有効なbuiltinをschedule applyで登録しません。Phase 9の米国セクター集計は未実装です。
+- `builtin`の`us_sector_daily`はPhase 9で実装されています。未知builtinは`JOB_TASK_UNAVAILABLE`、builtinで`watchlistSync=true`は設定エラーです。全米株の条件なし取得は現行公式MCPが拒否するため、`us_sector_morning`サンプルはenabled=falseです。
 
 ## 多重起動と結果
 
@@ -64,7 +64,15 @@ Phase 8のScheduler登録はdailyの`Asia/Tokyo`だけをサポートします�
 
 IANAとWindowsのtimezone名を推測で変換しません。日本のtimezone規則が変更された場合は実装を見直します。[Microsoft StartBoundary](https://learn.microsoft.com/en-us/windows/win32/taskschd/trigger-startboundary)、[登録とlogon type](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskfolder-registertaskdefinition)を参照してください。
 
-weekly/monthly/cron、macOS/Linux Scheduler、常駐daemon、Phase 9は実装していません。
+weekly/monthly/cron、macOS/Linux Scheduler、常駐daemonは実装していません。
+
+## us_sector_morningサンプルとcoverage制約
+
+`jobs/us_sector_morning.json`はenabled=false、builtin=us_sector_daily、daily 07:00 / Asia/Tokyo、save=true、watchlistSync=falseです。07:00 JSTは米国regular session終了後の運用例であり、休日・早期終了calendarを導入するものではありません。snapshotを改変せず、retrievedAtとsessionAssumptionを記録します。
+
+2026-10-18の再検証でもProviderは条件なしのamerica/stock取得を拒否しました。上限1000件とpagination不在も同じで、全Universe取得手段は未確認です。S&P 500限定取得の成功は全米株coverageの根拠になりません。**schedule applyでのbuiltin登録対応は実装済みですが、同梱Jobはデフォルト無効のため自動登録されません。本番の全米株集計・保存成功は未達です。検証専用S&P 500の503銘柄・20分類では集計・保存成功を実測しました。** 今回のsmokeでは実Task登録・削除を行っていません。
+
+将来の成功応答でも、全件coverage検証を通過するまで保存しません。coverage不足は`US_SECTOR_COVERAGE_INCOMPLETE` / exit1、Provider業務失敗もexit1です。save=falseなら取得・集計のみ行い、metadata.saved=false / resultPath=nullを返します。集計・欠損・重複・rank契約は[Results](RESULTS.md)を参照してください。
 
 ## 実機確認（2026-09-26〜27）
 

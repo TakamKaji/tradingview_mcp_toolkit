@@ -14,9 +14,10 @@ from tradingview_screening.common.config import definition_path
 from tradingview_screening.common.errors import AppError, ConfigError, TransientRequestError
 from tradingview_screening.integrations.tradingview.client import TradingViewClient
 from tradingview_screening.screening.engine import run_screening
-from tradingview_screening.screening.results import TOKYO, save_result
+from tradingview_screening.screening.results import TOKYO, save_result, write_json_result
 from tradingview_screening.screening.watchlist_sync import sync_screening_watchlist
 
+from .builtin import BUILTINS, validate_builtin_job
 from .loader import list_job_names, load_job_by_name, validate_job_screening_reference
 from .schema import JobDefinition
 
@@ -61,6 +62,7 @@ def _envelope(name: str, job: JobDefinition | None, started: float) -> dict[str,
             "resultPath": None,
         },
         "screening": None,
+        "builtin": None,
         "watchlistSync": None,
         "errors": [],
     }
@@ -98,6 +100,17 @@ def list_jobs(project_root: Path) -> dict[str, Any]:
         job = load_job_by_name(name, project_root)
         if job.task.type == "screening":
             validate_job_screening_reference(job, project_root)
+        else:
+            try:
+                validate_builtin_job(job)
+            except AppError as exc:
+                if exc.code == "JOB_TASK_UNAVAILABLE":
+                    raise ConfigError(
+                        "CONFIG_REFERENCE_NOT_FOUND",
+                        "Referenced builtin is unavailable",
+                        "task.definition",
+                    ) from exc
+                raise
         jobs.append({
             "name": job.name,
             "enabled": job.enabled,
@@ -156,7 +169,28 @@ async def run_job(name: str, project_root: Path) -> dict[str, Any]:
         raise AppError("JOB_LOCK_ERROR", "Cannot acquire Job lock") from exc
     try:
         if job.task.type == "builtin":
-            _record_error(payload, AppError("JOB_TASK_UNAVAILABLE", "Builtin Job is unavailable"))
+            validate_builtin_job(job)
+            builtin = BUILTINS[job.task.definition]
+            async with TradingViewClient() as client:
+                result = await builtin(client)
+            if (
+                not isinstance(result, dict)
+                or result.get("operation") != "us_sector_summary"
+                or result.get("status") != "success"
+                or result.get("name") != job.task.definition
+            ):
+                raise AppError("JOB_BUILTIN_INVALID", "Builtin result is invalid")
+            payload["builtin"] = result
+            if job.output.save:
+                try:
+                    retrieved_at = datetime.fromisoformat(result["retrievedAt"])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise AppError("JOB_BUILTIN_INVALID", "Builtin retrieval time is invalid") from exc
+                saved_path = write_json_result(
+                    result, name=job.name, executed_at=retrieved_at, project_root=project_root,
+                )
+                payload["metadata"]["saved"] = True
+                payload["metadata"]["resultPath"] = saved_path.relative_to(project_root).as_posix()
             return _finish(payload, started)
         screening = validate_job_screening_reference(job, project_root)
         if screening is None:

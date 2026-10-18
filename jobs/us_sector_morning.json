@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "us_sector_morning",
+  "enabled": false,
+  "task": {
+    "type": "builtin",
+    "definition": "us_sector_daily"
+  },
+  "schedule": {
+    "type": "daily",
+    "time": "07:00",
+    "timezone": "Asia/Tokyo"
+  },
+  "output": {
+    "save": true,
+    "watchlistSync": false
+  }
+}

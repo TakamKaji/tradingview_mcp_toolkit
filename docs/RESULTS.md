@@ -1,4 +1,4 @@
-# Screening結果（Phase 6）
+# Screening結果・履歴・米国セクター集計（Phase 6/9/11）
 
 `python -m tradingview_screening screen <name>` は `screenings/<name>.json` を実行し、成功時にstdoutとファイルへ同じアプリJSONを返します。リポジトリ直下から実行してください。
 
@@ -124,3 +124,67 @@ comparisonScopeはcoverageが両方trueなら `full_matched_set`、それ以外�
 上記は出力の抜粋です。実行例は `app.bat results compare observed_sample`、exit 0でした。旧fingerprintなしの2結果はMISSING_FINGERPRINT、limitを変更した2結果はDEFINITION_MISMATCHでexit 1を確認しました。既存public_japan_valueは保存結果1件のためhistory/latestはexit 0、compareはNO_BASELINE / exit 1でした。比較のためのMCPアクセスは行っていません。
 
 履歴・比較はローカルread-onlyです。TradingView MCP・認証情報・Watchlist・Alert・Schedulerを操作しません。差分ファイルを自動保存せず、既存結果ファイルも変更しません。
+
+## 米国セクターsummary（Phase 9）
+
+`us_sector_daily`は`america / stock`全Universeからsector/changeを取得するbuiltinです。sample Jobは`us_sector_morning`（daily 07:00 JST、現行Betaはenabled=false）。1 symbol = 1票のequal weightでsector別算術平均を計算し、時価総額加重は行いません。
+
+| Field | 内容 |
+| --- | --- |
+| schemaVersion / status | 1 / success（正常summaryのみ保存） |
+| operation / name | us_sector_summary / us_sector_daily |
+| retrievedAt | timezone-aware取得時刻 |
+| source | tradingview_official_mcp |
+| metadata.market / symbolTypes | america / ["stock"] |
+| metadata.changeMetric | tradingview_change_snapshot_percent |
+| metadata.validSymbolCount | 有効なunique symbol数 |
+| metadata.excludedRowCount | sector/change欠損で除外したunique symbol数 |
+| metadata.sectorCount | 出力sector数 |
+| metadata.sessionAssumption | 米国regular session終了後に実行し、返されたsnapshotを使う運用前提 |
+| results | rank / sector / meanChange / sampleSize |
+| errors | 正常時は空配列 |
+
+`meanChange`は有限の算術平均、`sampleSize`はそのsectorの有効unique symbol数です。入力順序に依存しません。平均降順、数値完全一致の同率はcompetition ranking（1, 1, 3）、同率の表示順はsector名昇順です。表示丸めで同率を作りません。
+
+同一symbol・同じsector/changeの重複は1票、矛盾する重複は`MCP_SCHEMA_MISMATCH`。sectorの前後空白は除去します。sector/changeの不在・nullは除外しますが、片側欠損でも他方の型を検証します。空sector、bool、NaN、Inf、不正型・row構造・symbolはschema mismatchであり、ゼロや欠損に置き換えません。同一欠損symbolの重複はexcludedRowCountでも1件です。
+
+休日・早期終了calendarは導入せず、regular session終了前の実行でも数値を改変しません。retrievedAtとsessionAssumptionから実行条件を確認してください。OHLCVからの再計算、ニュース理由分析は行いません。
+
+### Coverageと実Provider確認
+
+2026-09-27、通常Windowsユーザー + Embedded Python 3.12.8でread-only確認しました。
+
+| 確認 | 結果 |
+| --- | --- |
+| app.bat mcp status | 認証・Tool Discovery成功、server 1.30.0 / protocol 2025-11-25 |
+| 実list_tools | 35 tools。run_screenerは上限1000、offset/page/cursorなし |
+| get_screener_columns | market=stock、search=sector/changeで各完全一致nameとstock対応を確認 |
+| 最小run_screener | market=america、symbol_types=["stock"]、columns=["sector","change"]、limit=1はsuccess=false、dataなし |
+| 空filters / 明示sort | filters={}、さらにchange/descを指定してもfilterを要求する業務失敗 |
+| 全Universe・US実row・totalCount | 未検証。正式な完全取得手段は確認できず |
+| live Job実行・保存 | coverage未確定のため未実行。成功保存を確認したとは扱わない |
+
+[公式MCP資料](https://www.tradingview.com/mcp/docs)も上限1000件を示します。field discoveryはstructured_content.columnsのname/marketsを使用します。Screener正規化はPhase 6で観測済みのstructured_content.data.rows/totalCountを基礎とし、US成功応答はUnit Testで検証します。US実測と他市場での過去の観測を混同しません。市場データ値や生エラー本文は記録しません。
+
+全Universe契約は維持し、S&P 500・NASDAQ・先頭1000件へ縮小しません。Universeを変えるfilterや大量分割queryで回避しません。成功応答でもreturnedCountはlen(rows)から算出し、非負整数totalCountと比較します。小さければ`US_SECTOR_COVERAGE_INCOMPLETE`、大きい・不正型なら`MCP_SCHEMA_MISMATCH`です。unique symbol数も照合し、重複で未取得銘柄を隠しません。完全性を確認する前に集計・保存しません。
+
+### 2026-10-18の再判定
+
+既存Python TradingViewClient / 共通RequestGovernorでDiscoveryと少量Readを再実行しました。protocol 2025-11-25、server 1.30.0、35 Tool、Screener schemaは同一です。sector/changeはstock対応、S&P 500 filterとsymbolsetは各totalCount=503 / returnedCount=5で、symbol・sector・changeを持つobject行を確認しました。
+
+一方、filter/preset/symbolsetを全省略したamerica/stockはsuccess=falseでした。上限1000件、pagination/offset/cursorなしのため全米株を完全取得する公式手段は未確認です。S&P 500は限定Universeとしてのみ成功扱いにし、全米株集計のlive実行・保存は行っていません。Issue #18 / PR #19のblocking limitationとDraftを維持します。一般Screening拡張は独立Issue #22 / PR #23で管理します。
+
+### Job接続と保存
+
+Job stdoutはoperation=job、task.type=builtin、task.definition=us_sector_dailyとし、`builtin`に上記summaryを格納します。save=trueならsummaryだけを`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存し、Job.metadata.saved=true / resultPathに相対パスを返します。日付・時刻はretrievedAtをAsia/Tokyoへ変換します。同秒suffix、非上書きatomic publish、有限JSONとpath safetyはScreening保存と同じ契約です。
+
+save=falseでは取得・集計のみ、metadata.saved=false / resultPath=nullです。Provider失敗・coverage不足・型破損時はJob failed / exit1で保存しません。AUTH_REQUIREDはexit3、builtinのwatchlistSync=trueはCONFIG_VALIDATION_ERROR / exit2。未知builtinはJOB_TASK_UNAVAILABLEです。raw responseは渡しません。
+
+`results latest`は既存Screening専用のままです。builtin結果はJobのresultPathを使用してください。全Universe取得とlive保存の未達はblocking limitationとして追跡し、Phase 9全体の完了とは扱いません。
+
+### 2026-10-18 23:02〜23:03 JST 追加実機確認
+
+- 本番の `app.bat run us_sector_morning`：現行公式MCPは条件なしの `america/stock` 取得を拒否し、`PROVIDER_ERROR` / exit 1、JSON保存なし。実行と通信は正常に到達。
+- 検証専用S&P 500：`filters.index="S&P 500"`、`totalCount=returnedCount=uniqueSymbolCount=503`、無視されたfilterなし。TradingView sector分類20件、有効503件・除外0件。各平均・件数・rankを独立照合し、JSON保存と読み戻し成功。
+- これは **S&P 500限定での成功** であり、全米株本番summaryの成功ではない。Beta公開サンプルは `enabled=false` とし、Provider更新により全Universeの取得方法が確立するまで定期登録しない。
+- [Issue #18の検証根拠](https://github.com/TakamKaji/tradingview_mcp_support/issues/18#issuecomment-6250858944) を参照。
