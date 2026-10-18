@@ -318,7 +318,7 @@ app.bat schedule remove sample_screen_daily
 
 Phase 10はPhase 9のbuiltin米国セクター集計から独立して先行できます。Windowsでは `setup.bat` がEmbedded Python、pip、依存導入までを担当し、通常実行は共通 `app.bat` へ統一します。公開用の初回JobはWatchlistへ書き込まず、定期登録も自動では行いません。
 
-Repository上のbootstrap契約はUnit Testで固定しますが、Phase 10の最終受け入れではPython未導入相当のclean Windows環境で `setup.bat` → `app.bat mcp status` までのfresh-machine smokeを別途確認します。Phase 9の未実装はこの導線を妨げません。
+2026-10-18、Windows実機の空の検証コピーで、PATHからsystem Pythonを除外し、`setup.bat --no-pause` による新規導入、正常runtimeの再利用、標準ライブラリ欠落からの復旧を確認しました。保存済みcredentialによるstatus/toolsと公開Jobの50件保存も成功しました。新規Windowsアカウントでの初回OAuthは未実施です。条件と検証範囲は[Windows Setup](docs/WINDOWS_SETUP.md)を参照してください。
 
 ## ライセンス
 

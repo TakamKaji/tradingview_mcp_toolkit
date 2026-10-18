@@ -12,7 +12,11 @@ set "NO_PAUSE="
 
 if /I "%~1"=="--no-pause" set "NO_PAUSE=1"
 
-for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do set "PTH_FILENAME=python%%a%%b._pth"
+for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
+    set "PTH_FILENAME=python%%a%%b._pth"
+    set "STDLIB_FILENAME=python%%a%%b.zip"
+    set "DLL_FILENAME=python%%a%%b.dll"
+)
 
 cd /d "%~dp0"
 if errorlevel 1 goto :error
@@ -24,7 +28,13 @@ echo.
 if not exist "%RUNTIME_DIR%\" mkdir "%RUNTIME_DIR%"
 if errorlevel 1 goto :error
 
-if exist "%TARGET_DIR%\python.exe" (
+set "RUNTIME_HEALTHY="
+if exist "%TARGET_DIR%\python.exe" if exist "%TARGET_DIR%\%PTH_FILENAME%" if exist "%TARGET_DIR%\%STDLIB_FILENAME%" if exist "%TARGET_DIR%\%DLL_FILENAME%" (
+    "%TARGET_DIR%\python.exe" -I -c "import sys, encodings, ssl, pathlib; assert '.'.join(map(str, sys.version_info[:3])) == '%PYTHON_VERSION%'; assert any(line.strip() in ('#import site', 'import site') for line in pathlib.Path(sys.executable).with_name('%PTH_FILENAME%').read_text().splitlines())" >nul 2>&1
+    if not errorlevel 1 set "RUNTIME_HEALTHY=1"
+)
+
+if defined RUNTIME_HEALTHY (
     echo Embedded Python already exists. Reusing it.
 ) else (
     if exist "%TARGET_DIR%\" (
@@ -37,14 +47,14 @@ if exist "%TARGET_DIR%\python.exe" (
 
     echo Downloading Embedded Python from %DOWNLOAD_URL% ...
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%DOWNLOAD_PATH%'"
+      "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $env:DOWNLOAD_URL -OutFile $env:DOWNLOAD_PATH"
     if errorlevel 1 goto :error
 
     mkdir "%TARGET_DIR%"
     if errorlevel 1 goto :error
 
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "Expand-Archive -LiteralPath '%DOWNLOAD_PATH%' -DestinationPath '%TARGET_DIR%'"
+      "Expand-Archive -LiteralPath $env:DOWNLOAD_PATH -DestinationPath $env:TARGET_DIR"
     if errorlevel 1 goto :error
 
     del /q "%DOWNLOAD_PATH%" >nul 2>&1
@@ -59,7 +69,7 @@ if not exist "%PTH_FILEPATH%" (
 
 rem Always enable site on rerun as well. A previous setup may have stopped after extraction.
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$path = '%PTH_FILEPATH%'; $content = (Get-Content -LiteralPath $path -Raw) -replace '#import site', 'import site'; $encoding = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($path, $content, $encoding)"
+  "$path = $env:PTH_FILEPATH; $content = (Get-Content -LiteralPath $path -Raw) -replace '(?m)^#import site[ \t]*(\r?)$', 'import site$1'; if ($content -notmatch '(?m)^import site[ \t]*\r?$') { throw 'Embedded Python site configuration is invalid' }; $encoding = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($path, $content, $encoding)"
 if errorlevel 1 goto :error
 
 call "%~dp0setenv.bat"

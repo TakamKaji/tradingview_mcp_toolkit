@@ -40,7 +40,7 @@ setup.bat --no-pause
 
 システムPythonは参照しません。`setenv.bat` が起動プロセス内だけEmbedded PythonをPATH先頭へ置き、`PYTHONHOME` / `PYTHONPATH` をクリアします。Windowsのユーザープロファイル、Credential Manager、既定ブラウザ、TEMPは置き換えません。
 
-途中で壊れたruntime directoryだけが残っている場合、`python.exe` が存在しなければそのdirectoryを削除して再構築します。正常な `python.exe` がある場合はruntimeを再利用し、依存導入は再実行します。
+runtimeの再利用前に、`python.exe`・`python312._pth`・標準ライブラリZIP・DLLを確認し、Python 3.12.8の起動とSSL・site設定も検査します。不完全な場合は`runtime/python-3.12.8/`だけを再構築します。正常なruntimeは再利用し、依存導入は再実行します。ZIP由来のCRLFとLFの両方でsite設定を補正できます。
 
 ## MCP認証
 
@@ -104,10 +104,23 @@ python -m ruff check .
 
 通常は `setup.bat` の再実行で十分です。
 
-Embedded Python本体が破損し、`python.exe` 自体は残っている場合だけ、アプリを終了した上で `runtime/python-3.12.8/` を削除してから `setup.bat` を再実行します。
+アプリを終了してから再実行してください。`python.exe`が残っていても、標準ライブラリやDLLの欠落・起動検査の失敗を検出した場合は自動再構築します。依存パッケージの導入に失敗した場合も、原因を解消して同じsetupを再実行できます。
 
 `.local/` はOAuth補助情報・lock・cache等のアプリ固有ローカルデータです。runtime再構築のために削除する必要はありません。認証情報の本体はWindows Credential Manager側です。
 
-## Phase 9との関係
+## 2026-10-18の実機確認
+
+Windows実機のソース検証コピーに空のruntimeから導入しました。プロセスのPATHをWindows標準ディレクトリだけにし、system Pythonを利用しない状態で以下を確認しています。
+
+- `setup.bat --no-pause`: Python 3.12.8、pip、依存導入、共通CLI起動まで成功。
+- 同じsetupの再実行: 正常runtimeを再利用して成功。
+- 検証コピーの `python312.zip` だけを退避した状態: `python.exe` が残っていてもruntimeを再構築し、`.local` 内の確認用ファイルを保持。
+- `python312._pth` のCRLF/LF双方: `import site` 補正と再実行のテストに成功。
+- `app.bat mcp status` / `app.bat mcp tools`: 通常ユーザーの保存済みcredentialで認証、35 ToolのDiscoveryに成功。
+- `app.bat run public_sample_screen_daily`: success、50件をJSON保存、Watchlist同期なし、errors空。
+
+これは既存Windowsユーザー上でのPython未導入相当の検証です。新規OS・新規アカウントでの初回OAuthは実施していません。既存credentialとownership mappingは保持し、Watchlist/Alert WriteやTask Scheduler登録・削除は行っていません。
+
+## Phase 9との関係（実装境界）
 
 Phase 10のWindows bootstrap / DocsはPhase 9の米国セクター集計から独立しています。Phase 9 builtinが未実装でも、MCP認証、通常Screening、Job、Scheduler、公開read-only sampleは利用できます。
