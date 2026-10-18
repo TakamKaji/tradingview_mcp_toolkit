@@ -16,14 +16,6 @@ stdoutはJSON 1つ、stderrは診断です。exit 0でもpartialやalready_runni
 
 AUTH_REQUIREDはpartialのときもexit 3を優先します。未実装builtinやSchedulerのunsupportedはexit 1です。
 
-同一Jobは全実行期間をfilelockで保護します。二重起動は待機せずalready_running/exit 0です。失敗後にWriteを自動再送・rollbackせず、確定済み結果とエラーを確認します。
-
-Taskは`TradingViewMcpSupport__<job_name>`です。applyは有効Jobの作成/更新だけを行い、disabled・定義消失による削除はしません。削除はremoveの完全一致だけです。既存ユーザーTaskをテストに流用しないでください。
-
-SchedulerはWindows通常ユーザーのログオン中に実行し、保存済みOAuth tokenとrefreshだけを使います。認証切れ時にブラウザ・DCR・mcp authを自動起動しません。対応timezoneはdailyのAsia/Tokyo（明示+09:00）のみで、他IANA/DSTをローカル時刻へ読み替えません。
-
-`screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。詳しくは[Schedule Manual](SCHEDULE_MANUAL.md)、[Screening Manual](SCREENING_MANUAL.md)、[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。
-
 ## 米国セクターbuiltin
 
 `results latest`はScreening結果用です。builtin保存結果はJob JSONの相対resultPathで参照します。
@@ -34,4 +26,14 @@ Phase 9の`us_sector_daily`は、`america / stock`全Universeのsector/changeを
 
 full coverageを安全に確認できるまでliveの`app.bat run us_sector_morning`は実行しません。確認できた後は共通CLIを使用します。成功応答の件数不足は`US_SECTOR_COVERAGE_INCOMPLETE`で保存せず停止します。取得・列確認は同一Clientと既存RequestGovernor経由です。builtinのwatchlistSync=trueは設定エラーで、Watchlist Writeは行いません。
 
-米国regular session終了後のsnapshotを使う運用前提はsessionAssumptionに記録し、retrievedAtを必ず確認してください。休日・早期終了判定やOHLCV再計算はなく、集計へニュース解釈・投資判断を追加しません。詳細は[Results](RESULTS.md)を参照してください。Phase 10のsetup・Public配布最終化は対象外です。
+米国regular session終了後のsnapshotを使う運用前提はsessionAssumptionに記録し、retrievedAtを必ず確認してください。休日・早期終了判定やOHLCV再計算はなく、集計へニュース解釈・投資判断を追加しません。詳細は[Results](RESULTS.md)を参照してください。Windows導入は別PR #21、一般Screening拡張は別PR #23で管理します。
+
+## Jobの排他とTask
+
+同一Jobは全実行期間をfilelockで保護します。二重起動は待機せずalready_running/exit 0です。失敗後にWriteを自動再送・rollbackせず、確定済み結果とエラーを確認します。
+
+Taskは`TradingViewMcpSupport__<job_name>`です。applyは有効Jobの作成/更新だけを行い、disabled・定義消失による削除はしません。削除はremoveの完全一致だけです。既存ユーザーTaskをテストに流用しないでください。
+
+SchedulerはWindows通常ユーザーのログオン中に実行し、保存済みOAuth tokenとrefreshだけを使います。認証切れ時にブラウザ・DCR・mcp authを自動起動しません。対応timezoneはdailyのAsia/Tokyo（明示+09:00）のみで、他IANA/DSTをローカル時刻へ読み替えません。
+
+`screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。詳しくは[Schedule Manual](SCHEDULE_MANUAL.md)、[Screening Manual](SCREENING_MANUAL.md)、[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。
