@@ -251,6 +251,12 @@ stdoutは機械可読JSON、stderrは診断用です。終了コードは0=succe
 
 名前付きScreeningでは公式presetとsymbolsetも指定できます。Provider総件数と実取得行数を分け、条件が無視された応答は保存・同期前に拒否します。日本株・S&P 500・oversold_healthy・symbolsetのread-only例は[Screening Manual](docs/SCREENING_MANUAL.md)、実測範囲は[2026-10-18検証記録](docs/MCP_VERIFICATION_2026-10-18.md)を参照してください。
 
+### TradingView公式MCP Betaの制約（2026-10-18確認）
+
+現行の公式MCPは、条件を全省略した全米株Screening要求をProvider側で拒否します。また `run_screener` は1回最大1000行で、当時の公式Tool schemaにページング引数はありません。したがって**全米株全体の取得・セクター平均集計は本β版では提供していません**。一方、条件付きの通常Screeningは利用可能で、S&P 500を指定した503銘柄の実機取得・限定セクター集計は成功しています。全米株の成功と混同しないでください。
+
+これは2026-10-18時点のProvider挙動であり、公式MCP Betaの更新で変更される可能性があります。利用可能な例、制限とエラーの意味は[Screening Manualの公式MCP Beta制約](docs/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)をご覧ください。
+
 ### 保存結果の履歴・前回比較（Phase 11）
 
 ```bat
