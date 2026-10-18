@@ -307,6 +307,16 @@ Unit Test後の実API確認はWindows Embedded Python 3.12.8・通常ユーザ�
 
 Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済みです。既存 `screen` コマンドはReadと結果保存のみで、Watchlist設定がenabledでも同期しません。Phase 8のJob Runnerから同期APIを再利用します。
 
+## 米国セクター集計（Phase 9・Provider制約あり）
+
+`jobs/us_sector_morning.json`はbuiltin `us_sector_daily`のdaily 07:00 JSTサンプルです。公式MCP Betaが全米株条件なし取得を拒否するため、**enabled=false**で自動Task登録されません。明示的な手動runは可能ですが、実機ではProviderエラー（exit 1・保存なし）となりました。Windows導入の整備は別PR #21で管理します。
+
+Universeは`america / stock`全体、取得列は`sector / change`です。1 symbol = 1票のequal weightでsector別の算術平均`meanChange`と有効銘柄数`sampleSize`を返します。同率はcompetition ranking（1, 1, 3）、表示順はsector名昇順。同値重複は1票、矛盾重複はエラー、欠損は除外、不正型はエラーです。snapshotをそのまま使い、`retrievedAt`と`sessionAssumption`を残します。OHLCV再計算・休日calendar・ニュース解釈は行いません。
+
+2026-10-18のWindows実機で本番Jobは`PROVIDER_ERROR` / exit 1、保存なしでした。一方、検証専用S&P 500では503銘柄を全件取得して、Provider分類20セクターの平均・順位・件数を独立照合しJSON保存・読み戻しに成功しました。これは**全米株の集計成功ではありません**。公式Toolは一度に最大1000行でページング未確認です。Universeを変えるfilterは追加せず、成功応答でも`returnedCount < totalCount`なら`US_SECTOR_COVERAGE_INCOMPLETE`で保存前に停止します。重複で件数不足が隠れないようunique symbol数も確認します。
+
+成功時はJob JSONの`builtin`にsummaryを格納し、save=trueなら`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存します。save=falseでは保存せず、builtinのwatchlistSync=trueは設定エラーです。現在のblocking limitationの詳細は[Results](docs/RESULTS.md)と[実装仕様19.3](docs/tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)を参照してください。
+
 ## Jobs / Scheduler（Phase 8）
 
 ```bat
@@ -327,7 +337,7 @@ app.bat schedule remove sample_screen_daily
 - dailyのAsia/Tokyoだけを登録対象にし、+09:00を明示します。他IANA/DST timezoneはunsupportedで停止し、ローカル時刻へ読み替えません。
 - Schedulerは保存済みtokenとrefreshのみ。ブラウザOAuth/DCRを起動せず、認証切れはAUTH_REQUIRED/exit 3です。
 - stdoutはJob JSON 1つ。partial/重複skipはexit 0、runtime failureは1、usage/configは2です。保存・同期失敗を成功へ隠しません。
-- builtin本体・米国セクター集計等のPhase 9は未実装です。
+- Phase 9のbuiltin集計本体は実装済みですが、条件なし全米株取得は現行公式MCP Betaが拒否するため、全米株集計は未対応です。同梱Jobはenabled=falseです。
 
 2026-09-26〜27、通常Windowsユーザー・Embedded Python 3.12.8で実機確認しました。sample Jobは50件を保存し、新規管理Watchlistへ同期成功。専用Jobでは空白入りディレクトリのTask作成/更新、手動Task起動と06:30の日次トリガー起動、結果1件の生成を確認しました。同一Jobの重複は手動・実Taskともexit 0でskipしました。disabled/定義削除でTaskが残り、明示removeだけで削除されることも確認し、今回作成したTask 2件はcleanup済みです。sampleの管理Watchlistとownership mappingは保持しています。
 
