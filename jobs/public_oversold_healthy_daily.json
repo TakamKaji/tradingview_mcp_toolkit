@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "public_oversold_healthy_daily",
+  "enabled": false,
+  "task": {
+    "type": "screening",
+    "definition": "public_oversold_healthy"
+  },
+  "schedule": {
+    "type": "daily",
+    "time": "15:40",
+    "timezone": "Asia/Tokyo"
+  },
+  "output": {
+    "save": true,
+    "watchlistSync": false
+  }
+}

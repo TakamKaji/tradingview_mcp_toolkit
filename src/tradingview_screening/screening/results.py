@@ -6,6 +6,7 @@ import json
 import os
 import re
 import tempfile
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,10 +18,20 @@ from tradingview_screening.common.errors import AppError, ConfigError
 TOKYO = ZoneInfo("Asia/Tokyo")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 _FILE = re.compile(r"(?P<name>[A-Za-z0-9][A-Za-z0-9_-]*)_(?P<time>\d{6})(?:_(?P<serial>\d+))?\.json\Z")
+_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def _reject_json_constant(_value: str) -> None:
     raise ValueError("Non-standard JSON constant")
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON key")
+        result[key] = value
+    return result
 
 
 def _valid_name(name: str, root: Path) -> None:
@@ -28,7 +39,23 @@ def _valid_name(name: str, root: Path) -> None:
     definition_path(root / "screenings", name, project_root=root)
 
 
-def _executed_at(payload: Any, *, name: str | None = None) -> datetime | None:
+def _valid_fingerprint(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and set(value) == {"version", "algorithm", "value"}
+        and type(value["version"]) is int
+        and value["version"] >= 1
+        and isinstance(value["algorithm"], str)
+        and bool(value["algorithm"])
+        and isinstance(value["value"], str)
+        and _DIGEST.fullmatch(value["value"]) is not None
+    )
+
+
+def _executed_at(
+    payload: Any, *, name: str | None = None, validate_fingerprint: bool = True,
+    validate_uniqueness: bool = True,
+) -> datetime | None:
     if not isinstance(payload, dict):
         return None
     if set(payload) != {
@@ -85,6 +112,30 @@ def _executed_at(payload: Any, *, name: str | None = None) -> datetime | None:
         or ("cacheHit" in metadata and type(metadata["cacheHit"]) is not bool)
     ):
         return None
+    if (
+        validate_fingerprint
+        and "definitionFingerprint" in metadata
+        and not _valid_fingerprint(metadata["definitionFingerprint"])
+    ):
+        return None
+    coverage_fields = {"requestedLimit", "totalCount", "limitReached", "completeCoverage"}
+    if coverage_fields.intersection(metadata) and (
+        not coverage_fields.issubset(metadata)
+        or type(metadata["requestedLimit"]) is not int
+        or metadata["requestedLimit"] != metadata["requestedCount"]
+        or type(metadata["totalCount"]) is not int
+        or metadata["totalCount"] < metadata["returnedCount"]
+        or type(metadata["limitReached"]) is not bool
+        or metadata["limitReached"] is not (
+            metadata["returnedCount"] >= metadata["requestedLimit"]
+        )
+        or type(metadata["completeCoverage"]) is not bool
+        or (validate_uniqueness and metadata["completeCoverage"] is not (
+            metadata["returnedCount"] == metadata["totalCount"]
+            and len({row["symbol"] for row in results}) == metadata["totalCount"]
+        ))
+    ):
+        return None
     try:
         executed = datetime.fromisoformat(payload["executedAt"])
     except (KeyError, TypeError, ValueError):
@@ -110,21 +161,7 @@ def save_result(payload: dict[str, Any], project_root: Path) -> Path:
     executed = _executed_at(payload, name=name)
     if executed is None:
         raise AppError("RESULT_WRITE_ERROR", "Screening result is invalid")
-    return write_json_result(payload, name=name, executed_at=executed, project_root=project_root)
-
-
-def write_json_result(
-    payload: dict[str, Any], *, name: str, executed_at: datetime, project_root: Path,
-) -> Path:
-    """Publish finite JSON atomically with a safe Job or Screening filename."""
-    try:
-        _valid_name(name, project_root)
-        if executed_at.tzinfo is None or executed_at.utcoffset() is None:
-            raise ValueError("Naive result time")
-        local = executed_at.astimezone(TOKYO)
-        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
-    except (ConfigError, OverflowError, TypeError, ValueError) as exc:
-        raise AppError("RESULT_WRITE_ERROR", "Result is invalid") from exc
+    local = executed.astimezone(TOKYO)
     result_root = project_root / "results"
     if result_root.is_symlink() or not result_root.resolve().is_relative_to(project_root.resolve()):
         raise AppError("RESULT_WRITE_ERROR", "Cannot save screening result")
@@ -134,6 +171,7 @@ def write_json_result(
     temporary: Path | None = None
     try:
         folder.mkdir(parents=True, exist_ok=True)
+        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=folder, suffix=".tmp", delete=False) as temp:
             temporary = Path(temp.name)
             temp.write(body)
@@ -160,14 +198,25 @@ def write_json_result(
                 pass
 
 
-def latest_result(project_root: Path, name: str | None = None) -> dict[str, Any]:
-    """Find the newest validated application result across date folders."""
+@dataclass(frozen=True)
+class _StoredResult:
+    payload: dict[str, Any]
+    path: Path
+    executed: datetime
+    serial: int
+
+
+def _scan_results(
+    project_root: Path, name: str | None, *, validate_fingerprint: bool = True,
+    validate_uniqueness: bool = True,
+) -> list[_StoredResult]:
+    """Read safe, timestamp-matched snapshots in deterministic newest-first order."""
     if name is not None:
         _valid_name(name, project_root)
     root = project_root / "results"
     if root.is_symlink() or not root.resolve().is_relative_to(project_root.resolve()):
         raise AppError("RESULT_READ_ERROR", "Cannot read screening results")
-    best: tuple[datetime, int, str, dict[str, Any]] | None = None
+    found: list[_StoredResult] = []
     try:
         folders = root.iterdir()
         for folder in folders:
@@ -178,7 +227,10 @@ def latest_result(project_root: Path, name: str | None = None) -> dict[str, Any]
             ):
                 continue
             for path in folder.iterdir():
-                if not path.is_file() or path.is_symlink():
+                if (
+                    not path.is_file() or path.is_symlink()
+                    or not path.resolve().is_relative_to(folder.resolve())
+                ):
                     continue
                 match = _FILE.fullmatch(path.name)
                 if match is None or (name is not None and match["name"] != name):
@@ -187,22 +239,63 @@ def latest_result(project_root: Path, name: str | None = None) -> dict[str, Any]
                     payload = json.loads(
                         path.read_text(encoding="utf-8"),
                         parse_constant=_reject_json_constant,
+                        object_pairs_hook=_unique_json_object,
                     )
                 except (OSError, UnicodeError, ValueError):
                     continue
-                executed = _executed_at(payload, name=match["name"])
+                executed = _executed_at(
+                    payload, name=match["name"], validate_fingerprint=validate_fingerprint,
+                    validate_uniqueness=validate_uniqueness,
+                )
                 if executed is None:
                     continue
                 local = executed.astimezone(TOKYO)
                 if folder.name != local.strftime("%Y-%m-%d") or match["time"] != local.strftime("%H%M%S"):
                     continue
-                candidate = (executed.astimezone(UTC), int(match["serial"] or 0), path.name, payload)
-                if best is None or candidate[:3] > best[:3]:
-                    best = candidate
+                try:
+                    serial = int(match["serial"] or 0)
+                except ValueError:
+                    continue
+                found.append(_StoredResult(payload, path, executed, serial))
     except FileNotFoundError:
         pass
     except OSError as exc:
         raise AppError("RESULT_READ_ERROR", "Cannot read screening results") from exc
-    if best is None:
+    found.sort(
+        key=lambda item: (item.executed.astimezone(UTC), item.serial, item.path.name),
+        reverse=True,
+    )
+    return found
+
+
+def latest_result(project_root: Path, name: str | None = None) -> dict[str, Any]:
+    """Find the newest validated application result across date folders."""
+    found = _scan_results(project_root, name)
+    if not found:
         raise AppError("RESULT_NOT_FOUND", "No screening result found")
-    return best[3]
+    return found[0].payload
+
+
+def history_result(project_root: Path, name: str, *, limit: int = 20) -> dict[str, Any]:
+    """List successful local snapshots without contacting TradingView."""
+    if type(limit) is not int or not 1 <= limit <= 1000:
+        raise AppError("CLI_USAGE_ERROR", "Invalid history limit")
+    items = []
+    for item in _scan_results(project_root, name):
+        if item.payload["status"] != "success":
+            continue
+        metadata = item.payload["metadata"]
+        items.append({
+            "file": item.path.relative_to(project_root).as_posix(),
+            "executedAt": item.payload["executedAt"],
+            "returnedCount": metadata["returnedCount"],
+            "totalCount": metadata.get("totalCount"),
+            "completeCoverage": metadata.get("completeCoverage"),
+            "definitionFingerprint": metadata.get("definitionFingerprint"),
+        })
+        if len(items) == limit:
+            break
+    return {
+        "schemaVersion": 1, "status": "success", "operation": "screening_history",
+        "name": name, "items": items,
+    }

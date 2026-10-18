@@ -9,6 +9,7 @@ from typing import Self
 import pytest
 
 from tradingview_screening.common.errors import AppError, ConfigError
+from tradingview_screening.integrations.tradingview.schemas import ObservedReadResponse
 from tradingview_screening.jobs import runner
 
 
@@ -141,6 +142,31 @@ def test_failed_screening_does_not_save_or_sync(tmp_path: Path, monkeypatch: pyt
     assert payload["metadata"]["saved"] is False
     assert payload["watchlistSync"]["status"] == "skipped"
     assert runner.job_exit_code(payload) == 1
+
+
+def test_ignored_provider_filter_prevents_save_and_watchlist_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = root_with_job(tmp_path, save=True, sync=True)
+    class IgnoredFilterClient(FakeClient):
+        async def run_screener(self, _request: object) -> ObservedReadResponse:
+            return ObservedReadResponse.model_validate({
+                "structured_content": {"success": True, "data": {
+                    "rows": [], "totalCount": 0,
+                    "ignored_filters": ["price_earnings_ttm"],
+                }},
+                "content": [{"type": "text", "text": "private raw provider content"}],
+            })
+    monkeypatch.setattr(runner, "TradingViewClient", IgnoredFilterClient)
+    monkeypatch.setattr(runner, "save_result", lambda *_args: pytest.fail("No result save"))
+    async def no_write(*_args: object) -> dict:
+        pytest.fail("No Watchlist Write")
+    monkeypatch.setattr(runner, "sync_screening_watchlist", no_write)
+    payload = asyncio.run(runner.run_job("daily", root))
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "MCP_SCHEMA_MISMATCH"
+    assert payload["metadata"]["saved"] is False
+    assert "private raw" not in json.dumps(payload)
 
 
 def test_save_failure_prevents_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

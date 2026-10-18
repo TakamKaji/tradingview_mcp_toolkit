@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "status": "success",
+  "operation": "screening_compare",
+  "name": "observed_sample",
+  "from": {
+    "file": "results/2026-10-17/observed_sample_154000.json",
+    "executedAt": "2026-10-17T15:40:00+09:00",
+    "returnedCount": 2,
+    "totalCount": 12,
+    "completeCoverage": false,
+    "definitionFingerprint": {
+      "version": 1,
+      "algorithm": "sha256",
+      "value": "5b18f8583b10527a30185be5ca7c7170f8007266acc51091aaf09e0f0e3b4eb9"
+    }
+  },
+  "to": {
+    "file": "results/2026-10-18/observed_sample_154000.json",
+    "executedAt": "2026-10-18T15:40:00+09:00",
+    "returnedCount": 2,
+    "totalCount": 13,
+    "completeCoverage": false,
+    "definitionFingerprint": {
+      "version": 1,
+      "algorithm": "sha256",
+      "value": "5b18f8583b10527a30185be5ca7c7170f8007266acc51091aaf09e0f0e3b4eb9"
+    }
+  },
+  "fingerprintMatched": true,
+  "comparisonScope": "observed_set_only",
+  "observedAdded": [
+    "TEST:BBB"
+  ],
+  "observedRemoved": [
+    "TEST:CCC"
+  ],
+  "observedCommon": [
+    "TEST:AAA"
+  ],
+  "indicatorChanges": [
+    {
+      "symbol": "TEST:AAA",
+      "fields": {
+        "close": {
+          "before": {
+            "present": true,
+            "value": 100
+          },
+          "after": {
+            "present": true,
+            "value": 105
+          }
+        },
+        "volume": {
+          "before": {
+            "present": true,
+            "value": 10
+          },
+          "after": {
+            "present": true,
+            "value": 12
+          }
+        }
+      }
+    }
+  ],
+  "totalCountChange": 1
+}

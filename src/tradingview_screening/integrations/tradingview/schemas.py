@@ -8,6 +8,11 @@ from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, model_validator
 
+ScreenerFilterPreset = Literal[
+    "pullback_with_reversal", "breakout_with_volume", "oversold_healthy", "earnings_runup",
+    "relative_strength", "new_highs",
+]
+
 
 class ToolRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
@@ -110,10 +115,7 @@ class RunScreenerRequest(ToolRequest):
     limit: int = Field(default=None, le=1000)
     columns: list[str] | None = None
     symbol_types: list[str] | None = None
-    filter_preset: Literal[
-        "pullback_with_reversal", "breakout_with_volume", "oversold_healthy", "earnings_runup",
-        "relative_strength", "new_highs",
-    ] = None
+    filter_preset: ScreenerFilterPreset = None
     symbolset: list[str] | None = None
 
 

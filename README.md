@@ -16,10 +16,19 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 ## Windows セットアップ
 
 1. リポジトリをcloneする。
-2. `setup.bat` を実行する。
-3. 完了後、`console.bat` を開く。
+2. 通常ユーザー権限で `setup.bat` を実行する。
+3. `app.bat mcp status` で共通CLIへ到達できることを確認する。
+4. 初回未認証なら `AUTH_REQUIRED` / exit 3になるため、`app.bat mcp auth` を実行する。
+5. 認証後に `app.bat mcp status` と `app.bat mcp tools` を確認する。
+6. 書き込みを伴わない公開サンプルは `app.bat run public_sample_screen_daily` で試す。
 
-`setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。
+`setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。exe・標準ライブラリZIP・DLL・設定の欠落や起動検査の失敗は不完全なruntimeとして検出し、対象runtimeだけを再構築します。非対話実行では `setup.bat --no-pause` を利用できます。
+
+`mcp status` は未認証でもブラウザを開きません。初回認証だけを `mcp auth` で明示的に開始し、OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。
+
+公開用の `public_sample_screen_daily` は `enabled=false` / `save=true` / `watchlistSync=false` です。手動runは可能ですが `schedule apply` の登録対象にならず、TradingView WatchlistへのWriteも行いません。既存の `sample_screen_daily` はWatchlist同期を行う運用サンプルなので、初回確認では使い分けてください。
+
+詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。
 
 `setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク作成を必要とする検証がskipされることがあります。
 
@@ -71,7 +80,7 @@ Development:
 
 ## 設定定義（Phase 2）
 
-公開サンプルは `screenings/sample_standard_screen.json` と、それを参照する `jobs/sample_screen_daily.json` です。全モデルで未知キーを拒否し、JobのtimezoneはIANA名を明示する必要があります。
+公開Screeningは `screenings/sample_standard_screen.json` です。初回確認向けの安全なJobは `jobs/public_sample_screen_daily.json` で、Scheduler登録とWatchlist同期を既定で無効にしています。`jobs/sample_screen_daily.json` は同じScreeningを参照しますが、定期登録とWatchlist同期を行う運用サンプルです。全モデルで未知キーを拒否し、JobのtimezoneはIANA名を明示する必要があります。
 
 リポジトリのルートを起点に、Pythonから次のように検証できます。
 
@@ -85,7 +94,7 @@ from tradingview_screening.jobs.loader import (
 )
 
 try:
-    job = load_job_by_name("sample_screen_daily", Path.cwd())
+    job = load_job_by_name("public_sample_screen_daily", Path.cwd())
     screening = validate_job_screening_reference(job, Path.cwd())
 except ConfigError as error:
     print(error.to_dict())
@@ -240,6 +249,25 @@ python -m tradingview_screening results latest sample_standard_screen
 
 stdoutは機械可読JSON、stderrは診断用です。終了コードは0=success/partial、1=実行時失敗、2=usage/定義Validation失敗、3=AUTH_REQUIREDです。詳細は [RESULTS.md](docs/RESULTS.md) を参照してください。
 
+名前付きScreeningでは公式presetとsymbolsetも指定できます。Provider総件数と実取得行数を分け、条件が無視された応答は保存・同期前に拒否します。日本株・S&P 500・oversold_healthy・symbolsetのread-only例は[Screening Manual](docs/SCREENING_MANUAL.md)、実測範囲は[2026-10-18検証記録](docs/MCP_VERIFICATION_2026-10-18.md)を参照してください。
+
+### TradingView公式MCP Betaの制約（2026-10-18確認）
+
+現行の公式MCPは、条件を全省略した全米株Screening要求をProvider側で拒否します。また `run_screener` は1回最大1000行で、当時の公式Tool schemaにページング引数はありません。したがって**全米株全体の取得・セクター平均集計は本β版では提供していません**。一方、条件付きの通常Screeningは利用可能で、S&P 500を指定した503銘柄の実機取得・限定セクター集計は成功しています。全米株の成功と混同しないでください。
+
+これは2026-10-18時点のProvider挙動であり、公式MCP Betaの更新で変更される可能性があります。利用可能な例、制限とエラーの意味は[Screening Manualの公式MCP Beta制約](docs/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)をご覧ください。
+
+### 保存結果の履歴・前回比較（Phase 11）
+
+```bat
+app.bat results history public_japan_value --limit 10
+app.bat results compare public_japan_value
+```
+
+保存済みの成功結果だけをローカルで読み、履歴と直近2件の観測銘柄・指標値の差分をJSONで返します。新しい成功結果には実行定義のversion付きSHA-256 fingerprintを付けます。同名でも条件が違う、旧結果にfingerprintがない、比較対象が不足する場合は理由を返し、古い比較可能な結果へ飛びません。
+
+`completeCoverage=false`の差分は取得した観測集合の増減です。銘柄が見えなくなっても条件不適合とは断定しません。履歴・比較からMCP、認証、Watchlist、Alert、Schedulerを操作せず、結果の移行・自動保存も行いません。出力と失敗理由は[Results](docs/RESULTS.md)を参照してください。
+
 ### Phase 6の実MCP確認
 
 2026-09-26、Windows Embedded Python 3.12.8・通常ユーザー・保存credentialで、Read-onlyの `run_screener` をlimit=1で確認しました。銘柄指定の空結果と、サンプル条件の1行取得が成功し、`structured_content.success=true`、`data.rows`、`data.totalCount`、行の `symbol` と要求列の構造を実測しました。要求外の追加列は保存対象に含めません。Providerの本文や市場データ値をfixtureへ保存していません。
@@ -279,27 +307,18 @@ Unit Test後の実API確認はWindows Embedded Python 3.12.8・通常ユーザ�
 
 Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済みです。既存 `screen` コマンドはReadと結果保存のみで、Watchlist設定がenabledでも同期しません。Phase 8のJob Runnerから同期APIを再利用します。
 
-## 米国セクター集計（Phase 9・Provider制約あり）
-
-`jobs/us_sector_morning.json`はbuiltin `us_sector_daily`をdaily 07:00 JSTに実行するサンプルです。`schedule apply`で登録できますが、登録成功は集計成功を保証しません。Windows導入の整備は別PR #21で管理します。
-
-Universeは`america / stock`全体、取得列は`sector / change`です。1 symbol = 1票のequal weightでsector別の算術平均`meanChange`と有効銘柄数`sampleSize`を返します。同率はcompetition ranking（1, 1, 3）、表示順はsector名昇順。同値重複は1票、矛盾重複はエラー、欠損は除外、不正型はエラーです。snapshotをそのまま使い、`retrievedAt`と`sessionAssumption`を残します。OHLCV再計算・休日calendar・ニュース解釈は行いません。
-
-2026-10-18に既存Python clientで再確認し、sector/change列のstock対応と、S&P 500に限定した503件中5件のobject行・symbol形式を確認しました。ただし条件なしamerica/stockは引き続きProvider業務失敗で、上限1000件・pagination不在も同じです。限定集合の成功は全米株Universe取得を保証しないため、全件集計・live保存は未実施、PR #19はDraftを維持します。Universeを変えるfilterは追加せず、成功応答でも`returnedCount < totalCount`なら`US_SECTOR_COVERAGE_INCOMPLETE`で保存前に停止します。重複で件数不足が隠れないようunique symbol数も確認します。
-
-成功時はJob JSONの`builtin`にsummaryを格納し、save=trueなら`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存します。save=falseでは保存せず、builtinのwatchlistSync=trueは設定エラーです。現在のblocking limitationの詳細は[Results](docs/RESULTS.md)と[実装仕様19.3](docs/tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)を参照してください。
-
 ## Jobs / Scheduler（Phase 8）
 
 ```bat
 app.bat jobs list
+app.bat run public_sample_screen_daily
 app.bat run sample_screen_daily
 app.bat schedule apply
 app.bat schedule list
 app.bat schedule remove sample_screen_daily
 ```
 
-共通Job RunnerがScreening→任意保存→任意Watchlist同期を同じClient sessionで実行します。サンプルJobはsave/watchlistSyncともにtrueなので、runすると管理Watchlistへ実Writeします。詳細は[Schedule Manual](docs/SCHEDULE_MANUAL.md)、AIからの操作は[AI Usage](docs/AI_USAGE.md)を参照してください。
+共通Job RunnerがScreening→任意保存→任意Watchlist同期を同じClient sessionで実行します。`public_sample_screen_daily` は初回確認用のread-only Jobです。`sample_screen_daily` はsave/watchlistSyncともにtrueなので、runすると管理Watchlistへ実Writeします。詳細は[Schedule Manual](docs/SCHEDULE_MANUAL.md)、AIからの操作は[AI Usage](docs/AI_USAGE.md)を参照してください。
 
 - `enabled`は登録可否。明示的な手動runはfalseでも実行できます。jobs listは不正な定義・参照が1つでもあればexit 2です。
 - 同一Job全体を`.local/job_locks/<sha256(job_name)>.lock`で保護します。重複時は待機せずalready_running/exit 0、異なるJobは独立です。
@@ -308,11 +327,17 @@ app.bat schedule remove sample_screen_daily
 - dailyのAsia/Tokyoだけを登録対象にし、+09:00を明示します。他IANA/DST timezoneはunsupportedで停止し、ローカル時刻へ読み替えません。
 - Schedulerは保存済みtokenとrefreshのみ。ブラウザOAuth/DCRを起動せず、認証切れはAUTH_REQUIRED/exit 3です。
 - stdoutはJob JSON 1つ。partial/重複skipはexit 0、runtime failureは1、usage/configは2です。保存・同期失敗を成功へ隠しません。
-- Phase 9では`us_sector_daily`だけをbuiltin registryで実行・登録対象にします。Provider coverageの制約は下記を参照してください。
+- builtin本体・米国セクター集計等のPhase 9は未実装です。
 
 2026-09-26〜27、通常Windowsユーザー・Embedded Python 3.12.8で実機確認しました。sample Jobは50件を保存し、新規管理Watchlistへ同期成功。専用Jobでは空白入りディレクトリのTask作成/更新、手動Task起動と06:30の日次トリガー起動、結果1件の生成を確認しました。同一Jobの重複は手動・実Taskともexit 0でskipしました。disabled/定義削除でTaskが残り、明示removeだけで削除されることも確認し、今回作成したTask 2件はcleanup済みです。sampleの管理Watchlistとownership mappingは保持しています。
 
 最終検証は500 passed・4 skipped（すべて従来と同じsymlink作成権限制約）、ruff成功です。Phase 8仕様はGoogle Drive正本を先に更新し、Repositoryへ同期・読み戻し確認済みです。
+
+## Windows配布と公開導線（Phase 10）
+
+Phase 10はPhase 9のbuiltin米国セクター集計から独立して先行できます。Windowsでは `setup.bat` がEmbedded Python、pip、依存導入までを担当し、通常実行は共通 `app.bat` へ統一します。公開用の初回JobはWatchlistへ書き込まず、定期登録も自動では行いません。
+
+2026-10-18、Windows実機の空の検証コピーで、PATHからsystem Pythonを除外し、`setup.bat --no-pause` による新規導入、正常runtimeの再利用、標準ライブラリ欠落からの復旧を確認しました。保存済みcredentialによるstatus/toolsと公開Jobの50件保存も成功しました。新規Windowsアカウントでの初回OAuthは未実施です。条件と検証範囲は[Windows Setup](docs/WINDOWS_SETUP.md)を参照してください。
 
 ## ライセンス
 

@@ -19,8 +19,12 @@ from tradingview_screening.integrations.tradingview.schemas import (
     ObservedReadResponse,
     RunScreenerRequest,
 )
-from tradingview_screening.integrations.tradingview.screener_normalization import normalize_screener
+from tradingview_screening.integrations.tradingview.screener_normalization import (
+    normalize_screener,
+    normalize_screener_snapshot,
+)
 from tradingview_screening.screening.engine import run_screening, to_screener_request
+from tradingview_screening.screening.fingerprint import definition_fingerprint
 from tradingview_screening.screening.results import latest_result, save_result
 from tradingview_screening.screening.validators import load_screening_by_name, validate_screening
 
@@ -112,6 +116,34 @@ def test_mapping_omits_optional_sort_without_sending_null() -> None:
     assert "sort_by" not in request.model_dump(mode="json", exclude_unset=True)
 
 
+def test_mapping_supports_preset_and_symbolset_without_empty_filters() -> None:
+    preset = definition()
+    preset["filters"] = {}
+    preset["filterPreset"] = "oversold_healthy"
+    request = to_screener_request(validate_screening(preset))
+    assert request.model_dump(mode="json", exclude_unset=True)["filter_preset"] == "oversold_healthy"
+    assert "filters" not in request.model_dump(mode="json", exclude_unset=True)
+
+    symbolset = definition()
+    symbolset["filters"] = {}
+    symbolset["symbolset"] = ["SYML:SP;SPX"]
+    request = to_screener_request(validate_screening(symbolset))
+    assert request.model_dump(mode="json", exclude_unset=True)["symbolset"] == ["SYML:SP;SPX"]
+    assert "filters" not in request.model_dump(mode="json", exclude_unset=True)
+
+
+@pytest.mark.parametrize("mutation", [
+    {"filterPreset": "unknown"},
+    {"symbolset": []},
+    {"symbolset": [""]},
+    {"symbolset": [" "]},
+])
+def test_invalid_preset_or_symbolset_is_config_error(mutation: dict) -> None:
+    with pytest.raises(ConfigError) as caught:
+        validate_screening(definition() | mutation)
+    assert caught.value.code == "CONFIG_VALIDATION_ERROR"
+
+
 def test_typed_client_path_and_success_normalization() -> None:
     client = FakeClient()
     client.reply = success([{
@@ -123,6 +155,13 @@ def test_typed_client_path_and_success_normalization() -> None:
     assert result["results"] == [{"symbol": "TSE:7203", "name": "Toyota", "close": 100}]
     assert result["metadata"]["requestedCount"] == 1
     assert result["metadata"]["returnedCount"] == 1
+    assert result["metadata"]["requestedLimit"] == 1
+    assert result["metadata"]["totalCount"] == 1
+    assert result["metadata"]["limitReached"] is True
+    assert result["metadata"]["completeCoverage"] is True
+    assert result["metadata"]["definitionFingerprint"] == definition_fingerprint(
+        validate_screening(definition())
+    )
     assert result["metadata"]["partial"] is False
     assert "cacheHit" not in result["metadata"]
     assert result["executedAt"].endswith("+09:00")
@@ -169,6 +208,47 @@ def test_more_rows_than_requested_is_schema_mismatch() -> None:
     with pytest.raises(AppError) as caught:
         asyncio.run(run_screening(validate_screening(definition()), client))
     assert caught.value.code == "MCP_SCHEMA_MISMATCH"
+
+
+def test_provider_total_count_and_duplicate_coverage_are_preserved() -> None:
+    client = FakeClient()
+    data = definition()
+    data["limit"] = 3
+    client.reply = response({"success": True, "data": {
+        "rows": [
+            {"symbol": "TSE:A", "name": "A", "close": 1},
+            {"symbol": "TSE:A", "name": "A", "close": 1},
+        ],
+        "totalCount": 2,
+    }})
+    result = asyncio.run(run_screening(validate_screening(data), client))
+    assert result["metadata"]["requestedCount"] == 3
+    assert result["metadata"]["requestedLimit"] == 3
+    assert result["metadata"]["totalCount"] == 2
+    assert result["metadata"]["returnedCount"] == 2
+    assert result["metadata"]["limitReached"] is False
+    assert result["metadata"]["completeCoverage"] is False
+
+
+@pytest.mark.parametrize("ignored", [["dividends_yield_ttm"], "dividends_yield_ttm", None, [1]])
+def test_ignored_filters_fail_closed_without_raw_values(ignored: object) -> None:
+    payload = {"success": True, "data": {
+        "rows": [{"symbol": "TSE:A", "name": "A"}], "totalCount": 1,
+        "ignored_filters": ignored,
+    }}
+    with pytest.raises(AppError) as caught:
+        normalize_screener_snapshot(response(payload), ["name"])
+    assert caught.value.code == "MCP_SCHEMA_MISMATCH"
+    assert "dividends_yield_ttm" not in caught.value.message
+
+
+def test_empty_ignored_filters_is_valid() -> None:
+    snapshot = normalize_screener_snapshot(response({"success": True, "data": {
+        "rows": [{"symbol": "TSE:A", "name": "A"}], "totalCount": 5,
+        "ignored_filters": [],
+    }}), ["name"])
+    assert snapshot.total_count == 5
+    assert snapshot.rows == [{"symbol": "TSE:A", "name": "A"}]
 
 
 @pytest.mark.parametrize("payload", [
@@ -413,6 +493,36 @@ def test_latest_timezone_absolute_order_and_deterministic_tie(tmp_path: Path) ->
     assert latest_result(tmp_path) == later
 
 
+def test_latest_accepts_legacy_and_new_coverage_metadata(tmp_path: Path) -> None:
+    legacy = result("legacy", "2026-09-26T12:00:00+09:00")
+    save_result(legacy, tmp_path)
+    current = result("current", "2026-09-26T12:00:01+09:00")
+    current["metadata"].update({
+        "requestedLimit": 1, "totalCount": 10,
+        "limitReached": True, "completeCoverage": False,
+    })
+    save_result(current, tmp_path)
+    assert latest_result(tmp_path, "legacy") == legacy
+    assert latest_result(tmp_path, "current") == current
+
+
+@pytest.mark.parametrize("mutation", [
+    {"requestedLimit": 1},
+    {"requestedLimit": 2, "totalCount": 1, "limitReached": True, "completeCoverage": True},
+    {"requestedLimit": 1, "totalCount": True, "limitReached": True, "completeCoverage": True},
+    {"requestedLimit": 1, "totalCount": 1, "limitReached": False, "completeCoverage": True},
+    {"requestedLimit": 1, "totalCount": 2, "limitReached": True, "completeCoverage": True},
+])
+def test_result_rejects_inconsistent_new_coverage_metadata(
+    tmp_path: Path, mutation: dict,
+) -> None:
+    invalid = result("sample", "2026-09-26T12:00:00+09:00")
+    invalid["metadata"].update(mutation)
+    with pytest.raises(AppError) as caught:
+        save_result(invalid, tmp_path)
+    assert caught.value.code == "RESULT_WRITE_ERROR"
+
+
 def test_cli_screen_stdout_persistence_and_exit_zero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -482,6 +592,24 @@ def test_cli_real_failure_does_not_save_and_usage_is_two(
     assert cli.main(["screen"]) == 2
     assert json.loads(capsys.readouterr().out)["error"]["code"] == "CLI_USAGE_ERROR"
     FakeClient.failure = None
+
+
+def test_ignored_filter_does_not_save_cli_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_definition(tmp_path)
+    FakeClient.reply = response({"success": True, "data": {
+        "rows": [{"symbol": "TSE:7203", "name": "Toyota", "close": 100}],
+        "totalCount": 1, "ignored_filters": ["price_earnings_ttm"],
+    }})
+    FakeClient.failure = None
+    monkeypatch.setattr(cli, "TradingViewClient", FakeClient)
+    with pytest.raises(AppError) as caught:
+        asyncio.run(cli._execute_screen(
+            load_screening_by_name("sample", tmp_path), tmp_path, started=cli.time.monotonic(),
+        ))
+    assert caught.value.code == "MCP_SCHEMA_MISMATCH"
+    assert not (tmp_path / "results").exists()
 
 
 def test_cli_results_latest_routes_and_absence(
