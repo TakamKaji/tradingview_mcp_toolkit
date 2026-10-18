@@ -52,4 +52,3 @@ EMA検索は部分文字列一致のpremarket列を返し、EMA50/EMA200をカ�
 sector/change列とS&P 500に限定した少量データは取得できました。しかし条件なしのamerica/stockは拒否され、1000件を超える全米株Universeを完全取得する公式手段は確認できません。S&P 500、先頭1000件、未検証のfilter分割を代替Universeにしません。
 
 Issue #18 / PR #19は引き続きblocking limitationを保持しDraftのままとします。全米株集計のlive保存は未実施です。一般Screeningの成功とPhase 9の全Universe保証は別々に判定します。
-
