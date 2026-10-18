@@ -251,6 +251,17 @@ stdoutは機械可読JSON、stderrは診断用です。終了コードは0=succe
 
 名前付きScreeningでは公式presetとsymbolsetも指定できます。Provider総件数と実取得行数を分け、条件が無視された応答は保存・同期前に拒否します。日本株・S&P 500・oversold_healthy・symbolsetのread-only例は[Screening Manual](docs/SCREENING_MANUAL.md)、実測範囲は[2026-10-18検証記録](docs/MCP_VERIFICATION_2026-10-18.md)を参照してください。
 
+### 保存結果の履歴・前回比較（Phase 11）
+
+```bat
+app.bat results history public_japan_value --limit 10
+app.bat results compare public_japan_value
+```
+
+保存済みの成功結果だけをローカルで読み、履歴と直近2件の観測銘柄・指標値の差分をJSONで返します。新しい成功結果には実行定義のversion付きSHA-256 fingerprintを付けます。同名でも条件が違う、旧結果にfingerprintがない、比較対象が不足する場合は理由を返し、古い比較可能な結果へ飛びません。
+
+`completeCoverage=false`の差分は取得した観測集合の増減です。銘柄が見えなくなっても条件不適合とは断定しません。履歴・比較からMCP、認証、Watchlist、Alert、Schedulerを操作せず、結果の移行・自動保存も行いません。出力と失敗理由は[Results](docs/RESULTS.md)を参照してください。
+
 ### Phase 6の実MCP確認
 
 2026-09-26、Windows Embedded Python 3.12.8・通常ユーザー・保存credentialで、Read-onlyの `run_screener` をlimit=1で確認しました。銘柄指定の空結果と、サンプル条件の1行取得が成功し、`structured_content.success=true`、`data.rows`、`data.totalCount`、行の `symbol` と要求列の構造を実測しました。要求外の追加列は保存対象に含めません。Providerの本文や市場データ値をfixtureへ保存していません。
