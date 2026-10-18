@@ -198,6 +198,53 @@ def save_result(payload: dict[str, Any], project_root: Path) -> Path:
                 pass
 
 
+def write_json_result(
+    payload: dict[str, Any], *, name: str, executed_at: datetime, project_root: Path,
+) -> Path:
+    """Publish finite JSON atomically with a safe Job or Screening filename."""
+    try:
+        _valid_name(name, project_root)
+        if executed_at.tzinfo is None or executed_at.utcoffset() is None:
+            raise ValueError("Naive result time")
+        local = executed_at.astimezone(TOKYO)
+        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+    except (ConfigError, OverflowError, TypeError, ValueError) as exc:
+        raise AppError("RESULT_WRITE_ERROR", "Result is invalid") from exc
+    result_root = project_root / "results"
+    if result_root.is_symlink() or not result_root.resolve().is_relative_to(project_root.resolve()):
+        raise AppError("RESULT_WRITE_ERROR", "Cannot save screening result")
+    folder = result_root / local.strftime("%Y-%m-%d")
+    if folder.is_symlink() or not folder.resolve().is_relative_to(result_root.resolve()):
+        raise AppError("RESULT_WRITE_ERROR", "Cannot save screening result")
+    temporary: Path | None = None
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=folder, suffix=".tmp", delete=False) as temp:
+            temporary = Path(temp.name)
+            temp.write(body)
+            temp.flush()
+            os.fsync(temp.fileno())
+        stem = f"{name}_{local:%H%M%S}"
+        for serial in range(10000):
+            candidate = folder / f"{stem}{'_' + str(serial) if serial else ''}.json"
+            try:
+                os.link(temporary, candidate)
+            except FileExistsError:
+                continue
+            return candidate
+        raise AppError("RESULT_WRITE_ERROR", "Cannot allocate result filename")
+    except (OSError, TypeError, ValueError) as exc:
+        raise AppError("RESULT_WRITE_ERROR", "Cannot save screening result") from exc
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                # The published hard link is complete; cleanup failure must not
+                # turn a successful result into an execution failure.
+                pass
+
+
 @dataclass(frozen=True)
 class _StoredResult:
     payload: dict[str, Any]
