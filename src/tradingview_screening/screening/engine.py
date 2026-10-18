@@ -13,6 +13,7 @@ from tradingview_screening.integrations.tradingview.screener_normalization impor
     normalize_screener_snapshot,
 )
 
+from .fingerprint import definition_fingerprint
 from .results import TOKYO
 from .schema import ScreeningDefinition
 
@@ -67,6 +68,7 @@ async def run_screening(
             ),
             "partial": False,
             "durationMs": round((time.monotonic() - start) * 1000),
+            "definitionFingerprint": definition_fingerprint(screening),
         },
         "results": rows,
         "errors": [],

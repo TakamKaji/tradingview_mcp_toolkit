@@ -1984,4 +1984,48 @@ stockカタログの17グループ/163カラムも観測値であり、固定件
 
 ---
 
+# 37. 保存Screeningの履歴・前回差分（Phase 11 / Issue #24）
+
+## 37.1 実行定義fingerprint
+
+新しい成功Screening結果のmetadata.definitionFingerprintへ {version:1, algorithm:"sha256", value:<64桁の小文字hex>} を追加する。schemaVersion=1と旧保存結果の読取を維持する。
+
+hash対象は検証済み定義のmarket、symbolTypes、filters、filterPreset、symbolset、sortBy、sortOrder、limit、columnsの9項目。全項目をモデル既定値込みで取り出し、JSONのsort_keys=True、separators=(",", ":")、ensure_ascii=False、allow_nan=Falseでcanonical化し、UTF-8のSHA-256とする。objectキー順を正規化し、配列順は保持する。
+
+name、description、watchlist設定、実行時刻、結果値は対象外。同名でも条件変更やlimit/columns変更は別identityとして比較を拒否する。旧結果へ現在の定義からfingerprintを後付けしない。
+
+## 37.2 履歴取得
+
+results history <screening_name> [--limit N] を追加する。limit既定20、許容範囲1〜1000。ローカルの成功・検証済みsnapshotを新しい順に列挙し、0件は成功の空itemsとする。
+
+operation=screening_historyのJSON 1個に、各snapshotのfile（プロジェクト相対POSIX）、executedAt、returnedCount、totalCount、completeCoverage、definitionFingerprintを返す。旧形式の未記録情報はnull。
+
+日付folder/filename/executedAtの整合、有限JSON、既存結果metadataを検証する。破損JSON、危険なpath/symlink、failed/partialは履歴から除外する。絶対時刻降順、同時刻は数値serial、filenameの順で安定化し、mtimeを利用しない。名前にpath traversalを許可しない。
+
+## 37.3 直近2件の比較
+
+results compare <screening_name> を追加する。直近2件の成功snapshotを選択し、古いfromと新しいtoとして比較する。2件不足はNO_BASELINE等の区別可能な理由を返す。fingerprint・symbol等の比較可否は選択後に判定し、旧形式・条件不一致・未対応fingerprintや重複を飛ばして古い比較可能ペアへ置き換えない。
+
+壊れたJSON・基本Envelope不整合・危険pathは履歴同様に比較候補から除外する。fingerprintやcoverage flagの整合・重複・指標値は選択後に検証する。比較時に現在のScreening定義を読み直したり、MCPへ問い合わせたりしない。
+
+成功はoperation=screening_compareの独立JSON。from/toのfile・日時・fingerprint・coverage、fingerprintMatched、observedAdded、observedRemoved、observedCommon、indicatorChanges（共通銘柄の列別before/after）、totalCountChangeを返す。不正fingerprintの参照値はnullにし、不正本文をechoしない。
+
+EXCHANGE:TICKERを変更せず比較キーにする。不正symbol、重複、型不正、非有限値を黙認しない。結果行順の変更だけで銘柄差分を作らず、symbol/列の順序を決定的にする。値の欠落とnull、boolとnumberを区別する。 指標値は有限number/string/bool/nullを扱い、複合object/arrayはINVALID_VALUESで比較不可とする。numberの1と1.0は同値。列before/afterはpresent/valueで未記録とnullを区別する。
+
+## 37.4 Coverageと失敗の意味
+
+両snapshotのcompleteCoverage=trueかつ同一fingerprintを確認できた場合だけfull_matched_setとする。それ以外はobserved_set_onlyであり、observedRemovedを条件不適合・失格とは断定しない。limitや順位で観測されなかった可能性を明記する。
+
+totalCountChangeはProvider総件数の差で、取得済みsymbol数の差とは別。旧形式等で総件数不明ならnullにする。
+
+比較不能はstatus=not_comparableと理由、CLI exit 1。履歴成功/比較成功はexit 0、引数Validationはexit 2。不正なpathやローカル読取失敗もsecret-freeなJSON errorとして返す。 reasonはNO_BASELINE / MISSING_FINGERPRINT / INVALID_FINGERPRINT / UNSUPPORTED_FINGERPRINT / DEFINITION_MISMATCH / INVALID_SYMBOLS / INVALID_VALUES / INVALID_METADATAを区別する。
+
+## 37.5 境界と検証
+
+履歴と比較はローカルread-only。MCP追加アクセス、OAuth/credential変更、Watchlist/Alert Write、Scheduler変更、差分自動保存、Job自動実行連携を行わない。既存ファイルの移行・削除を行わず、screen / results latest / run / jobs / schedule / Watchlist / 35 Tool / RequestGovernorを維持する。Phase 9 / Issue #18 / PR #19は変更しない。
+
+テストは0/1/複数履歴、複数日付・同秒serial、完全/不完全coverage、同条件・filter/limit/columns変更、順序変更、列値変更、旧形式、破損JSON、不正数値・symbol・重複、symlink/path traversal、比較がMCP/外部Writeを呼ばないことを含む。
+
+---
+
 以上。

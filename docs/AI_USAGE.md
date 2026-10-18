@@ -26,3 +26,16 @@ Taskは`TradingViewMcpSupport__<job_name>`です。applyは有効Jobの作成/�
 SchedulerはWindows通常ユーザーのログオン中に実行し、保存済みOAuth tokenとrefreshだけを使います。認証切れ時にブラウザ・DCR・mcp authを自動起動しません。対応timezoneはdailyのAsia/Tokyo（明示+09:00）のみで、他IANA/DSTをローカル時刻へ読み替えません。
 
 `screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。詳しくは[Schedule Manual](SCHEDULE_MANUAL.md)、[Screening Manual](SCREENING_MANUAL.md)、[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。
+
+## ローカル履歴と前回比較
+
+```bat
+app.bat results history public_japan_value --limit 10
+app.bat results compare public_japan_value
+```
+
+この2コマンドは保存済みJSONだけを読みます。実行前後に認証・MCP接続・Job・Watchlist同期・Scheduler操作を追加する必要はありません。差分ファイルを自動保存せず、既存結果も変更しません。
+
+比較は同名の直近2件の成功snapshotを選び、その後で定義fingerprintと入力を検証します。結果不足、fingerprint欠落・不一致・未対応形式、不正symbol・重複等を検出したら理由を報告してください。比較可能な古い結果を探して「前回との差分」と表示しないでください。旧結果へ現在の定義からfingerprintを後付けしません。
+
+差分の呼び方は `observedAdded` / `observedRemoved` とし、coverageが不完全または不明なら「観測集合への出現・今回未観測」と説明します。順位やlimitで見えなくなった可能性があり、条件適合・失格とは断定しません。ProviderのtotalCountと実取得returnedCountは分けて表示します。具体的なJSON契約は[Results](RESULTS.md)を参照してください。

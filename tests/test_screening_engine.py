@@ -24,6 +24,7 @@ from tradingview_screening.integrations.tradingview.screener_normalization impor
     normalize_screener_snapshot,
 )
 from tradingview_screening.screening.engine import run_screening, to_screener_request
+from tradingview_screening.screening.fingerprint import definition_fingerprint
 from tradingview_screening.screening.results import latest_result, save_result
 from tradingview_screening.screening.validators import load_screening_by_name, validate_screening
 
@@ -158,6 +159,9 @@ def test_typed_client_path_and_success_normalization() -> None:
     assert result["metadata"]["totalCount"] == 1
     assert result["metadata"]["limitReached"] is True
     assert result["metadata"]["completeCoverage"] is True
+    assert result["metadata"]["definitionFingerprint"] == definition_fingerprint(
+        validate_screening(definition())
+    )
     assert result["metadata"]["partial"] is False
     assert "cacheHit" not in result["metadata"]
     assert result["executedAt"].endswith("+09:00")

@@ -19,8 +19,9 @@ from .integrations.tradingview.oauth_bootstrap import bootstrap_oauth
 from .integrations.tradingview.tool_catalog import EXPECTED_TOOLS
 from .jobs.runner import failed_job, job_exit_code, list_jobs, run_job
 from .jobs.scheduler import apply_schedules, list_schedules, remove_schedule
+from .screening.comparison import compare_results
 from .screening.engine import run_screening
-from .screening.results import TOKYO, latest_result, save_result
+from .screening.results import TOKYO, history_result, latest_result, save_result
 from .screening.schema import ScreeningDefinition
 from .screening.validators import load_screening_by_name
 
@@ -48,6 +49,11 @@ def build_parser() -> argparse.ArgumentParser:
     result_operations = results.add_subparsers(dest="results_command", required=True, parser_class=Parser)
     latest = result_operations.add_parser("latest")
     latest.add_argument("screening_name", nargs="?")
+    history = result_operations.add_parser("history")
+    history.add_argument("screening_name")
+    history.add_argument("--limit", type=int, default=20)
+    compare = result_operations.add_parser("compare")
+    compare.add_argument("screening_name")
     run = commands.add_parser("run")
     run.add_argument("job_name")
     jobs = commands.add_parser("jobs")
@@ -233,9 +239,14 @@ def main(argv: list[str] | None = None) -> int:
                 requested_count = screening.limit
                 payload = asyncio.run(_execute_screen(screening, project_root, started=started))
             else:
-                payload = latest_result(project_root, name)
+                if parsed.results_command == "latest":
+                    payload = latest_result(project_root, name)
+                elif parsed.results_command == "history":
+                    payload = history_result(project_root, name, limit=parsed.limit)
+                else:
+                    payload = compare_results(project_root, name)
             _emit(payload)
-            return 0
+            return 0 if payload["status"] != "not_comparable" else 1
         except ConfigError as exc:
             error = AppError(exc.code, exc.message)
             code = 2
@@ -244,18 +255,26 @@ def main(argv: list[str] | None = None) -> int:
             code = 2
         except AppError as exc:
             error = exc
-            code = 3 if exc.code == "AUTH_REQUIRED" else 1
+            code = 3 if exc.code == "AUTH_REQUIRED" else 2 if exc.code == "CLI_USAGE_ERROR" else 1
         except TransientRequestError:
-            error = AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
+            error = (
+                AppError("MCP_CONNECTION_ERROR", "MCP connection failed")
+                if parsed.command == "screen" else
+                AppError("RESULT_READ_ERROR", "Cannot read screening results")
+            )
             code = 1
         except Exception:  # noqa: BLE001 - CLI boundary must emit one secret-free JSON error.
-            error = AppError("MCP_CONNECTION_ERROR", "Screening execution failed")
+            error = (
+                AppError("MCP_CONNECTION_ERROR", "Screening execution failed")
+                if parsed.command == "screen" else
+                AppError("RESULT_READ_ERROR", "Cannot read screening results")
+            )
             code = 1
         _emit(
             _failed_screening(
                 name, error, requested_count=requested_count,
                 duration_ms=round((time.monotonic() - started) * 1000),
-            ) if parsed.command == "screen" else _failed("results_latest", error)
+            ) if parsed.command == "screen" else _failed(f"results_{parsed.results_command}", error)
         )
         print(f"{error.code}: {error.message}", file=sys.stderr)
         return code
