@@ -1082,7 +1082,7 @@ symbol_types = ["stock"]
 - Phase 9は安全なbuiltin / Job / 保存 / Scheduler統合を実装するが、全Universe取得とlive JSON保存は **blocking limitation** として未達を記録する。成功を偽装しない。Provider契約の改善または別途承認された仕様変更があるまで本番の集計成功は保証しない。Phase 10は実装しない。
 - 成功応答ではrows数からreturnedCountを算出し、非負整数のtotalCountと比較する。returnedCount > totalCountやbool等は `MCP_SCHEMA_MISMATCH`、returnedCount < totalCountは `US_SECTOR_COVERAGE_INCOMPLETE`。完全coverage確認を通過してから集計・保存する。重複symbolによって未取得銘柄を隠さないよう、unique symbol数でも完全性を確認する。
 - Provider業務失敗・coverage不足はJob failed / exit1とし、結果ファイルを生成しない。AUTH_REQUIREDはexit3、configはexit2。Provider生本文、raw response、content本文のJSON再parseは禁止する。
-- full coverageを安全に確認できるまではliveの `app.bat run us_sector_morning` は行わない。小件数read-only probeとUnit Testを区別して報告し、Task Schedulerへの実登録・Write Tool操作はPhase 9 smokeに含めない。
+- 2026-10-18に `app.bat run us_sector_morning` を実機試行し、Provider拒否・exit1・保存なしを確認した。検証専用S&P 500では503銘柄を全件取得し、20分類の集計・保存・読み戻しに成功したが、全米株full coverageを意味しない。Task Scheduler実登録・Write Tool操作はPhase 9 smokeに含めない。
 
 ## 19.4 決定論集計と欠損・重複
 
@@ -1102,7 +1102,7 @@ symbol_types = ["stock"]
 - `output.save=true` は標準summaryを `results/YYYY-MM-DD/<job_name>_<HHMMSS>.json` へ保存する。日付・時刻はretrievedAtのAsia/Tokyo表現。Screening専用Validationを流用せず、小さな共通writerでdate folder / 同秒suffix / no overwrite / atomic publish / finite JSON / path safetyを維持する。Job側resultPathは相対パス。
 - `output.save=false` は取得・集計のみ行い、metadata.saved=false / resultPath=null。失敗結果は保存しない。
 - builtinの `output.watchlistSync=true` は `CONFIG_VALIDATION_ERROR`。sector名をsymbolとして同期しない。
-- `jobs/us_sector_morning.json` はenabled=true、builtin=us_sector_daily、daily 07:00 / Asia/Tokyo、save=true、watchlistSync=falseのサンプル。時刻は運用例であり、市場calendar判定を意味しない。
+- `jobs/us_sector_morning.json` は現行Betaではenabled=false、builtin=us_sector_daily、daily 07:00 / Asia/Tokyo、save=true、watchlistSync=falseのサンプル。全米株の条件なし要求を公式Providerが拒否するため、失敗が確認済みのTaskを初期状態で自動登録しない。明示手動runは可能だがProvider制約がある。時刻は運用例であり、市場calendar判定を意味しない。
 - enabledなus_sector_dailyはschedule applyの事前検証を通る。未知builtinは従来どおり拒否し、Scheduler adapter自体を変更しない。登録対応とProviderによる集計成功は別であり、上記blocking limitationは残る。
 - `results latest` の既存Screening契約は変更しない。builtin保存はJobのresultPathから参照する。
 
