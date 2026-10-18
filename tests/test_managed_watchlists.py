@@ -51,6 +51,17 @@ def result(symbols: list[str], *, status: str = "success") -> dict:
     }
 
 
+def test_watchlist_symbols_accept_legacy_and_new_top_n_metadata(tmp_path: Path) -> None:
+    payload = result(["TSE:7203"])
+    screening_definition = validate_screening(screening())
+    assert desired_symbols(screening_definition, payload, tmp_path) == ("TSE:7203",)
+    payload["metadata"].update({
+        "requestedLimit": 10, "totalCount": 100,
+        "limitReached": False, "completeCoverage": False,
+    })
+    assert desired_symbols(screening_definition, payload, tmp_path) == ("TSE:7203",)
+
+
 def test_mapping_first_create_and_load(tmp_path: Path) -> None:
     assert load_mapping(tmp_path).screenings == {}
     managed = ManagedWatchlist(watchlistId="123", expectedName="[Auto] Sample")

@@ -12,6 +12,8 @@ Phase 4〜6の契約とPhase 7の管理Watchlist同期契約（18.4〜18.7）は
 
 Phase 8のJob Runner / Scheduler契約（11.5）は2026-09-27にGoogle Drive正本へ反映し、実装用スナップショットへ同期した。
 
+Phase 9のcoverage limitationと統合契約（19.3〜19.5）は2026-09-27にDrive正本へ先行反映する。全Universe契約を縮小しない。
+
 ## 0. この仕様書の使い方
 
 この文書は、後でCodex等のコーディングエージェントへ渡し、リポジトリを自動実装させるための**実装仕様書**である。
@@ -605,7 +607,7 @@ V1で正式サポートするschedule typeは `daily` のみとする。
 
 - 手動 `run <job>` はenabled=falseでも実行可能。enabledはschedule applyの登録可否を制御する。実行は共通Job Runnerで行い、Screening・保存・Watchlist同期まで同一Job lockを保持する。
 - `jobs list` はflatに決定順で列挙し、全JobとScreening参照・filename/internal nameを検証する。1件でも不正なら全体をfailed、終了コード2とし、黙ってskipしない。
-- `builtin` はPhase 8ではJOB_TASK_UNAVAILABLE。enabledなbuiltinはschedule applyの事前検証で拒否する。Phase 9本体は実装しない。
+- Phase 8ではbuiltinを拒否していた。Phase 9では明示registryのus_sector_dailyを実行・登録対象とし、未知builtinはJOB_TASK_UNAVAILABLEを維持する。coverage制約は19.3〜19.5を参照。
 - Job lockは `.local/job_locks/<sha256(job_name)>.lock`。timeout=0で競合時のみalready_running/exit0。path・権限等のlock故障を競合扱いしない。
 - Job Envelopeはoperation=jobとし、Screening結果・保存済みか・相対resultPath・Watchlist同期の確定結果を区別する。save/sync未指定操作を実行済みとしない。下位failedまたはstep例外はJob failed、下位partialはJob partial。正常ScreeningのみWatchlistへ渡す。エラーはsecret-freeで、AUTH_REQUIREDはexit3、configはexit2、runtimeはexit1、partialはexit0。保存失敗後のWatchlist Writeは行わない。
 - Scheduler adapterは標準Windows PowerShellからTask Scheduler COMを使う。固定scriptへJSONデータを渡し、shell=Trueやlocalized text解析を使わない。Taskはルートフォルダの管理Prefixと安全なJob名の完全一致だけを操作する。
@@ -1069,6 +1071,40 @@ symbol_types = ["stock"]
 - 「なぜ上昇したか」等のニュース解釈はこのbuiltinへ入れない。
 
 ---
+
+## 19.3 Phase 9 coverage契約とProvider制約（2026-09-27）
+
+- Universeは引き続き `america / stock` 全体とする。先頭1000件、S&P 500、NASDAQ限定等へ縮小しない。
+- [公式MCP資料](https://www.tradingview.com/mcp/docs)と実 `list_tools/inputSchema` は `run_screener.limit` 上限1000を示し、offset/page/cursorを公開していない。filterやsymbolsetは部分集合指定であり、全Universeを重複・欠落なく列挙できる正式なpartition契約は確認できていない。未確認引数や大量分割queryを追加しない。
+- 通常Windowsユーザー + Embedded Python 3.12.8のread-only実測では、MCP status成功、server 1.30.0 / protocol 2025-11-25 / 35 tools。列discoveryは `get_screener_columns(market="stock", search="sector")` と `search="change"` で成功し、両列のmarketsにstockを確認した。discoveryのmarketはstockでありamericaではない。
+- `run_screener(market="america", symbol_types=["stock"], columns=["sector","change"], limit=1)` は `structured_content.success=false` でdataなし。空filtersを明示した場合、およびsortをchange/descへ明示した場合も、少なくとも1つのfilterを要求するProvider業務失敗だった。Universeを変えるfilterや、欠損銘柄を失う可能性がある見かけ上の無制限filterは追加しない。
+- このためamerica/stockの実row shape・totalCount・全件coverageは未検証。今回、実Universe件数が1000超であると実測したわけではない。Phase 6で確認済みの `structured_content.data.rows / data.totalCount / row.symbol` を正規化境界の基礎とし、sector/change付きのUS成功応答はUnit Testで検証する。
+- Phase 9は安全なbuiltin / Job / 保存 / Scheduler統合を実装するが、全Universe取得とlive JSON保存は **blocking limitation** として未達を記録する。成功を偽装しない。Provider契約の改善または別途承認された仕様変更があるまで本番の集計成功は保証しない。Phase 10は実装しない。
+- 成功応答ではrows数からreturnedCountを算出し、非負整数のtotalCountと比較する。returnedCount > totalCountやbool等は `MCP_SCHEMA_MISMATCH`、returnedCount < totalCountは `US_SECTOR_COVERAGE_INCOMPLETE`。完全coverage確認を通過してから集計・保存する。重複symbolによって未取得銘柄を隠さないよう、unique symbol数でも完全性を確認する。
+- Provider業務失敗・coverage不足はJob failed / exit1とし、結果ファイルを生成しない。AUTH_REQUIREDはexit3、configはexit2。Provider生本文、raw response、content本文のJSON再parseは禁止する。
+- full coverageを安全に確認できるまではliveの `app.bat run us_sector_morning` は行わない。小件数read-only probeとUnit Testを区別して報告し、Task Schedulerへの実登録・Write Tool操作はPhase 9 smokeに含めない。
+
+## 19.4 決定論集計と欠損・重複
+
+- `meanChange` はsector別の算術平均、`sampleSize` は有効なunique symbol数。1 symbol = 1票のequal weight。時価総額加重・OHLCV再計算・ニュース解釈をしない。
+- 入力順序によらない有限の平均を計算する。表示用丸めで同率を作らず、計算済みmeanChangeの数値完全一致を同率とする。competition ranking（1, 1, 3）を採用し、同率はsector名昇順。
+- 同一symbolでsector/changeが一致する重複は1票。値が矛盾する重複は `MCP_SCHEMA_MISMATCH`。sectorは前後空白を除いた値、changeは検証した数値で比較する。欠損した側を保持し、残った値の矛盾も検出する。
+- sector/changeの不在またはnullは除外対象。ただし片方が欠損でも、存在する他方の型は検証する。空sector、bool、NaN、Inf、不正型・row構造破損・不正symbolは `MCP_SCHEMA_MISMATCH`。
+- `excludedRowCount` は欠損で除外したunique symbol数。同一欠損行の重複を二重計上しない。`validSymbolCount` は有効unique symbol数、`sectorCount` は結果sector数。
+- summary EnvelopeはschemaVersion/status/operation=us_sector_summary/name=us_sector_daily/retrievedAt/source/metadata/results/errors。metadataにmarket=america、symbolTypes=["stock"]、changeMetric=tradingview_change_snapshot_percent、validSymbolCount、excludedRowCount、sectorCount、sessionAssumptionを残す。
+- 米国regular session終了後に実行する運用前提をsessionAssumptionに記録する。snapshotを改変せずretrievedAtを残し、休日・早期終了calendarや前日終値の再計算を追加しない。
+
+## 19.5 Builtin Job・保存・Scheduler
+
+- 明示registryで `us_sector_daily` をdispatchする。未知builtinは `JOB_TASK_UNAVAILABLE`。Phase 8のScreening経路を維持する。
+- 同一Job lock内で、同じTradingViewClient sessionを使ってfield discovery → Screener → 正規化 → coverage検証 → 集計 → 必要なら保存する。typed wrapper → _call_tool → RequestGovernorの経路を維持し、30 rpm / concurrency 1と既存read retryを使う。
+- Job Envelopeの `builtin` に標準summaryを格納する。Screening専用fieldへ流用せず、raw responseを格納しない。
+- `output.save=true` は標準summaryを `results/YYYY-MM-DD/<job_name>_<HHMMSS>.json` へ保存する。日付・時刻はretrievedAtのAsia/Tokyo表現。Screening専用Validationを流用せず、小さな共通writerでdate folder / 同秒suffix / no overwrite / atomic publish / finite JSON / path safetyを維持する。Job側resultPathは相対パス。
+- `output.save=false` は取得・集計のみ行い、metadata.saved=false / resultPath=null。失敗結果は保存しない。
+- builtinの `output.watchlistSync=true` は `CONFIG_VALIDATION_ERROR`。sector名をsymbolとして同期しない。
+- `jobs/us_sector_morning.json` はenabled=true、builtin=us_sector_daily、daily 07:00 / Asia/Tokyo、save=true、watchlistSync=falseのサンプル。時刻は運用例であり、市場calendar判定を意味しない。
+- enabledなus_sector_dailyはschedule applyの事前検証を通る。未知builtinは従来どおり拒否し、Scheduler adapter自体を変更しない。登録対応とProviderによる集計成功は別であり、上記blocking limitationは残る。
+- `results latest` の既存Screening契約は変更しない。builtin保存はJobのresultPathから参照する。
 
 # 20. TradingView公式MCP 全35 Toolラッパー
 
@@ -1672,6 +1708,8 @@ Job JSONを追加するだけでBAT編集なしに定期Taskへ反映できる�
 
 前営業日の米国セクター上昇/下落順位をJSONで保存できる。
 
+2026-09-27時点では19.3のProvider制約により、全Universe取得とlive保存の完了条件は未達。安全な統合実装とUnit Testを先行し、blocking limitationとして追跡する。
+
 ## Phase 10 — Windows Embedded setup / Docs
 
 1. `setup.bat`
@@ -1904,6 +1942,45 @@ Job追加:
 独自処理追加:
   必要性が定義ファイルでは表現できない場合だけPythonコードを追加
 ```
+
+---
+
+# 36. Screening selector・件数契約の拡張（2026-10-18 / Issue #22）
+
+## 36.1 定義とProviderへの写像
+
+schemaVersion=1を維持し、既存filtersの数値[min,max]とindex/sector/industry/analyst_rating文字列の形式を維持する。任意filterPresetを既存wrapperと同じ6 preset（pullback_with_reversal / breakout_with_volume / oversold_healthy / earnings_runup / relative_strength / new_highs）に限定し、filter_presetへ渡す。任意symbolsetは空でない文字列配列としてそのまま渡す。独自filter DSLは設けない。
+
+両selectorを省略した既存定義はそのまま利用できる。空filtersの定義は互換性のため許容するが、条件をすべて省略した要求がProviderに拒否された場合は業務失敗として伝播する。
+
+## 36.2 条件が無視された応答
+
+structured_content.success=trueだけで成功を確定しない。data.ignored_filtersが存在するとき、空配列だけを許容する。非空または型不正ならMCP_SCHEMA_MISMATCHとして停止し、raw Provider本文を出さない。失敗は0件成功やpartialへ読み替えず、保存・Watchlist同期を実行しない。
+
+実測ではdividends_yield_ttmがcolumnsのカタログに存在してもfilterとして無視された。日本株公開例は公式alias pe=[0,15] / div_yield=[3,null]を用い、予想配当利回り条件であることを明示する。
+
+## 36.3 成功結果の件数
+
+既存metadata.requestedCount（定義limit）とreturnedCountを保持し、成功時にrequestedLimit / totalCount / limitReached / completeCoverageを一組で追加する。
+
+- requestedLimit: 定義limit、requestedCountと一致。
+- totalCount: Provider data.totalCountの非負整数。実返却行数以上。
+- limitReached: returnedCount >= requestedLimit。
+- completeCoverage: returnedCountと一意symbol数の両方がtotalCountに一致。
+
+totalCount=503 / returnedCount=5 / requestedLimit=5ならlimitReached=true、completeCoverage=false。totalCountとlimitが同じで全行揃えば両flagがtrueになる。これは要求された条件内の件数整合であり、市場全体や別Universeの完全性は保証しない。limit到達だけではpartialにしない。
+
+旧4項目を持たない保存結果は引き続き読み込む。追加4項目の一部欠落、型不正、件数・flagの矛盾は保存/latest/Watchlist入力で拒否する。既存の上位N件Watchlist同期はcompleteCoverage=falseでも可能とする。
+
+## 36.4 公開例・検証範囲
+
+日本株条件、S&P 500 filter、oversold_healthy、S&P 500 symbolsetの各公開定義はlimit=5 / watchlist.enabled=false。対応Jobはenabled=false / save=true / watchlistSync=falseとし、Scheduler登録を自動実行しない。
+
+2026-10-18、既存Python TradingViewClientで35 ToolをDiscoveryし、Screenerのschemaは従来と同じ、上限1000、pagination/offset/cursorなしと確認した。日本株1037件中5件、S&P 500とsymbolsetは503件中5件、presetは115件中5件を取得した（件数は観測値）。
+
+stockカタログの17グループ/163カラムも観測値であり、固定件数をテスト要件にしない。EMA50/EMA200と乖離率はpreset実応答で確認したProvider計算値を使う。PublicコアでOHLCVから計算しない。
+
+条件なしamerica/stockは依然Providerが拒否した。全米株Universeの完全取得手段は未確認で、19.3〜19.5のPhase 9 blocking limitationを解除しない。S&P 500や先頭1000件への縮小、未確認pagination/filter分割は行わない。
 
 ---
 

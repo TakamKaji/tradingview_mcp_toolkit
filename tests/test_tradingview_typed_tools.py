@@ -41,6 +41,11 @@ from tradingview_screening.integrations.tradingview.tool_catalog import (
 SNAPSHOT = json.loads(
     (Path(__file__).parent / "fixtures" / "tradingview_input_schemas_2026-09-25.json").read_text(encoding="utf-8")
 )
+LATEST_SNAPSHOT = json.loads(
+    (Path(__file__).parent / "fixtures" / "tradingview_input_schemas_2026-10-18.json").read_text(
+        encoding="utf-8"
+    )
+)
 LOGICAL_NAMES = tuple(TOOL_NAME_MAP)
 OBSERVED_READ_NAMES = frozenset({
     "search_symbols", "get_ohlcv", "get_symbol_data", "get_symbol_data_batch",
@@ -78,6 +83,10 @@ def test_complete_logical_wire_request_wrapper_and_policy_sets() -> None:
     assert SNAPSHOT["retrievedAt"] == "2026-09-25"
     assert SNAPSHOT["protocolVersion"] == "2025-11-25"
     assert SNAPSHOT["serverVersion"] == "1.30.0"
+    assert LATEST_SNAPSHOT["retrievedAt"] == "2026-10-18"
+    assert LATEST_SNAPSHOT["protocolVersion"] == "2025-11-25"
+    assert LATEST_SNAPSHOT["serverVersion"] == "1.30.0"
+    assert set(LATEST_SNAPSHOT["tools"]) == set(EXPECTED_TOOLS)
     assert len(WRITE_TOOL_NAMES) == 10
     assert len(set(TOOL_NAME_MAP) - WRITE_TOOL_NAMES) == 25
     assert NON_RETRY_TOOL_NAMES == WRITE_TOOL_NAMES | {"get_active_watchlist"}
@@ -86,6 +95,34 @@ def test_complete_logical_wire_request_wrapper_and_policy_sets() -> None:
         hints = get_type_hints(getattr(TradingViewClient, logical))
         assert hints["request"] is REQUEST_MODELS[logical]
         assert hints["return"] is (ObservedReadResponse if logical in OBSERVED_READ_NAMES else TypedToolResponse)
+
+
+def _without_descriptions(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _without_descriptions(item) for key, item in value.items()
+                if key != "description"}
+    if isinstance(value, list):
+        return [_without_descriptions(item) for item in value]
+    return value
+
+
+@pytest.mark.parametrize("logical", LOGICAL_NAMES)
+def test_october_input_schema_preserves_existing_tool_contract(logical: str) -> None:
+    wire = TOOL_NAME_MAP[logical]
+    old = SNAPSHOT["tools"][wire]
+    current = copy.deepcopy(LATEST_SNAPSHOT["tools"][wire])
+    added = set(current.get("properties", {})) - set(old.get("properties", {}))
+    if logical == "get_ohlcv":
+        assert added == {"date_from", "date_to", "format"}
+        for name in added:
+            assert name not in current.get("required", [])
+            del current["properties"][name]
+    else:
+        assert not added
+        assert schema_is_compatible(logical, current)
+    assert _without_descriptions(current) == _without_descriptions(old)
+    if logical in {"run_screener", "get_screener_columns"}:
+        assert current == old
 
 
 @pytest.mark.parametrize("logical", LOGICAL_NAMES)

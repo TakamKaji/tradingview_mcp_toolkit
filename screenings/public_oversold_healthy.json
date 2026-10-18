@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "public_oversold_healthy",
+  "description": "公式oversold_healthy presetの上位5件",
+  "market": "america",
+  "symbolTypes": [
+    "stock"
+  ],
+  "filterPreset": "oversold_healthy",
+  "sortBy": "volume",
+  "sortOrder": "desc",
+  "limit": 5,
+  "columns": [
+    "close",
+    "change",
+    "RSI",
+    "EMA50",
+    "EMA200",
+    "price_vs_ema50_pct",
+    "price_vs_ema200_pct",
+    "volume"
+  ],
+  "watchlist": {
+    "enabled": false
+  }
+}

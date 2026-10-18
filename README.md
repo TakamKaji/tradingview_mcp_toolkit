@@ -240,6 +240,8 @@ python -m tradingview_screening results latest sample_standard_screen
 
 stdoutは機械可読JSON、stderrは診断用です。終了コードは0=success/partial、1=実行時失敗、2=usage/定義Validation失敗、3=AUTH_REQUIREDです。詳細は [RESULTS.md](docs/RESULTS.md) を参照してください。
 
+名前付きScreeningでは公式presetとsymbolsetも指定できます。Provider総件数と実取得行数を分け、条件が無視された応答は保存・同期前に拒否します。日本株・S&P 500・oversold_healthy・symbolsetのread-only例は[Screening Manual](docs/SCREENING_MANUAL.md)、実測範囲は[2026-10-18検証記録](docs/MCP_VERIFICATION_2026-10-18.md)を参照してください。
+
 ### Phase 6の実MCP確認
 
 2026-09-26、Windows Embedded Python 3.12.8・通常ユーザー・保存credentialで、Read-onlyの `run_screener` をlimit=1で確認しました。銘柄指定の空結果と、サンプル条件の1行取得が成功し、`structured_content.success=true`、`data.rows`、`data.totalCount`、行の `symbol` と要求列の構造を実測しました。要求外の追加列は保存対象に含めません。Providerの本文や市場データ値をfixtureへ保存していません。
