@@ -6,6 +6,14 @@
 > Captured in project planning on 2026-09-18.
 > Phase 4 verification: 2026-09-25. Current official docs retain the same endpoint, OAuth 2.1, Streamable HTTP, 35-tool catalog, and Essential-or-higher eligibility excluding trials. SDK integration details are recorded in the implementation specification §17.1. Live account access and 35 discovered schemas were subsequently confirmed; Phase 5 observations follow below.
 
+## Phase 9 read-only注記（2026-09-27）
+
+公式ページと実35 Tool schemaを再確認した。`run_screener`は上限1000件でoffset/page/cursorを公開していない。filtersやsymbolsetの存在だけでは全Universeの完全列挙を保証しない。
+
+`get_screener_columns(market="stock", search="sector" / "change")`は両列の完全一致nameとstock対応を返した。`run_screener(market="america", symbol_types=["stock"], columns=["sector","change"], limit=1)`はfilterを要求する業務失敗（structured_content.success=false、dataなし）。空filtersやchange/desc sort明示でも成功せず、US実rows/totalCountは未検証。生エラー本文・市場データ値は保存していない。
+
+Universeを絞る回避策は追加せず、全件取得・live集計保存はblocking limitationとして追跡する。詳細は[実装仕様19.3](tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)を参照。
+
 ## Phase 5 live schema注記（2026-09-25、保存版本文より優先）
 
 保存credentialで実server `mcp-streamable-http 1.30.0`（protocol `2025-11-25`）から35 inputSchemaを取得した。以下は実測に基づく補足であり、下の2026-09-18本文が永続的に正しいことを保証しない。
