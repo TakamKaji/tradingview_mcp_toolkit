@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "name": "public_sp500_symbolset",
+  "description": "公式symbolset SYML:SP;SPXの出来高上位5件",
+  "market": "america",
+  "symbolTypes": [
+    "stock"
+  ],
+  "symbolset": [
+    "SYML:SP;SPX"
+  ],
+  "sortBy": "volume",
+  "sortOrder": "desc",
+  "limit": 5,
+  "columns": [
+    "close",
+    "change",
+    "sector",
+    "volume"
+  ],
+  "watchlist": {
+    "enabled": false
+  }
+}

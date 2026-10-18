@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "name": "public_sp500",
+  "description": "S&P 500構成銘柄の出来高上位5件",
+  "market": "america",
+  "symbolTypes": [
+    "stock"
+  ],
+  "filters": {
+    "index": "S&P 500"
+  },
+  "sortBy": "volume",
+  "sortOrder": "desc",
+  "limit": 5,
+  "columns": [
+    "close",
+    "change",
+    "sector",
+    "volume"
+  ],
+  "watchlist": {
+    "enabled": false
+  }
+}

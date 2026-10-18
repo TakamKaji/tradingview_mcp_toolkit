@@ -85,6 +85,24 @@ def _executed_at(payload: Any, *, name: str | None = None) -> datetime | None:
         or ("cacheHit" in metadata and type(metadata["cacheHit"]) is not bool)
     ):
         return None
+    coverage_fields = {"requestedLimit", "totalCount", "limitReached", "completeCoverage"}
+    if coverage_fields.intersection(metadata) and (
+        not coverage_fields.issubset(metadata)
+        or type(metadata["requestedLimit"]) is not int
+        or metadata["requestedLimit"] != metadata["requestedCount"]
+        or type(metadata["totalCount"]) is not int
+        or metadata["totalCount"] < metadata["returnedCount"]
+        or type(metadata["limitReached"]) is not bool
+        or metadata["limitReached"] is not (
+            metadata["returnedCount"] >= metadata["requestedLimit"]
+        )
+        or type(metadata["completeCoverage"]) is not bool
+        or metadata["completeCoverage"] is not (
+            metadata["returnedCount"] == metadata["totalCount"]
+            and len({row["symbol"] for row in results}) == metadata["totalCount"]
+        )
+    ):
+        return None
     try:
         executed = datetime.fromisoformat(payload["executedAt"])
     except (KeyError, TypeError, ValueError):

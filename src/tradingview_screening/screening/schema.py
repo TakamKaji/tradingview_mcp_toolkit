@@ -17,6 +17,8 @@ from pydantic import (
     model_validator,
 )
 
+from tradingview_screening.integrations.tradingview.schemas import ScreenerFilterPreset
+
 Number = StrictInt | StrictFloat
 Range = tuple[Number | None, Number | None]
 NonEmptyString = Annotated[StrictStr, Field(min_length=1)]
@@ -53,6 +55,8 @@ class ScreeningDefinition(BaseModel):
     market: NonEmptyString
     symbolTypes: list[NonEmptyString] = Field(min_length=1)
     filters: dict[NonEmptyString, FilterValue] = Field(default_factory=dict)
+    filterPreset: ScreenerFilterPreset | None = None
+    symbolset: list[NonEmptyString] | None = Field(default=None, min_length=1)
     sortBy: StrictStr | None = None
     sortOrder: Literal["asc", "desc"] = "desc"
     limit: StrictInt = Field(ge=1, le=1000)
@@ -66,9 +70,11 @@ class ScreeningDefinition(BaseModel):
             raise ValueError("schemaVersion must be 1")
         return value
 
-    @field_validator("name", "market", "symbolTypes", "columns")
+    @field_validator("name", "market", "symbolTypes", "columns", "symbolset")
     @classmethod
-    def reject_blank(cls, value: str | list[str]) -> str | list[str]:
+    def reject_blank(cls, value: str | list[str] | None) -> str | list[str] | None:
+        if value is None:
+            return value
         values = [value] if isinstance(value, str) else value
         if any(not item.strip() for item in values):
             raise ValueError("value must not be empty")
