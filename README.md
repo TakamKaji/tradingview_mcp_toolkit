@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-Phase 8までのScreening・保存・Watchlist同期・Job Runner・Windows Schedulerに、Phase 9の米国セクター集計builtin統合を追加しています。ただし、公式Providerがfilterなし取得を拒否し、全Universe取得手段も確認できていないため、米国セクター集計のlive保存は未達です。1000件だけを全米株集計として返すことはありません。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
+現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Phase 9の全米株集計はProvider coverage未確定のため保留中です。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
 
 ## 開発方針
 
@@ -279,6 +279,16 @@ Unit Test後の実API確認はWindows Embedded Python 3.12.8・通常ユーザ�
 
 Phase 7の仕様はGoogle Drive正本へ反映し、読み戻しで確認済みです。既存 `screen` コマンドはReadと結果保存のみで、Watchlist設定がenabledでも同期しません。Phase 8のJob Runnerから同期APIを再利用します。
 
+## 米国セクター集計（Phase 9・Provider制約あり）
+
+`jobs/us_sector_morning.json`はbuiltin `us_sector_daily`をdaily 07:00 JSTに実行するサンプルです。`schedule apply`で登録できますが、登録成功は集計成功を保証しません。Windows導入の整備は別PR #21で管理します。
+
+Universeは`america / stock`全体、取得列は`sector / change`です。1 symbol = 1票のequal weightでsector別の算術平均`meanChange`と有効銘柄数`sampleSize`を返します。同率はcompetition ranking（1, 1, 3）、表示順はsector名昇順。同値重複は1票、矛盾重複はエラー、欠損は除外、不正型はエラーです。snapshotをそのまま使い、`retrievedAt`と`sessionAssumption`を残します。OHLCV再計算・休日calendar・ニュース解釈は行いません。
+
+2026-10-18に既存Python clientで再確認し、sector/change列のstock対応と、S&P 500に限定した503件中5件のobject行・symbol形式を確認しました。ただし条件なしamerica/stockは引き続きProvider業務失敗で、上限1000件・pagination不在も同じです。限定集合の成功は全米株Universe取得を保証しないため、全件集計・live保存は未実施、PR #19はDraftを維持します。Universeを変えるfilterは追加せず、成功応答でも`returnedCount < totalCount`なら`US_SECTOR_COVERAGE_INCOMPLETE`で保存前に停止します。重複で件数不足が隠れないようunique symbol数も確認します。
+
+成功時はJob JSONの`builtin`にsummaryを格納し、save=trueなら`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存します。save=falseでは保存せず、builtinのwatchlistSync=trueは設定エラーです。現在のblocking limitationの詳細は[Results](docs/RESULTS.md)と[実装仕様19.3](docs/tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)を参照してください。
+
 ## Jobs / Scheduler（Phase 8）
 
 ```bat
@@ -303,16 +313,6 @@ app.bat schedule remove sample_screen_daily
 2026-09-26〜27、通常Windowsユーザー・Embedded Python 3.12.8で実機確認しました。sample Jobは50件を保存し、新規管理Watchlistへ同期成功。専用Jobでは空白入りディレクトリのTask作成/更新、手動Task起動と06:30の日次トリガー起動、結果1件の生成を確認しました。同一Jobの重複は手動・実Taskともexit 0でskipしました。disabled/定義削除でTaskが残り、明示removeだけで削除されることも確認し、今回作成したTask 2件はcleanup済みです。sampleの管理Watchlistとownership mappingは保持しています。
 
 最終検証は500 passed・4 skipped（すべて従来と同じsymlink作成権限制約）、ruff成功です。Phase 8仕様はGoogle Drive正本を先に更新し、Repositoryへ同期・読み戻し確認済みです。
-
-## 米国セクター集計（Phase 9・Provider制約あり）
-
-`jobs/us_sector_morning.json`はbuiltin `us_sector_daily`をdaily 07:00 JSTに実行するサンプルです。`schedule apply`で登録できますが、登録成功は集計成功を保証しません。Phase 10のsetup・公開配布最終化は今回の対象外です。
-
-Universeは`america / stock`全体、取得列は`sector / change`です。1 symbol = 1票のequal weightでsector別の算術平均`meanChange`と有効銘柄数`sampleSize`を返します。同率はcompetition ranking（1, 1, 3）、表示順はsector名昇順。同値重複は1票、矛盾重複はエラー、欠損は除外、不正型はエラーです。snapshotをそのまま使い、`retrievedAt`と`sessionAssumption`を残します。OHLCV再計算・休日calendar・ニュース解釈は行いません。
-
-2026-09-27のread-only確認で両列のstock対応は確認済みですが、filterなしのScreenerはProvider業務失敗でした。公式資料と実schemaに上限1000件はあるものの、paginationや完全列挙を保証するpartition契約は確認できていません。実US行・totalCount・全件取得・live保存は未検証です。Universeを変えるfilterは追加せず、成功応答でも`returnedCount < totalCount`なら`US_SECTOR_COVERAGE_INCOMPLETE`で保存前に停止します。重複で件数不足が隠れないようunique symbol数も確認します。
-
-成功時はJob JSONの`builtin`にsummaryを格納し、save=trueなら`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存します。save=falseでは保存せず、builtinのwatchlistSync=trueは設定エラーです。現在のblocking limitationの詳細は[Results](docs/RESULTS.md)と[実装仕様19.3](docs/tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)を参照してください。
 
 ## ライセンス
 

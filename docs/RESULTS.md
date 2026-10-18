@@ -89,6 +89,12 @@ python -m tradingview_screening results latest sample_standard_screen
 
 全Universe契約は維持し、S&P 500・NASDAQ・先頭1000件へ縮小しません。Universeを変えるfilterや大量分割queryで回避しません。成功応答でもreturnedCountはlen(rows)から算出し、非負整数totalCountと比較します。小さければ`US_SECTOR_COVERAGE_INCOMPLETE`、大きい・不正型なら`MCP_SCHEMA_MISMATCH`です。unique symbol数も照合し、重複で未取得銘柄を隠しません。完全性を確認する前に集計・保存しません。
 
+### 2026-10-18の再判定
+
+既存Python TradingViewClient / 共通RequestGovernorでDiscoveryと少量Readを再実行しました。protocol 2025-11-25、server 1.30.0、35 Tool、Screener schemaは同一です。sector/changeはstock対応、S&P 500 filterとsymbolsetは各totalCount=503 / returnedCount=5で、symbol・sector・changeを持つobject行を確認しました。
+
+一方、filter/preset/symbolsetを全省略したamerica/stockはsuccess=falseでした。上限1000件、pagination/offset/cursorなしのため全米株を完全取得する公式手段は未確認です。S&P 500は限定Universeとしてのみ成功扱いにし、全米株集計のlive実行・保存は行っていません。Issue #18 / PR #19のblocking limitationとDraftを維持します。一般Screening拡張は独立Issue #22 / PR #23で管理します。
+
 ### Job接続と保存
 
 Job stdoutはoperation=job、task.type=builtin、task.definition=us_sector_dailyとし、`builtin`に上記summaryを格納します。save=trueならsummaryだけを`results/YYYY-MM-DD/us_sector_morning_HHMMSS.json`へ保存し、Job.metadata.saved=true / resultPathに相対パスを返します。日付・時刻はretrievedAtをAsia/Tokyoへ変換します。同秒suffix、非上書きatomic publish、有限JSONとpath safetyはScreening保存と同じ契約です。

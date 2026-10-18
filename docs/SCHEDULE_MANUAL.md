@@ -69,7 +69,7 @@ weekly/monthly/cron、macOS/Linux Scheduler、常駐daemonは実装していま�
 
 `jobs/us_sector_morning.json`はenabled=true、builtin=us_sector_daily、daily 07:00 / Asia/Tokyo、save=true、watchlistSync=falseです。07:00 JSTは米国regular session終了後の運用例であり、休日・早期終了calendarを導入するものではありません。snapshotを改変せず、retrievedAtとsessionAssumptionを記録します。
 
-2026-09-27時点のProviderはfilterなしのamerica/stock取得を拒否しました。上限1000件とpagination不在も確認され、全Universe取得手段は未確認です。**schedule applyの登録対応は実装済みですが、live集計・保存成功はblocking limitationとして未達です。** 今回のsmokeで実Task登録は行いません。
+2026-10-18の再検証でもProviderは条件なしのamerica/stock取得を拒否しました。上限1000件とpagination不在も同じで、全Universe取得手段は未確認です。S&P 500限定取得の成功は全米株coverageの根拠になりません。**schedule applyの登録対応は実装済みですが、live集計・保存成功はblocking limitationとして未達です。** 今回のsmokeでは実Task登録・削除を行っていません。
 
 将来の成功応答でも、全件coverage検証を通過するまで保存しません。coverage不足は`US_SECTOR_COVERAGE_INCOMPLETE` / exit1、Provider業務失敗もexit1です。save=falseなら取得・集計のみ行い、metadata.saved=false / resultPath=nullを返します。集計・欠損・重複・rank契約は[Results](RESULTS.md)を参照してください。
 

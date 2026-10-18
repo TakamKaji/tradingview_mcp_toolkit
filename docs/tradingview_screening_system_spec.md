@@ -1945,4 +1945,43 @@ Job追加:
 
 ---
 
+# 36. Screening selector・件数契約の拡張（2026-10-18 / Issue #22）
+
+## 36.1 定義とProviderへの写像
+
+schemaVersion=1を維持し、既存filtersの数値[min,max]とindex/sector/industry/analyst_rating文字列の形式を維持する。任意filterPresetを既存wrapperと同じ6 preset（pullback_with_reversal / breakout_with_volume / oversold_healthy / earnings_runup / relative_strength / new_highs）に限定し、filter_presetへ渡す。任意symbolsetは空でない文字列配列としてそのまま渡す。独自filter DSLは設けない。
+
+両selectorを省略した既存定義はそのまま利用できる。空filtersの定義は互換性のため許容するが、条件をすべて省略した要求がProviderに拒否された場合は業務失敗として伝播する。
+
+## 36.2 条件が無視された応答
+
+structured_content.success=trueだけで成功を確定しない。data.ignored_filtersが存在するとき、空配列だけを許容する。非空または型不正ならMCP_SCHEMA_MISMATCHとして停止し、raw Provider本文を出さない。失敗は0件成功やpartialへ読み替えず、保存・Watchlist同期を実行しない。
+
+実測ではdividends_yield_ttmがcolumnsのカタログに存在してもfilterとして無視された。日本株公開例は公式alias pe=[0,15] / div_yield=[3,null]を用い、予想配当利回り条件であることを明示する。
+
+## 36.3 成功結果の件数
+
+既存metadata.requestedCount（定義limit）とreturnedCountを保持し、成功時にrequestedLimit / totalCount / limitReached / completeCoverageを一組で追加する。
+
+- requestedLimit: 定義limit、requestedCountと一致。
+- totalCount: Provider data.totalCountの非負整数。実返却行数以上。
+- limitReached: returnedCount >= requestedLimit。
+- completeCoverage: returnedCountと一意symbol数の両方がtotalCountに一致。
+
+totalCount=503 / returnedCount=5 / requestedLimit=5ならlimitReached=true、completeCoverage=false。totalCountとlimitが同じで全行揃えば両flagがtrueになる。これは要求された条件内の件数整合であり、市場全体や別Universeの完全性は保証しない。limit到達だけではpartialにしない。
+
+旧4項目を持たない保存結果は引き続き読み込む。追加4項目の一部欠落、型不正、件数・flagの矛盾は保存/latest/Watchlist入力で拒否する。既存の上位N件Watchlist同期はcompleteCoverage=falseでも可能とする。
+
+## 36.4 公開例・検証範囲
+
+日本株条件、S&P 500 filter、oversold_healthy、S&P 500 symbolsetの各公開定義はlimit=5 / watchlist.enabled=false。対応Jobはenabled=false / save=true / watchlistSync=falseとし、Scheduler登録を自動実行しない。
+
+2026-10-18、既存Python TradingViewClientで35 ToolをDiscoveryし、Screenerのschemaは従来と同じ、上限1000、pagination/offset/cursorなしと確認した。日本株1037件中5件、S&P 500とsymbolsetは503件中5件、presetは115件中5件を取得した（件数は観測値）。
+
+stockカタログの17グループ/163カラムも観測値であり、固定件数をテスト要件にしない。EMA50/EMA200と乖離率はpreset実応答で確認したProvider計算値を使う。PublicコアでOHLCVから計算しない。
+
+条件なしamerica/stockは依然Providerが拒否した。全米株Universeの完全取得手段は未確認で、19.3〜19.5のPhase 9 blocking limitationを解除しない。S&P 500や先頭1000件への縮小、未確認pagination/filter分割は行わない。
+
+---
+
 以上。
