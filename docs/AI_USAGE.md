@@ -2,6 +2,8 @@
 
 Repository rootで共通CLIを使います。Windowsでは`app.bat`がEmbedded Pythonを選択します。JobごとのBATや、AIからMCP SDKへの独自呼出しは追加しません。
 
+Windowsの初回導入は[Windows Setup](WINDOWS_SETUP.md)を参照してください。
+
 ```bat
 app.bat jobs list
 app.bat run public_sample_screen_daily
@@ -23,4 +25,4 @@ Taskは`TradingViewMcpSupport__<job_name>`です。applyは有効Jobの作成/�
 
 SchedulerはWindows通常ユーザーのログオン中に実行し、保存済みOAuth tokenとrefreshだけを使います。認証切れ時にブラウザ・DCR・mcp authを自動起動しません。対応timezoneはdailyのAsia/Tokyo（明示+09:00）のみで、他IANA/DSTをローカル時刻へ読み替えません。
 
-`screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。builtinの本体とPhase 9米国セクター集計は未実装です。Windowsの初回導入は[Windows Setup](WINDOWS_SETUP.md)、Job運用は[Schedule Manual](SCHEDULE_MANUAL.md)、Screeningは[Screening Manual](SCREENING_MANUAL.md)、書き込みを伴う同期は[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。
+`screen`、`results latest`、`mcp auth/status/tools`は引き続き利用できます。詳しくは[Schedule Manual](SCHEDULE_MANUAL.md)、[Screening Manual](SCREENING_MANUAL.md)、[Watchlist Sync](WATCHLIST_SYNC.md)を参照してください。

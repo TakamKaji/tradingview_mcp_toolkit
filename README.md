@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Phase 9の米国セクター集計は保留し、独立して進められるPhase 10のWindows Embedded setup / Public Docsを先行整備しています。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
+現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Phase 9の全米株集計はProvider coverage未確定のため保留中です。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
 
 ## 開発方針
 
@@ -22,7 +22,7 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 5. 認証後に `app.bat mcp status` と `app.bat mcp tools` を確認する。
 6. 書き込みを伴わない公開サンプルは `app.bat run public_sample_screen_daily` で試す。
 
-`setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。途中で `runtime/python-3.12.8/` だけが作られ、`python.exe` が存在しない不完全なruntimeは再実行時に削除して再構築します。非対話実行では `setup.bat --no-pause` を利用できます。
+`setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。exe・標準ライブラリZIP・DLL・設定の欠落や起動検査の失敗は不完全なruntimeとして検出し、対象runtimeだけを再構築します。非対話実行では `setup.bat --no-pause` を利用できます。
 
 `mcp status` は未認証でもブラウザを開きません。初回認証だけを `mcp auth` で明示的に開始し、OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。
 
