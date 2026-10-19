@@ -79,7 +79,6 @@ def test_click_setup_uses_ascii_batch_and_bom_power_shell_ui() -> None:
     assert "run sample_screen_daily" not in ui
 
 
-
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows PowerShell script parser")
 def test_powershell_ui_has_valid_syntax(tmp_path: Path) -> None:
     script = ROOT / "scripts/setup-ui.ps1"
