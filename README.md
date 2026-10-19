@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Phase 9の全米株集計はProvider coverage未確定のため保留中です。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
+Phase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携、Phase 11の保存履歴・前回比較を実装しています。Phase 9のセクター集計コードは実装済みですが、全米株取得は公式Provider Betaの制約で未対応のため、当該自動Jobは初期状態で無効です。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
 
 ## 開発方針
 
@@ -15,20 +15,19 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 
 ## Windows セットアップ
 
-1. リポジトリをcloneする。
-2. 通常ユーザー権限で `setup.bat` を実行する。
-3. `app.bat mcp status` で共通CLIへ到達できることを確認する。
-4. 初回未認証なら `AUTH_REQUIRED` / exit 3になるため、`app.bat mcp auth` を実行する。
-5. 認証後に `app.bat mcp status` と `app.bat mcp tools` を確認する。
-6. 書き込みを伴わない公開サンプルは `app.bat run public_sample_screen_daily` で試す。
+1. リポジトリをダウンロードして展開する（またはcloneする）。
+2. 通常ユーザーで **`setup.bat` をダブルクリック**する。システムPythonや管理者権限は不要。 日本語の説明はPowerShell側で表示するため、WindowsのBAT文字化けを避けています。
+3. 初回はブラウザが開くので、TradingViewにログインしてアクセスを許可する。
+4. セットアップが自動で `mcp status`・`mcp tools` を確認し、完了を日本語で表示する。認証済みなら再ログインを省略する。
+5. 任意の動作確認として、書き込みを伴わない公開サンプル `app.bat run public_sample_screen_daily` を利用できる。
 
 `setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。exe・標準ライブラリZIP・DLL・設定の欠落や起動検査の失敗は不完全なruntimeとして検出し、対象runtimeだけを再構築します。非対話実行では `setup.bat --no-pause` を利用できます。
 
-`mcp status` は未認証でもブラウザを開きません。初回認証だけを `mcp auth` で明示的に開始し、OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。
+`setup.bat`の通常実行は未認証時だけ `mcp auth` を起動し、ブラウザ認証後にMCP接続とTool一覧を検証します。`mcp status` 単独ではブラウザを開きません。OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。非対話の `setup.bat --no-pause` はブラウザ認証を行わず、Pythonと依存の導入だけを実行します。
 
 公開用の `public_sample_screen_daily` は `enabled=false` / `save=true` / `watchlistSync=false` です。手動runは可能ですが `schedule apply` の登録対象にならず、TradingView WatchlistへのWriteも行いません。既存の `sample_screen_daily` はWatchlist同期を行う運用サンプルなので、初回確認では使い分けてください。
 
-詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。
+詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。**別PCでの初回テストは[単一BAT（second_pc_full_test.bat）](second_pc_full_test.bat)をダウンロードして通常ユーザーで実行するだけ**です。GitHub/TradingViewのブラウザ認証以外はバッチが順番に実施します。手動確認用の詳細は[別PC受入テスト手順](docs/SECOND_PC_ACCEPTANCE_TEST.md)を参照してください。公開前の確認手順は[Release Candidate Gate](docs/RELEASE_CANDIDATE.md)、想定する利用範囲と制約は[β版リリースノート案](docs/RELEASE_NOTES_0.1.0b1.md)にまとめています。パッケージ版は現在 `0.1.0b1`（リリース候補準備中）です。GitHub Releaseやtagを公開したという意味ではありません。
 
 `setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク作成を必要とする検証がskipされることがあります。
 
@@ -37,10 +36,13 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 `console.bat` で開いたコンソールから実行します。
 
 ```bat
+python -m pip install --no-build-isolation -r requirements-dev.txt
 python -m tradingview_screening --help
 python -m pytest
 python -m ruff check .
 ```
+
+通常の `setup.bat` は実行時依存のみをインストールします。上の最初のコマンドは開発・テストを行う場合だけ必要です。
 
 ## macOS / 通常Python
 
@@ -76,7 +78,7 @@ Development:
 - `pytest>=8,<10`
 - `ruff>=0.9,<1`
 
-`requirements.txt` はWindows bootstrap互換のため `-e .[dev]` を指定します。
+`requirements.txt` はWindowsの一般利用者向けbootstrapとして `-e .`（runtime依存のみ）を指定します。`requirements-dev.txt` は開発・テスト用の `-e .[dev]` です。Windows Embedded Pythonではbuild backendを別途用意するため、dev導入には `--no-build-isolation` を指定します。
 
 ## 設定定義（Phase 2）
 

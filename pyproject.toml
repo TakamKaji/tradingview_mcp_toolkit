@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tradingview-mcp-support"
-version = "0.0.0"
+version = "0.1.0b1"
 description = "Deterministic local support layer for the official TradingView MCP server"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

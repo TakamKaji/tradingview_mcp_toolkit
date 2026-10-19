@@ -18,6 +18,7 @@ echo ========================================================
 echo.
 echo  Common commands:
 echo    python -m tradingview_screening --help
+echo    python -m pip install --no-build-isolation -r requirements-dev.txt ^(first time for development^)
 echo    python -m pytest
 echo    python -m ruff check .
 echo.
