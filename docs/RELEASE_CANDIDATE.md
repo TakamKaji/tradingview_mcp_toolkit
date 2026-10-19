@@ -132,6 +132,13 @@ skipはtest_jobsの3件、test_screening_history_compareの1件、test_validatio
 
 検証結果は[Issue #28](https://github.com/TakamKaji/tradingview_mcp_support/issues/28)に実行環境・HEAD・結果・未実施理由とともに記録する。
 
+### 2026-10-19 実機報告からの日本語文字化け修正
+
+- 実機ログでsetup自体は完了し認証・Tool Discoveryも成功。ただしUTF-8日本語を含む`setup.bat`を`cmd.exe`が誤解析し、日本語の二重化・「コマンドとして認識されません」を発生させた。
+- 修正：`setup.bat`はASCII専用ランチャー、`setup-runtime.bat`は既存のPython導入（ASCIIのみ）、`scripts/setup-ui.ps1`はBOM付き日本語PowerShell UIと公式OAuth・status/tools確認に分離。
+- `setup.bat`の通常ダブルクリック操作・既存認証の再利用・未認証時だけOAuth・`--no-pause`でブラウザ認証なし、という仕様は維持。
+- この分離修正後のWindows実機再テストは**未実施**。静的テストとPowerShell構文テストを追加したが、旧実機結果を文字化け修正の実測PASSとは扱わない。
+
 ### 2026-10-19 ワンクリックsetup対応（追加差分）
 
 - `setup.bat`の通常実行をPythonセットアップ→未認証時のみブラウザOAuth→status/tools確認まで統合。日本語案内、再実行時の認証スキップ、失敗時の停止・診断案内を追加。
