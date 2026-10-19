@@ -2,6 +2,9 @@
 
 このページは**公開済みリリースではなく、リリース候補の確認手順**です。Windows向け最初のβ版の可否を判定するために使用します。テスト未実行項目を完了と報告しません。
 
+**最新の判断（2026-10-19 JST）**：所有者本人が**文字化け修正版の通常 `setup.bat` ダブルクリックをWindows実機で確認し「オッケー」と報告**。既存credential利用でのMCP接続・Tool Discoveryを含む日本語案内のスモークはPASS。個人利用に限り、新規独立Windowsユーザーの初回OAuth再試験は未実施リスクを受容し、必須Blockerから外した。**PR #29はレビュー可能／main統合判断対象**。これはGitHub Release公開・tag発行の承認ではない。
+
+
 ## 対象・契約
 
 - 対象：Windows 64-bit（amd64）／一般ユーザー権限／PowerShell、インターネット接続が必要。Pythonのシステムインストール不要。
@@ -50,14 +53,14 @@ app.bat jobs list
 
 期待結果：ブラウザ認可→Windows Credential Manager保存→statusとTool Discovery成功。検証時の既知Toolは35件だが、BetaのTool増減は差分として確認し、追加Toolだけで全機能が故障したと判断しない。プロセス再起動後もstatus成功を確認。秘密・token・認可codeをテストログに保存しない。
 
-**2026-10-19判定：一部確認、必須Gateは未完了。**
+**2026-10-19 当時の実測（以下は旧時点の記録）**：新規OSユーザーによる初回OAuth未実施は維持。所有者が個人利用に限り未検証リスクを了承したため、最終PR判断では必須Blockerとしていない。
 
 - [x] 通常ユーザー権限、空白入りパス、空runtime、PATHをWindows標準のみとしてsetup成功・help成功
 - [x] Python 3.12.8 / isolated=1、project・package・installed versionが0.1.0b1、pytest/ruff未導入
 - [x] setup再実行で正常runtimeを再利用。通常のWindowsユーザープロファイルを維持
 - [x] 別CLIプロセスのstatus成功（**同じWindowsユーザーの保存済みcredentialを使用**）
 - [x] プロセス内の空storageを使う補助検証でAUTH_REQUIRED / exit3、browser呼出0・対話認証開始0・永続書込み0を確認
-- [ ] 独立した新規Windowsユーザー/環境で、初回OAuth→Credential Manager保存→再起動後status/toolsを実機確認
+- [ ] 任意の追加検証：独立した新規Windowsユーザー/環境で、初回OAuth→Credential Manager保存→再起動後status/toolsを実機確認（未実施をPASSとしない）
 
 利用可能な実行環境は既存の通常Windowsユーザーです。別ユーザーの資格情報や独立VMは利用できず、既存credential削除やOSアカウント新設で代用していません。空storageの補助検証も初回OAuth成功とは扱いません。この未実施項目がリリースBlockerです。
 
@@ -119,16 +122,19 @@ skipはtest_jobsの3件、test_screening_history_compareの1件、test_validatio
 - [x] Google Drive正本の`tradingview_screening_system_spec.md`とRepository版を同期し、読み戻し一致を確認する
 - [x] [Issue #18](https://github.com/TakamKaji/tradingview_mcp_support/issues/18)には全米株UniverseのProvider制約を追跡対象として残す
 - [x] 更新／削除／認証失効時の利用案内をWindows Setupへ記載
-- [ ] 配布先・Private Repositoryの公開方法を所有者が決定・承認
-- [x] 今回の公開判断はNO-GO。公開設定・tag・GitHub Release・mergeを自動で実行しない
+- [x] 個人利用は現Private Repositoryで継続すると所有者が判断
+- [ ] 外部向けGitHub Release・tag・Publicへの変更は別途所有者承認（現時点では実施しない）
+- [x] GitHub Release・tag・公開設定変更は未承認。PRのレビュー可能判断と一般公開承認を分離する
 
-2026-10-19、正本19.3/19.5をenabled=false、本番Provider拒否、S&P 500限定503件成功の契約へ同期しました。全件読戻し一致を確認し、Phase 11と他セクションの不変も照合済み。Issue #18はOPEN、RepoはPRIVATEのままです。**Gate Eは仕様同期・記録を完了し、配布先と公開承認は未完了**です。
+2026-10-19、正本19.3/19.5をenabled=false、本番Provider拒否、S&P 500限定503件成功の契約へ同期しました。全件読戻し一致を確認し、Phase 11と他セクションの不変も照合済み。Issue #18はOPEN、RepoはPRIVATEのままです。**Gate Eの仕様同期・記録は完了**。個人利用のPrivate運用は所有者確認済みだが、一般公開の承認は未取得（公開作業はしない）。
 
 ## Release Candidate判定
 
 **Go**：Gate A〜Eの必要項目が実際に検証済みで、既知の公式MCP Beta制限をユーザー向けマニュアルに記載し、公開物に秘密情報がない。
 
-**No-Go**：初回OAuth不可、read-only基本Jobの永続的な失敗、バージョン／配布ファイル不整合、secret混入、未対応機能を成功と偽って表示する状態。実機未実施項目を成功扱いした場合もNo-Go。
+**No-Go**：実際に試した認証やread-only基本Jobの失敗、バージョン／配布ファイル不整合、secret混入、未対応機能を成功と偽る状態。未実施項目を成功扱いした場合もNo-Go。
+
+**PRのmain統合判断と公開リリース判断は別**。今回の所有者向けPrivate利用では独立新規Windowsユーザー初回OAuthを任意検証とする一方、一般公開の可否は将来別途承認する。
 
 検証結果は[Issue #28](https://github.com/TakamKaji/tradingview_mcp_support/issues/28)に実行環境・HEAD・結果・未実施理由とともに記録する。
 
@@ -145,14 +151,18 @@ skipはtest_jobsの3件、test_screening_history_compareの1件、test_validatio
 - `--no-pause`は従来の自動化用途を保護するため認証なしのセットアップとする。一般向けは引数なしでダブルクリック。
 - **この追加実装はWindows実機のクリックによるスモークテスト前**。元の2026-10-19検証結果は今回追加のsetup認証分岐を検証した証拠ではない。
 
-### 2026-10-19 最終判定
+### 2026-10-19 最新判定（文字化け修正後のWindows実機確認済み）
 
-| Gate | 判定 |
+| 項目 | 判定 |
 | --- | --- |
-| A | 完了：ソースZIP・version・LICENSE・混入点検・通信先案内 |
-| B | 未完了：独立新規Windows環境での初回OAuthが未実施 |
-| C | 完了：runtime依存のみ・保存済みOAuthでread-onlyシナリオ成功 |
-| D | 完了：669 passed / 0 failed / 5 skipped、ruff・差分チェック成功 |
-| E | 一部未完了：Drive同期済み、配布先・公開承認待ち |
+| A | 完了：配布構成・版・LICENSE・旧候補ZIPの混入点検。最終公開物は公開前に再検証 |
+| B | **所有者の通常ダブルクリック実機スモークPASS**：日本語表示・既存OAuth再利用・MCP接続を確認。独立新規Windowsユーザーでの初回OAuthのみ未実施・リスク受容済み |
+| C | 完了：read-only Job×2、JSON保存、最新・履歴・前回比較、Scheduler列挙 |
+| D | Windows Embedded Pythonで**669 passed / 0 failed / 5 skipped**、ruff・差分成功（旧HEADでの実測）。最新のBAT/PowerShell分離後に全pytest/ruff再実行したという意味ではない |
+| E | Drive正本同期・個人用Private Repo利用方針は確定。一般公開・Release・tagは未承認 |
 
-**リリースNO-GO、PR #29はDraft維持。** 実装レビューは可能ですが、Readyへの変更は必須Gate完了後です。Blockerは新規Windows環境での初回OAuthと公開判断。未修正のMajorコード不具合は見つかっていません。Minorは権限のある環境での実symlinkテスト5件の再確認です。全米株未対応は明記済みのβ版制限として扱い、対応済みとは表示しません。
+**PR #29のレビュー／main統合判断：GO（所有者の実機スモーク結果に基づく）。**
+
+**GitHub Release／tag／Public公開：未承認・実施しない。** これは個人用Private版のPRをReadyにすることと矛盾しない。
+
+2026-10-19の所有者実機報告により、文字化け修正版の通常 `setup.bat` ダブルクリック経路は正常動作した。既存credentialが利用されたため、新規ユーザー初回OAuthが成功したと主張しない。残るMinorはWindows実symlink権限によりskipされた5件。全米株条件なし取得は公式Providerの制約により未対応で、Issue #18で継続する。
