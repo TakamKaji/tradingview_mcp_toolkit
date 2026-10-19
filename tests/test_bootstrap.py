@@ -42,7 +42,10 @@ def test_windows_setup_uses_pinned_embedded_python_and_shared_entrypoint() -> No
 def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_use() -> None:
     setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
 
-    assert 'if /I "%~1"=="--no-pause" set "NO_PAUSE=1"' in setup
+    assert 'if /I "%~1"=="--no-pause" (' in setup
+    assert 'set "NO_PAUSE=1"' in setup
+    assert 'set "SKIP_AUTH=1"' in setup
+    assert 'if not defined NO_PAUSE (' in setup
     assert 'if exist "%TARGET_DIR%\\python.exe"' in setup
     assert 'if exist "%TARGET_DIR%\\%PTH_FILENAME%"' in setup
     assert 'if exist "%TARGET_DIR%\\%STDLIB_FILENAME%"' in setup
@@ -56,6 +59,25 @@ def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_u
     assert "$path = $env:PTH_FILEPATH" in setup
     assert "if ($content -notmatch '(?m)^import site[ \\t]*\\r?$')" in setup
     assert "if not defined NO_PAUSE pause" in setup
+
+
+
+def test_click_setup_includes_mcp_login_and_safe_retry() -> None:
+    setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
+    assert "chcp 65001 >nul" in setup
+    assert "TradingViewの初回ログインが必要です" in setup
+    assert 'call "%~dp0app.bat" --help >nul' in setup
+    assert 'call "%~dp0app.bat" mcp status >nul 2>&1' in setup
+    assert 'if "%MCP_STATUS_EXIT%"=="0" goto :already_authenticated' in setup
+    assert 'if "%MCP_STATUS_EXIT%"=="3" goto :start_oauth' in setup
+    assert 'call "%~dp0app.bat" mcp auth' in setup
+    assert 'call "%~dp0app.bat" mcp status >nul' in setup
+    assert 'call "%~dp0app.bat" mcp tools >nul' in setup
+    assert 'if defined SKIP_AUTH goto :setup_complete_without_auth' in setup
+    assert ':setup_success' in setup
+    assert ':error' in setup
+    assert 'schedule apply' not in setup
+    assert 'run sample_screen_daily' not in setup
 
 
 def test_app_entrypoint_never_falls_back_to_system_python() -> None:
