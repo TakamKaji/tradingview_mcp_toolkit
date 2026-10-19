@@ -25,6 +25,8 @@ Windowsでは、システムPythonをインストールせずにRepository内の
 setup.bat
 ```
 
+**日本語の文字化け対策:** 入口の`setup.bat`はASCIIだけで記述した起動用ファイルです。従来のPython導入処理は`setup-runtime.bat`に分け、日本語の案内と認証制御はUTF-8 BOM付き`scripts/setup-ui.ps1`（Windows PowerShell）から行います。Windowsの`cmd.exe`でUTF-8の日本語を直接解釈させないため、文字化けや日本語がコマンドとして実行される問題を回避します。ダブルクリックするファイルは引き続き**`setup.bat`だけ**です。
+
 画面には日本語で進捗と対処法が表示されます。初回ログインが必要なときだけ既定ブラウザを開きます。TradingViewの認可画面でログイン・許可操作をしてください。ログイン後は自動で元のセットアップ画面に戻り、`mcp status`・`mcp tools`が正常かを検証します。
 
 **検証・自動化用オプション：** `setup.bat --no-pause` は従来の無人テスト用途を維持するため、pauseだけでなくブラウザOAuthも**起動せず**、PythonおよびRuntime依存の導入とCLI起動のみ行います。`setup.bat --skip-auth` は画面を閉じずに同じ「認証を省いた導入」を行います。オプションを省略した通常のダブルクリックが、認証まで完了する利用者向けです。
