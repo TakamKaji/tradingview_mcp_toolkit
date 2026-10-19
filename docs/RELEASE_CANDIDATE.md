@@ -23,7 +23,7 @@
 
 検証ZIPに禁止ディレクトリはなく、秘密情報・個人パスのパターン検出は0件。設定・LICENSE・fixture構成も点検しました。fixtureは公式ToolのinputSchemaメタデータ2件で、実銘柄結果の保存物ではありません。MITのLICENSEを含み、第三者依存のバイナリはZIPへ同梱せずsetupで取得します。公開先の承認はGate Eで別に判定します。
 
-別PCで初回ダウンロードから全テストまで利用者が手順どおり実行する場合は、[コピペ式の別PC受入手順](SECOND_PC_ACCEPTANCE_TEST.md)を使用してください。初回OAuth未実施のGate判定は、利用者の実測報告まで変更しません。
+別PCのユーザー本人による一括テストは、[second_pc_full_test.bat](../second_pc_full_test.bat) を1本ダウンロードして通常ユーザーで実行してください。GitHub/TradingViewのブラウザ認証だけ手動操作が必要です。失敗時のコピペ式切り分け手順は[別PC受入手順](SECOND_PC_ACCEPTANCE_TEST.md)にあります。初回OAuth未実施のGate判定は、利用者の実測報告まで変更しません。
 
 ## Gate B: 新規Windows環境でのセットアップ（要実機）
 
