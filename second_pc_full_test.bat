@@ -15,6 +15,7 @@ set "AUTH_TEST=NOT_RUN"
 set "SETUP_TEST=NOT_RUN"
 set "READ_TEST=NOT_RUN"
 set "UNIT_TEST=NOT_RUN"
+set "PYTEST_SUMMARY=NOT_RUN"
 set "RUFF_TEST=NOT_RUN"
 set "PERSIST_TEST=NOT_RUN"
 set "BASELINE_TEST=NOT_RUN"
@@ -311,9 +312,13 @@ if errorlevel 1 (
 )
 echo.
 echo Running complete pytest suite. Skips due to symlink permission must be reviewed.
-"%PYEXE%" -m pytest -rs
-if errorlevel 1 (
-    set "FAIL_REASON=pytest failed. Review traceback above."
+set "PYTEST_CAPTURE=%TARGET%\.local\second_pc_pytest.log"
+"%PYEXE%" -m pytest -rs > "%PYTEST_CAPTURE%" 2>&1
+set "PYTEST_RC=%errorlevel%"
+type "%PYTEST_CAPTURE%"
+for /f "delims=" %%L in ('findstr /C:" passed" "%PYTEST_CAPTURE%"') do set "PYTEST_SUMMARY=%%L"
+if not "%PYTEST_RC%"=="0" (
+    set "FAIL_REASON=pytest failed. Review traceback above. A local pytest log was preserved."
     goto :fail
 )
 set "UNIT_TEST=PASS"
@@ -378,11 +383,12 @@ echo [8/8] Writing a brief result report without OAuth tokens...
 >> "%REPORT%" echo Read-only screening and history: %READ_TEST%
 >> "%REPORT%" echo Initial NO_BASELINE comparison: %BASELINE_TEST%
 >> "%REPORT%" echo pytest: %UNIT_TEST%
+>> "%REPORT%" echo pytest summary: %PYTEST_SUMMARY%
 >> "%REPORT%" echo ruff and git diff check: %RUFF_TEST%
 >> "%REPORT%" echo OAuth persistence: %PERSIST_TEST%
 >> "%REPORT%" echo Failed step: %STEP%
 >> "%REPORT%" echo Reason: %FAIL_REASON%
->> "%REPORT%" echo Note: Copy pytest passed/failed/skipped totals from the console separately.
+>> "%REPORT%" echo Note: pytest log remains in the local ignored .local folder.
 echo.
 echo -----------------------------------------
 type "%REPORT%"
