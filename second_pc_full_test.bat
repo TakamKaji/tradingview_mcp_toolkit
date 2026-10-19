@@ -358,6 +358,7 @@ if errorlevel 1 (
 set "PERSIST_TEST=PASS"
 set "RESULT=PASS"
 if /i "%AUTH_TEST%"=="EXISTING_CREDENTIAL_ONLY" set "RESULT=PARTIAL"
+set "STEP=None"
 set "FAIL_REASON=None"
 goto :finish
 
