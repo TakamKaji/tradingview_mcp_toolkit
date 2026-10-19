@@ -17,6 +17,7 @@ set "READ_TEST=NOT_RUN"
 set "UNIT_TEST=NOT_RUN"
 set "RUFF_TEST=NOT_RUN"
 set "PERSIST_TEST=NOT_RUN"
+set "BASELINE_TEST=NOT_RUN"
 set "GIT_SHA=UNKNOWN"
 set "CAPTURE="
 set "FAIL_REASON=Unknown failure"
@@ -209,6 +210,10 @@ if errorlevel 1 (
 )
 if not exist ".local\" mkdir ".local"
 set "CAPTURE=%TARGET%\.local\second_pc_test_output.tmp"
+set "HAD_PREVIOUS_HISTORY=0"
+if exist "results\" (
+    for /r "results" %%F in (sample_standard_screen_*.json) do set "HAD_PREVIOUS_HISTORY=1"
+)
 if exist "%CAPTURE%" (
     set "FAIL_REASON=Old test capture exists. It was not overwritten."
     goto :fail
@@ -237,6 +242,7 @@ if errorlevel 1 (
     set "FAIL_REASON=results history after first Job failed."
     goto :fail
 )
+if "%HAD_PREVIOUS_HISTORY%"=="1" goto :skip_first_no_baseline
 call ".\app.bat" results compare sample_standard_screen > "%CAPTURE%"
 set "COMPARE_RC=%errorlevel%"
 if not "%COMPARE_RC%"=="1" (
@@ -249,8 +255,15 @@ if errorlevel 1 (
     goto :fail
 )
 echo PASS: first compare = NO_BASELINE / exit 1.
+set "BASELINE_TEST=PASS"
 del /q "%CAPTURE%" >nul 2>&1
+goto :first_compare_done
 
+:skip_first_no_baseline
+echo Existing snapshots were found. First-time NO_BASELINE test is skipped safely.
+set "BASELINE_TEST=SKIPPED_PREVIOUS_HISTORY"
+
+:first_compare_done
 echo Running public read-only Job: second snapshot...
 call ".\app.bat" run public_sample_screen_daily > "%CAPTURE%"
 if errorlevel 1 (
@@ -339,6 +352,7 @@ if errorlevel 1 (
 )
 set "PERSIST_TEST=PASS"
 set "RESULT=PASS"
+if /i "%AUTH_TEST%"=="EXISTING_CREDENTIAL_ONLY" set "RESULT=PARTIAL"
 set "FAIL_REASON=None"
 goto :finish
 
@@ -362,6 +376,7 @@ echo [8/8] Writing a brief result report without OAuth tokens...
 >> "%REPORT%" echo Setup: %SETUP_TEST%
 >> "%REPORT%" echo First OAuth: %AUTH_TEST%
 >> "%REPORT%" echo Read-only screening and history: %READ_TEST%
+>> "%REPORT%" echo Initial NO_BASELINE comparison: %BASELINE_TEST%
 >> "%REPORT%" echo pytest: %UNIT_TEST%
 >> "%REPORT%" echo ruff and git diff check: %RUFF_TEST%
 >> "%REPORT%" echo OAuth persistence: %PERSIST_TEST%
@@ -379,4 +394,5 @@ echo Do NOT paste OAuth tokens, private credentials, or raw authentication outpu
 echo.
 pause
 if /i "%RESULT%"=="PASS" exit /b 0
+if /i "%RESULT%"=="PARTIAL" exit /b 0
 exit /b 1
