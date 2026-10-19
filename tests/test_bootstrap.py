@@ -58,7 +58,8 @@ def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_u
     assert "Always enable site on rerun" in setup
     assert "$path = $env:PTH_FILEPATH" in setup
     assert "if ($content -notmatch '(?m)^import site[ \\t]*\\r?$')" in setup
-    assert "if not defined NO_PAUSE pause" in setup
+    assert "if not defined NO_PAUSE (" in setup
+    assert "pause >nul" in setup
 
 
 
@@ -74,6 +75,8 @@ def test_click_setup_includes_mcp_login_and_safe_retry() -> None:
     assert 'call "%~dp0app.bat" mcp status >nul' in setup
     assert 'call "%~dp0app.bat" mcp tools >nul' in setup
     assert 'if defined SKIP_AUTH goto :setup_complete_without_auth' in setup
+    assert 'if "%MCP_STATUS_EXIT%"=="3" goto :start_oauth' in setup
+    assert 'if "%MCP_STATUS_EXIT%"=="0" goto :already_authenticated' in setup
     assert ':setup_success' in setup
     assert ':error' in setup
     assert 'schedule apply' not in setup
