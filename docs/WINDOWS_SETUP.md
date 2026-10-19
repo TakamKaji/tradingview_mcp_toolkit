@@ -35,7 +35,7 @@ setup.bat --no-pause
 2. Embedded Pythonの `python312._pth` で `import site` を有効化
 3. 必要な場合だけpipをbootstrap
 4. build backendをEmbedded Pythonへ導入
-5. `requirements.txt` 経由でproject + dev依存をeditable install
+5. `requirements.txt` 経由でproject + runtime依存のみをeditable install。開発ツールは導入しません
 6. 最後に共通 `app.bat --help` が起動できることを検証
 
 システムPythonは参照しません。`setenv.bat` が起動プロセス内だけEmbedded PythonをPATH先頭へ置き、`PYTHONHOME` / `PYTHONPATH` をクリアします。Windowsのユーザープロファイル、Credential Manager、既定ブラウザ、TEMPは置き換えません。
@@ -94,11 +94,12 @@ console.bat
 その中で:
 
 ```bat
+python -m pip install --no-build-isolation -r requirements-dev.txt
 python -m pytest -rs
 python -m ruff check .
 ```
 
-通常利用は `app.bat <command>` を優先してください。JobごとのBATは作りません。
+先頭のコマンドは開発・テスト環境で初回だけ実行します。一般利用の `setup.bat` には `pytest` / `ruff` を含めません。通常利用は `app.bat <command>` を優先してください。JobごとのBATは作りません。
 
 ## 再セットアップ
 
@@ -123,4 +124,4 @@ Windows実機のソース検証コピーに空のruntimeから導入しました
 
 ## Phase 9との関係（実装境界）
 
-Phase 10のWindows bootstrap / DocsはPhase 9の米国セクター集計から独立しています。Phase 9 builtinが未実装でも、MCP認証、通常Screening、Job、Scheduler、公開read-only sampleは利用できます。
+Phase 9のbuiltin集計・Job統合は実装済みです。ただしTradingView公式MCP Betaが条件なし全米株Screenerを拒否し、全米株の完全取得手段も未確認のため、同梱の `us_sector_morning` は `enabled=false` です。S&P 500限定503銘柄での集計・保存は実機検証済みですが、全米株集計が利用可能という意味ではありません。一般Screening、認証、Job、Scheduler、read-only sampleは通常通り利用できます。公開前の確認は[Release Candidate Gate](RELEASE_CANDIDATE.md)に従ってください。
