@@ -77,4 +77,5 @@ python -m ruff check .
 - 同一ファイルを複数subagentへ同時編集させない。通常はSol implementerを1つだけ動かす。
 - Solは指定範囲の実装、Unit Test、pytest/ruff、変更結果の報告まで担当し、依頼外の大規模リファクタを行わない。
 - multi-agent機能が利用できない場合、Astraは黙って単独実装へ切り替えず、その状態をユーザーへ明示する。
-- 詳細な実装契約は `docs/tradingview_screening_system_spec.md` を参照する。
+- 操作マニュアルは `docs/user/README.md`、開発資料は `docs/development/README.md` を参照する。
+- 詳細な実装契約は `docs/development/tradingview_screening_system_spec.md` を参照する。
