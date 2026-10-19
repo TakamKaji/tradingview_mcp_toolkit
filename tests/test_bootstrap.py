@@ -18,7 +18,7 @@ def test_package_version_is_defined() -> None:
 def test_windows_release_install_does_not_install_dev_extras() -> None:
     runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8").strip()
     dev = (ROOT / "requirements-dev.txt").read_text(encoding="utf-8").strip()
-    setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
+    setup = (ROOT / "setup-runtime.bat").read_text(encoding="utf-8")
     assert runtime == "-e ."
     assert dev == "-e .[dev]"
     assert 'pip install --no-build-isolation -r requirements.txt' in setup
@@ -31,7 +31,7 @@ def test_cli_parser_can_be_built() -> None:
 
 
 def test_windows_setup_uses_pinned_embedded_python_and_shared_entrypoint() -> None:
-    setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
+    setup = (ROOT / "setup-runtime.bat").read_text(encoding="ascii")
 
     assert 'set "PYTHON_VERSION=3.12.8"' in setup
     assert "python-%PYTHON_VERSION%-embed-%ARCH%.zip" in setup
@@ -40,12 +40,9 @@ def test_windows_setup_uses_pinned_embedded_python_and_shared_entrypoint() -> No
 
 
 def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_use() -> None:
-    setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
+    setup = (ROOT / "setup-runtime.bat").read_text(encoding="ascii")
 
-    assert 'if /I "%~1"=="--no-pause" (' in setup
-    assert 'set "NO_PAUSE=1"' in setup
-    assert 'set "SKIP_AUTH=1"' in setup
-    assert 'if not defined NO_PAUSE (' in setup
+    assert 'if /I "%~1"=="--no-pause" set "NO_PAUSE=1"' in setup
     assert 'if exist "%TARGET_DIR%\\python.exe"' in setup
     assert 'if exist "%TARGET_DIR%\\%PTH_FILENAME%"' in setup
     assert 'if exist "%TARGET_DIR%\\%STDLIB_FILENAME%"' in setup
@@ -58,26 +55,28 @@ def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_u
     assert "Always enable site on rerun" in setup
     assert "$path = $env:PTH_FILEPATH" in setup
     assert "if ($content -notmatch '(?m)^import site[ \\t]*\\r?$')" in setup
-    assert "if not defined NO_PAUSE (" in setup
-    assert "pause >nul" in setup
 
 
-def test_click_setup_includes_mcp_login_and_safe_retry() -> None:
-    setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
-    assert "chcp 65001 >nul" in setup
-    assert "TradingViewの初回ログインが必要です" in setup
-    assert 'call "%~dp0app.bat" --help >nul' in setup
-    assert 'call "%~dp0app.bat" mcp status >nul 2>&1' in setup
-    assert 'if "%MCP_STATUS_EXIT%"=="0" goto :already_authenticated' in setup
-    assert 'if "%MCP_STATUS_EXIT%"=="3" goto :start_oauth' in setup
-    assert 'call "%~dp0app.bat" mcp auth' in setup
-    assert 'call "%~dp0app.bat" mcp status >nul' in setup
-    assert 'call "%~dp0app.bat" mcp tools >nul' in setup
-    assert 'if defined SKIP_AUTH goto :setup_complete_without_auth' in setup
-    assert ':setup_success' in setup
-    assert ':error' in setup
-    assert 'schedule apply' not in setup
-    assert 'run sample_screen_daily' not in setup
+def test_click_setup_uses_ascii_batch_and_bom_power_shell_ui() -> None:
+    launcher = (ROOT / "setup.bat").read_bytes()
+    ui_bytes = (ROOT / "scripts/setup-ui.ps1").read_bytes()
+    assert launcher.isascii()  # Windows cmd must never parse UTF-8 Japanese.
+    assert b"powershell.exe -NoProfile -ExecutionPolicy Bypass -File" in launcher
+    assert b"scripts\\setup-ui.ps1" in launcher
+    assert ui_bytes.startswith(b"\\xef\\xbb\\xbf")
+    ui = ui_bytes.decode("utf-8-sig")
+    assert "TradingView" in ui
+    assert "初回ログインが必要です" in ui
+    assert "$AuthStatus -eq 3" in ui
+    assert "$AuthStatus -eq 0" in ui
+    assert "@('mcp','auth')" in ui
+    assert "@('mcp','status')" in ui
+    assert "@('mcp','tools')" in ui
+    assert "'--no-pause' { $NoPause = $true; $SkipAuth = $true }" in ui
+    assert "'--skip-auth' { $SkipAuth = $true }" in ui
+    assert "setup-runtime.bat" in ui
+    assert "schedule apply" not in ui
+    assert "run sample_screen_daily" not in ui
 
 
 def test_app_entrypoint_never_falls_back_to_system_python() -> None:
@@ -99,7 +98,7 @@ def test_setenv_preserves_windows_user_profile_and_credentials() -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows PowerShell bootstrap")
 @pytest.mark.parametrize("newline", ["\r\n", "\n"])
 def test_site_repair_handles_embedded_pth_line_endings(tmp_path: Path, newline: str) -> None:
-    setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
+    setup = (ROOT / "setup-runtime.bat").read_text(encoding="ascii")
     command = next(
         line.strip()[1:-1] for line in setup.splitlines()
         if line.strip().startswith('"$path = $env:PTH_FILEPATH;')
