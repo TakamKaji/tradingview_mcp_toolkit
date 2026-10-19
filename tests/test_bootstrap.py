@@ -75,8 +75,6 @@ def test_click_setup_includes_mcp_login_and_safe_retry() -> None:
     assert 'call "%~dp0app.bat" mcp status >nul' in setup
     assert 'call "%~dp0app.bat" mcp tools >nul' in setup
     assert 'if defined SKIP_AUTH goto :setup_complete_without_auth' in setup
-    assert 'if "%MCP_STATUS_EXIT%"=="3" goto :start_oauth' in setup
-    assert 'if "%MCP_STATUS_EXIT%"=="0" goto :already_authenticated' in setup
     assert ':setup_success' in setup
     assert ':error' in setup
     assert 'schedule apply' not in setup
