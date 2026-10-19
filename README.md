@@ -28,7 +28,7 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 
 公開用の `public_sample_screen_daily` は `enabled=false` / `save=true` / `watchlistSync=false` です。手動runは可能ですが `schedule apply` の登録対象にならず、TradingView WatchlistへのWriteも行いません。既存の `sample_screen_daily` はWatchlist同期を行う運用サンプルなので、初回確認では使い分けてください。
 
-詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。公開前の確認手順は[Release Candidate Gate](docs/RELEASE_CANDIDATE.md)、想定する利用範囲と制約は[β版リリースノート案](docs/RELEASE_NOTES_0.1.0b1.md)にまとめています。パッケージ版は現在 `0.1.0b1`（リリース候補準備中）です。GitHub Releaseやtagを公開したという意味ではありません。
+詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。**別PCでの初回テスト**は[初回ダウンロードから全検証までのコピペ手順](docs/SECOND_PC_ACCEPTANCE_TEST.md)を参照してください。公開前の確認手順は[Release Candidate Gate](docs/RELEASE_CANDIDATE.md)、想定する利用範囲と制約は[β版リリースノート案](docs/RELEASE_NOTES_0.1.0b1.md)にまとめています。パッケージ版は現在 `0.1.0b1`（リリース候補準備中）です。GitHub Releaseやtagを公開したという意味ではありません。
 
 `setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク作成を必要とする検証がskipされることがあります。
 
