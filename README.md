@@ -2,7 +2,7 @@
 
 TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽量Pythonバックエンドです。
 
-現在はPhase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携を実装しています。Phase 9の全米株集計はProvider coverage未確定のため保留中です。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
+Phase 8までの設定モデル・JSON検証・共通通信制御・MCP接続基盤・全35 Toolの型付きPython API、Screening実行・結果保存・管理Watchlist差分同期、共通Job RunnerとWindows Task Scheduler連携、Phase 11の保存履歴・前回比較を実装しています。Phase 9のセクター集計コードは実装済みですが、全米株取得は公式Provider Betaの制約で未対応のため、当該自動Jobは初期状態で無効です。Windowsではプロジェクト内のEmbedded Pythonを使い、システムPythonを要求しません。macOSなどでは通常Pythonから手動CLIを利用できますが、SchedulerはWindowsのみです。
 
 ## 開発方針
 
@@ -15,16 +15,15 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 
 ## Windows セットアップ
 
-1. リポジトリをcloneする。
-2. 通常ユーザー権限で `setup.bat` を実行する。
-3. `app.bat mcp status` で共通CLIへ到達できることを確認する。
-4. 初回未認証なら `AUTH_REQUIRED` / exit 3になるため、`app.bat mcp auth` を実行する。
-5. 認証後に `app.bat mcp status` と `app.bat mcp tools` を確認する。
-6. 書き込みを伴わない公開サンプルは `app.bat run public_sample_screen_daily` で試す。
+1. リポジトリをダウンロードして展開する（またはcloneする）。
+2. 通常ユーザーで **`setup.bat` をダブルクリック**する。システムPythonや管理者権限は不要。
+3. 初回はブラウザが開くので、TradingViewにログインしてアクセスを許可する。
+4. セットアップが自動で `mcp status`・`mcp tools` を確認し、完了を日本語で表示する。認証済みなら再ログインを省略する。
+5. 任意の動作確認として、書き込みを伴わない公開サンプル `app.bat run public_sample_screen_daily` を利用できる。
 
 `setup.bat` は初回のみEmbedded Pythonを取得します。Python本体が既にある場合も、依存パッケージの更新処理は継続して実行します。exe・標準ライブラリZIP・DLL・設定の欠落や起動検査の失敗は不完全なruntimeとして検出し、対象runtimeだけを再構築します。非対話実行では `setup.bat --no-pause` を利用できます。
 
-`mcp status` は未認証でもブラウザを開きません。初回認証だけを `mcp auth` で明示的に開始し、OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。
+`setup.bat`の通常実行は未認証時だけ `mcp auth` を起動し、ブラウザ認証後にMCP接続とTool一覧を検証します。`mcp status` 単独ではブラウザを開きません。OAuth credentialはWindows Credential Managerへ保存します。管理者権限、恒久PATH変更、Pythonのレジストリ登録は不要です。非対話の `setup.bat --no-pause` はブラウザ認証を行わず、Pythonと依存の導入だけを実行します。
 
 公開用の `public_sample_screen_daily` は `enabled=false` / `save=true` / `watchlistSync=false` です。手動runは可能ですが `schedule apply` の登録対象にならず、TradingView WatchlistへのWriteも行いません。既存の `sample_screen_daily` はWatchlist同期を行う運用サンプルなので、初回確認では使い分けてください。
 
