@@ -4,7 +4,7 @@
 
 **現在はこちらを使用してください。** [second_pc_full_test.bat](../second_pc_full_test.bat) をGitHub上で開き、右上の「Download raw file」で別PCへ保存したら、**管理者として実行せず普通にダブルクリック**するだけです。
 
-バッチ内でGit確認／未導入ならwinget導入、Private GitHubリポジトリclone、Embedded Pythonセットアップ、初回TradingView OAuth、公式MCP read-only、公開Job2回・JSON保存・履歴比較、pytest全件、ruff・git差分、認証永続性まで順次実行します。GitHubとTradingViewの認証だけブラウザ操作が必要です。wingetを利用できない場合はGitの手動導入が必要になるため、その場合だけバッチ画面の案内に従ってください。
+バッチ内でGit確認／未導入ならwinget導入、Private GitHubリポジトリclone、Embedded Pythonセットアップ、初回TradingView OAuth、公式MCP read-only、公開Job2回・JSON保存・履歴比較、pytest全件、ruff・git差分、認証永続性まで順次実行します。BATは`setup.bat --no-pause`を指定して**そこでブラウザ認証を起動せず**、直後にOAuthだけを独立した受入テストとして実行します。一般利用者の通常`setup.bat`ダブルクリックでは、初回OAuthもセットアップ内に含まれます。GitHubとTradingViewの認証だけブラウザ操作が必要です。wingetを利用できない場合はGitの手動導入が必要になるため、その場合だけバッチ画面の案内に従ってください。
 
 終了後に `%USERPROFILE%\TV_MCP_BETA_TEST_RESULT.txt` が作成されます。**このレポートだけ本チャットに貼ってください。** pytestの成功・skip件数も自動記録されます。OAuth tokenやGitHub認証情報はレポートに出しません。失敗時はバッチが止まり、既存フォルダや認証情報を削除せず失敗理由を報告します。
 
