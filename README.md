@@ -28,7 +28,7 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 
 公開用の `public_sample_screen_daily` は `enabled=false` / `save=true` / `watchlistSync=false` です。手動runは可能ですが `schedule apply` の登録対象にならず、TradingView WatchlistへのWriteも行いません。既存の `sample_screen_daily` はWatchlist同期を行う運用サンプルなので、初回確認では使い分けてください。
 
-詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。
+詳細は [Windows Embedded Python セットアップ](docs/WINDOWS_SETUP.md) を参照してください。公開前の確認手順は[Release Candidate Gate](docs/RELEASE_CANDIDATE.md)にまとめています。パッケージ版は現在 `0.1.0b1`（リリース候補準備中）です。GitHub Releaseやtagを公開したという意味ではありません。
 
 `setup.bat` / `console.bat` は通常ユーザー権限で実行する前提です。管理者として実行する必要はありません。pytestの `tmp_path` はOSの `%TEMP%` ではなく、Git管理外の `.pytest-tmp/` を使用します。これにより、過去に管理者権限で作成された `%TEMP%\\pytest-of-<user>` のACLに影響されず通常ユーザーでテストできます。WindowsでDeveloper Modeが無効な場合は、実シンボリックリンク作成を必要とする検証がskipされることがあります。
 
@@ -37,10 +37,13 @@ TradingView公式MCPを、AIアプリから共通CLI経由で扱うための軽�
 `console.bat` で開いたコンソールから実行します。
 
 ```bat
+python -m pip install --no-build-isolation -r requirements-dev.txt
 python -m tradingview_screening --help
 python -m pytest
 python -m ruff check .
 ```
+
+通常の `setup.bat` は実行時依存のみをインストールします。上の最初のコマンドは開発・テストを行う場合だけ必要です。
 
 ## macOS / 通常Python
 
@@ -76,7 +79,7 @@ Development:
 - `pytest>=8,<10`
 - `ruff>=0.9,<1`
 
-`requirements.txt` はWindows bootstrap互換のため `-e .[dev]` を指定します。
+`requirements.txt` はWindowsの一般利用者向けbootstrapとして `-e .`（runtime依存のみ）を指定します。`requirements-dev.txt` は開発・テスト用の `-e .[dev]` です。Windows Embedded Pythonではbuild backendを別途用意するため、dev導入には `--no-build-isolation` を指定します。
 
 ## 設定定義（Phase 2）
 
