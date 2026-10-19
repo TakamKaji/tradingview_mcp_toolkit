@@ -27,13 +27,15 @@
 
 ## Gate B: 新規Windows環境でのセットアップ（要実機）
 
-既存tokenを流用しない**新しいWindowsユーザーまたは独立したテスト環境**で検証します。パスに空白を含む展開先でも確認します。
+**配布向け操作はダウンロード・展開後に `setup.bat` のダブルクリックのみ**です。2026-10-19の所有者判断で、独立OSユーザーでの初回OAuth再試験は**未検証リスクを受け入れる**方針です。これを「初回OAuth成功」と記録しません。新しいワンクリックセットアップのWindows実機スモークは、今回の変更後に別途確認します。
+
+既存tokenを流用しない**新しいWindowsユーザーまたは独立したテスト環境**があれば追加検証できます。パスに空白を含む展開先でも確認します。
 
 ```bat
-setup.bat --no-pause
-app.bat --help
-app.bat mcp status
+setup.bat
 ```
+
+これでMCPのログイン・接続確認まで行います。**無人テスト時のみ** `setup.bat --no-pause` で認証を省略してbootstrap部分を検証できます。その場合は上記`mcp status`・`mcp auth`・`mcp tools`を別途確認します。
 
 期待結果：システムPython不使用でインストール成功。`mcp status` は未認証なら `AUTH_REQUIRED`（exit 3）。この操作は自動的にブラウザを開かない。
 
@@ -129,6 +131,12 @@ skipはtest_jobsの3件、test_screening_history_compareの1件、test_validatio
 **No-Go**：初回OAuth不可、read-only基本Jobの永続的な失敗、バージョン／配布ファイル不整合、secret混入、未対応機能を成功と偽って表示する状態。実機未実施項目を成功扱いした場合もNo-Go。
 
 検証結果は[Issue #28](https://github.com/TakamKaji/tradingview_mcp_support/issues/28)に実行環境・HEAD・結果・未実施理由とともに記録する。
+
+### 2026-10-19 ワンクリックsetup対応（追加差分）
+
+- `setup.bat`の通常実行をPythonセットアップ→未認証時のみブラウザOAuth→status/tools確認まで統合。日本語案内、再実行時の認証スキップ、失敗時の停止・診断案内を追加。
+- `--no-pause`は従来の自動化用途を保護するため認証なしのセットアップとする。一般向けは引数なしでダブルクリック。
+- **この追加実装はWindows実機のクリックによるスモークテスト前**。元の2026-10-19検証結果は今回追加のsetup認証分岐を検証した証拠ではない。
 
 ### 2026-10-19 最終判定
 
