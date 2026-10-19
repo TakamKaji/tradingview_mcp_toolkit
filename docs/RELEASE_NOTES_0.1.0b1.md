@@ -41,5 +41,5 @@ app.bat run public_sample_screen_daily
 
 - このβ版は投資助言、価格や指標の正確性・完全性を保証しません。
 - TradingView Providerの仕様・Tool数・銘柄カバレッジは変更され得ます。条件が黙って無視された応答、件数不整合、全件取得できていない応答を安全側で区別します。
-- 新規Windowsアカウントでの初回OAuth、PR #19統合後のWindows全pytest/ruff、Google Drive仕様の同一性、公開前の配布・秘密情報チェックは[Release Candidate Gate](RELEASE_CANDIDATE.md)で未完了のまま管理しています。
+- 新規Windowsアカウントでの初回OAuthは未実施です。保存済みcredentialの成功で代替せず、必須Gateが揃うまで公開はNO-GOです。統合後の回帰・クリーンsetup・仕様同期・配布点検の実測は[Release Candidate Gate](RELEASE_CANDIDATE.md)で管理します。
 - macOSからの通常Python CLIの想定はありますが、このWindows β版のリリース検証範囲には含めません。

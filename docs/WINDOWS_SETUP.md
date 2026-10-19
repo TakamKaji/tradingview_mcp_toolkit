@@ -8,10 +8,12 @@ Windowsでは、システムPythonをインストールせずにRepository内の
 - 通常ユーザー権限
 - PowerShellが利用可能
 - 初回セットアップ時に次のHTTPSアクセスが可能
-  - `python.org`
+  - `www.python.org`
   - `bootstrap.pypa.io`
-  - Python package index / package配布先
-- TradingView MCP利用時は対象TradingViewプランが必要
+  - 標準PyPI利用時は `pypi.org` / `files.pythonhosted.org`（独自indexを設定している環境ではその配布先）
+- MCP利用時は `mcp.tradingview.com`、ブラウザ認証では `www.tradingview.com` 等の公式認証先へのHTTPS接続が必要
+- 明示的な初回OAuthだけ、ローカルの `127.0.0.1:8765` で認可callbackを受信
+- TradingView MCP利用時はEssential以上の対象有料プランが必要。試用プランは対象外（2026-10-19の[公式案内](https://www.tradingview.com/mcp/docs)を確認。条件は公式案内を優先）
 
 管理者権限、恒久的なPATH変更、Pythonのレジストリ登録は不要です。
 
@@ -108,6 +110,14 @@ python -m ruff check .
 アプリを終了してから再実行してください。`python.exe`が残っていても、標準ライブラリやDLLの欠落・起動検査の失敗を検出した場合は自動再構築します。依存パッケージの導入に失敗した場合も、原因を解消して同じsetupを再実行できます。
 
 `.local/` はOAuth補助情報・lock・cache等のアプリ固有ローカルデータです。runtime再構築のために削除する必要はありません。認証情報の本体はWindows Credential Manager側です。
+
+## 更新・利用終了・認証失効
+
+更新時は新しいソースを別ディレクトリへ展開し、setup後に定義を確認してください。既存のscreenings/jobs、保存結果、`.local/managed_watchlists.json` 等は必要に応じて利用者がバックアップし、更新のために旧環境を削除しないでください。新しいsetupは旧ディレクトリのTaskやmappingを自動移行しません。
+
+利用終了時も、ディレクトリ削除だけでは登録済みScheduler TaskやCredential Managerの情報は消えません。登録状況を確認し、Taskの削除やTradingView側の連携解除は利用者が正規の手順で判断してください。このアプリは削除・失効を自動実行しません。
+
+AUTH_REQUIREDになった場合は `app.bat mcp auth` で正規のブラウザ認証を明示的にやり直します。tokenをファイルに書き出して移行したり、再認証のために既存credentialを一括削除したりしないでください。
 
 ## 2026-10-18の実機確認
 
