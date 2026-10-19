@@ -15,7 +15,6 @@ def test_package_version_is_defined() -> None:
     assert __version__ == "0.1.0b1"
 
 
-
 def test_windows_release_install_does_not_install_dev_extras() -> None:
     runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8").strip()
     dev = (ROOT / "requirements-dev.txt").read_text(encoding="utf-8").strip()
@@ -24,6 +23,7 @@ def test_windows_release_install_does_not_install_dev_extras() -> None:
     assert dev == "-e .[dev]"
     assert 'pip install --no-build-isolation -r requirements.txt' in setup
     assert 'pip install --no-build-isolation -r requirements-dev.txt' not in setup
+
 
 def test_cli_parser_can_be_built() -> None:
     parser = build_parser()
