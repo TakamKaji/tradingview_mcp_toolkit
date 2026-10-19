@@ -1,5 +1,15 @@
 # 別PCでの初回導入〜全テスト（Windows / v0.1.0b1 / PR #29）
 
+## 推奨：BATファイル1本で全自動実行
+
+**現在はこちらを使用してください。** [second_pc_full_test.bat](../second_pc_full_test.bat) をGitHub上で開き、右上の「Download raw file」で別PCへ保存したら、**管理者として実行せず普通にダブルクリック**するだけです。
+
+バッチ内でGit確認／未導入ならwinget導入、Private GitHubリポジトリclone、Embedded Pythonセットアップ、初回TradingView OAuth、公式MCP read-only、公開Job2回・JSON保存・履歴比較、pytest全件、ruff・git差分、認証永続性まで順次実行します。GitHubとTradingViewの認証だけブラウザ操作が必要です。wingetを利用できない場合はGitの手動導入が必要になるため、その場合だけバッチ画面の案内に従ってください。
+
+終了後に `%USERPROFILE%\TV_MCP_BETA_TEST_RESULT.txt` が作成されます。**このレポートだけ本チャットに貼ってください。** pytestの成功・skip件数も自動記録されます。OAuth tokenやGitHub認証情報はレポートに出しません。失敗時はバッチが止まり、既存フォルダや認証情報を削除せず失敗理由を報告します。
+
+以下の手動コピペ手順は、BATが途中で失敗した場合の切り分け用として残します。
+
 この手順は、自分の**別PC**で初めてTradingView MCP Supportを導入し、実際のTradingViewログイン、Read-only実MCP、保存・履歴比較、全pytest/ruffを行うためのものです。**通常のPowerShell（管理者として実行しない）**に、各コードブロックを上から順番に貼り付けます。途中で失敗したら、次へ進まずその結果を確認します。
 
 - Windows 10/11 64-bit、インターネット接続、TradingView公式MCP対象プランが必要。**システムPythonのインストールは不要**。
