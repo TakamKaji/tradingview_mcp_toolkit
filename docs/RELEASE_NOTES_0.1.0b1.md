@@ -27,9 +27,13 @@ Windows 64-bit、PowerShell・インターネット接続が必要です。セ�
 
 ```bat
 setup.bat
-app.bat mcp status
-app.bat mcp auth
-app.bat mcp tools
+```
+
+**通常のセットアップはダブルクリックのみ**：Pythonの導入、TradingView初回OAuthブラウザ認可、MCP接続・Tool Discoveryの確認を日本語の案内付きで連続実行します。TradingViewへのログインと許可操作は公式ブラウザ画面で行います。認証済みの場合、ブラウザ認可を再実行せず接続確認します。自動化向け`setup.bat --no-pause`はブラウザ認証をスキップします。
+
+試験用のread-only Jobを動かしたい場合は、セットアップ後に以下を別途実行できます。
+
+```bat
 app.bat run public_sample_screen_daily
 ```
 
