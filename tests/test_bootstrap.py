@@ -63,7 +63,7 @@ def test_click_setup_uses_ascii_batch_and_bom_power_shell_ui() -> None:
     assert launcher.isascii()  # Windows cmd must never parse UTF-8 Japanese.
     assert b"powershell.exe -NoProfile -ExecutionPolicy Bypass -File" in launcher
     assert b"scripts\\setup-ui.ps1" in launcher
-    assert ui_bytes.startswith(b"\\xef\\xbb\\xbf")
+    assert ui_bytes.startswith(b"\xef\xbb\xbf")
     ui = ui_bytes.decode("utf-8-sig")
     assert "TradingView" in ui
     assert "初回ログインが必要です" in ui
@@ -77,6 +77,24 @@ def test_click_setup_uses_ascii_batch_and_bom_power_shell_ui() -> None:
     assert "setup-runtime.bat" in ui
     assert "schedule apply" not in ui
     assert "run sample_screen_daily" not in ui
+
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows PowerShell script parser")
+def test_powershell_ui_has_valid_syntax(tmp_path: Path) -> None:
+    script = ROOT / "scripts/setup-ui.ps1"
+    env = {**os.environ, "SETUP_UI_SCRIPT_PATH": str(script)}
+    check = (
+        "$tokens=$null; $errors=$null; "
+        "[void][System.Management.Automation.Language.Parser]::ParseFile("
+        "$env:SETUP_UI_SCRIPT_PATH, [ref]$tokens, [ref]$errors); "
+        "if ($errors.Count -gt 0) { $errors | Out-String | Write-Error; exit 1 }"
+    )
+    completed = subprocess.run(
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", check],
+        cwd=tmp_path, env=env, capture_output=True, text=True, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_app_entrypoint_never_falls_back_to_system_python() -> None:
