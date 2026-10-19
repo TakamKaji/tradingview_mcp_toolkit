@@ -62,7 +62,6 @@ def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_u
     assert "pause >nul" in setup
 
 
-
 def test_click_setup_includes_mcp_login_and_safe_retry() -> None:
     setup = (ROOT / "setup.bat").read_text(encoding="utf-8")
     assert "chcp 65001 >nul" in setup
