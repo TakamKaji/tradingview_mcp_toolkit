@@ -19,16 +19,19 @@ Windowsでは、システムPythonをインストールせずにRepository内の
 
 ## 初回セットアップ
 
-Repository rootで `setup.bat` を実行します。
+**利用者はRepositoryをダウンロード・展開したフォルダで `setup.bat` をダブルクリックするだけです。** 管理者として実行する必要はありません。通常実行では、Python導入から公式TradingViewのブラウザOAuth認証、MCP接続確認まで1回で進みます。
 
 ```bat
 setup.bat
 ```
 
-非対話実行ではpauseを抑止できます。
+画面には日本語で進捗と対処法が表示されます。初回ログインが必要なときだけ既定ブラウザを開きます。TradingViewの認可画面でログイン・許可操作をしてください。ログイン後は自動で元のセットアップ画面に戻り、`mcp status`・`mcp tools`が正常かを検証します。
+
+**検証・自動化用オプション：** `setup.bat --no-pause` は従来の無人テスト用途を維持するため、pauseだけでなくブラウザOAuthも**起動せず**、PythonおよびRuntime依存の導入とCLI起動のみ行います。`setup.bat --skip-auth` は画面を閉じずに同じ「認証を省いた導入」を行います。オプションを省略した通常のダブルクリックが、認証まで完了する利用者向けです。
 
 ```bat
 setup.bat --no-pause
+setup.bat --skip-auth
 ```
 
 セットアップは次を行います。
@@ -38,7 +41,9 @@ setup.bat --no-pause
 3. 必要な場合だけpipをbootstrap
 4. build backendをEmbedded Pythonへ導入
 5. `requirements.txt` 経由でproject + runtime依存のみをeditable install。開発ツールは導入しません
-6. 最後に共通 `app.bat --help` が起動できることを検証
+6. 共通 `app.bat --help` の起動を確認
+7. 通常起動時は `mcp status` で認証状態を確認。未認証（`AUTH_REQUIRED` / exit 3）なら `mcp auth` を起動してブラウザ認可を開始
+8. 認可後（または既に認証済みの場合）は `mcp status` と `mcp tools` の成功を確認して完了表示。MCPの失敗は成功扱いしない
 
 システムPythonは参照しません。`setenv.bat` が起動プロセス内だけEmbedded PythonをPATH先頭へ置き、`PYTHONHOME` / `PYTHONPATH` をクリアします。Windowsのユーザープロファイル、Credential Manager、既定ブラウザ、TEMPは置き換えません。
 
@@ -46,28 +51,19 @@ runtimeの再利用前に、`python.exe`・`python312._pth`・標準ライブラ
 
 ## MCP認証
 
-セットアップ直後は、まずCLIへ到達できることを確認できます。
+**通常の `setup.bat` をダブルクリックした場合、認証と接続確認は自動実行されます。** 初回起動時の `AUTH_REQUIRED` は想定された状態であり、ブラウザ認証へ進む合図です。認証が残っている再セットアップ時はブラウザを開かず、現在の認証を再利用します。
+
+`mcp status`が通信障害・Providerエラーなどで失敗した場合は、認証情報を消したり新たなブラウザ認証を繰り返したりせず、その場でエラーを表示して停止します。MCP認可が失敗した場合にもRuntimeと既存認証情報は残すため、通信環境を整えて `setup.bat` を再実行できます。
+
+ログイン済みの動作確認や認証失効時の診断が必要な場合のみ、手動CLIを使用します。
 
 ```bat
 app.bat mcp status
-```
-
-まだ認証していない場合、これは異常ではありません。`AUTH_REQUIRED` のJSONを返して終了コード3になります。`mcp status` 自体はブラウザ認証を開始しません。
-
-初回認証は明示的に実行します。
-
-```bat
 app.bat mcp auth
-```
-
-既定ブラウザでTradingViewの認可を完了した後、再確認します。
-
-```bat
-app.bat mcp status
 app.bat mcp tools
 ```
 
-OAuth token等は平文Repositoryファイルへ保存せず、`keyring` 経由でWindows Credential Managerを利用します。
+`mcp status` 自体はブラウザを開きません。`mcp auth`は明示的な認可操作です。OAuth token等は平文Repositoryファイルへ保存せず、`keyring` 経由でWindows Credential Managerを利用します。セットアップはWatchlist書込み、Scheduler Task登録、実Screeningを自動実行しません。
 
 ## 公開用read-onlyサンプル
 
@@ -105,7 +101,7 @@ python -m ruff check .
 
 ## 再セットアップ
 
-通常は `setup.bat` の再実行で十分です。
+通常は `setup.bat` の再ダブルクリックで十分です。認証済みならログイン画面を再表示せず、MCP接続を確認します。未認証のときだけブラウザOAuthが必要です。
 
 アプリを終了してから再実行してください。`python.exe`が残っていても、標準ライブラリやDLLの欠落・起動検査の失敗を検出した場合は自動再構築します。依存パッケージの導入に失敗した場合も、原因を解消して同じsetupを再実行できます。
 
