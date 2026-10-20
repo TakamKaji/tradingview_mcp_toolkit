@@ -1,25 +1,20 @@
 # ドキュメント
 
-初めて利用する方は、[Windows導入](user/WINDOWS_SETUP.md) → [Screening](user/SCREENING_MANUAL.md) → [結果・履歴・比較](user/RESULTS.md)の順に進んでください。[トップREADME](../README.md)にも最短手順があります。
+[利用者マニュアル一覧](user/README.md)から必要な操作を参照できます。
 
-## 操作マニュアル
+開発者向けの設計仕様・テスト・検証資料は同じリポジトリの `develop` ブランチで管理します。
 
-| 目的 | 文書 |
-| --- | --- |
-| ダウンロード、セットアップ、TradingView認証、更新 | [Windows導入](user/WINDOWS_SETUP.md) |
-| 名前付き条件とRead-onlyサンプルの実行 | [Screening](user/SCREENING_MANUAL.md) |
-| 保存先、最新結果、履歴、前回差分の意味 | [Results](user/RESULTS.md) |
-| 管理Watchlistへの追加・削除を伴う同期 | [Watchlist](user/WATCHLIST_SYNC.md) |
-| Jobの手動実行、Task登録・削除 | [Scheduler](user/SCHEDULE_MANUAL.md) |
-| AIへの依頼例と結果の読み方 | [AI利用](user/AI_USAGE.md) |
-| 認証・通信・保存・比較のエラー | [トラブル対応](user/TROUBLESHOOTING.md) |
+## 開発・リリースの流れ
 
-Read-onlyの初回サンプルは`public_sample_screen_daily`です。`sample_screen_daily`はWatchlist Write、`schedule apply/remove`はWindows Taskの作成・更新／削除を伴います。操作の依頼・実行前に各マニュアルを確認してください。
+1. `develop`で開発・テストし、設計仕様と検証記録を保持します。
+2. 完成した変更のうち、実行コード・BAT・依存定義・Job/Screening定義・利用者文書だけをmain向けのPRへ反映します。
+3. mainの配布対象に必要なファイル、リンク、WindowsセットアップとRead-only動作を検証します。
+4. 公開前の確認と所有者判断を終えた後、対象mainコミットへ`v0.1.0b1`などのバージョンタグを付けます。
+5. そのタグでGitHub Releaseを作成します。
+6. 利用者はReleaseの**Assets → Source code (zip)**を取得・展開し、`setup.bat`を実行します。
 
-## 開発・調査・リリース情報
+**developをmainへ丸ごとmergeしません。** main用PRは配布ファイルだけを選んで反映し、`tests/`・開発仕様・検証資料・開発ツールを復活させないことを差分で確認します。専用ZIP生成ツール・Actions・独立リポジトリ・独立履歴は使用しません。
 
-- [開発索引](development/README.md)：設計仕様、型付きAPI、保存JSON、Job契約、Windows内部構造、開発・テスト方法
-- [過去の記録](archive/README.md)：時点付きの実機検証、旧README、RC Gate、別PC受入手順
-- [リリース情報](release/README.md)：`v0.1.0b1`は未公開のリリースノート案
+現在はRelease・tag・Public公開とも未実施です。developや過去の履歴も公開後に閲覧可能になります。所有者はこの可視性を了承していますが、[Issue #32](https://github.com/TakamKaji/tradingview_mcp_support/issues/32)の第三者資料の転載・権利確認は別の未解決事項であり、mainの整理だけでは解消しません。
 
-文書の移動対応表とGoogle Drive正本の扱いは[開発索引](development/README.md#文書の移動対応表issue-30)にあります。旧`docs/*.md`は移動案内です。操作マニュアルの本文は`user/`、内部契約は`development/`で管理します。
+[トップREADME](../README.md)

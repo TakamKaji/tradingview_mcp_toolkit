@@ -57,7 +57,7 @@ app.bat run public_oversold_healthy_daily
 app.bat run public_sp500_symbolset_daily
 ```
 
-EMA列はpresetの実応答で確認したProvider計算値です。PublicコアでOHLCVから再計算しません。[2026-10-18検証記録](../archive/MCP_VERIFICATION_2026-10-18.md)に範囲と制約を記録しています。
+EMA列はpresetの実応答で確認したProvider計算値です。PublicコアでOHLCVから再計算しません。[2026-10-18検証記録](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/archive/MCP_VERIFICATION_2026-10-18.md)に範囲と制約を記録しています。
 
 
 ## 自分の条件を追加する
@@ -66,6 +66,6 @@ EMA列はpresetの実応答で確認したProvider計算値です。Publicコア
 2. market、filters、sortBy、sortOrder、limit、columnsを編集します。通常の数値条件は `[下限, 上限]`、片側の `null` は制限なしです。limitは1〜1000で、取得列とfilterの対応はProviderによって異なります。
 3. 初回はWatchlistを無効のままにし、`app.bat screen 名前` で取得・保存結果を確認します。未知キーや不正な定義はエラーになります。
 
-`screen` はWatchlist設定が有効でも同期せず、取得とローカル保存だけを行います。Jobとして使うには[Schedulerマニュアル](SCHEDULE_MANUAL.md)、同期する場合は[Watchlistマニュアル](WATCHLIST_SYNC.md)へ進んでください。内部SchemaとPython APIは[開発資料](../development/SCREENING_API.md)に分離しています。
+`screen` はWatchlist設定が有効でも同期せず、取得とローカル保存だけを行います。Jobとして使うには[Schedulerマニュアル](SCHEDULE_MANUAL.md)、同期する場合は[Watchlistマニュアル](WATCHLIST_SYNC.md)へ進んでください。内部SchemaとPython APIは[開発資料](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/SCREENING_API.md)に分離しています。
 
 [利用者マニュアル一覧](README.md)
