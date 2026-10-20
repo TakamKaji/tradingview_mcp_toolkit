@@ -6,12 +6,13 @@ Windows 64-bit・PowerShell・インターネット接続、TradingViewの公式
 
 ## 導入
 
-1. mainブランチからソースZIPを取得して、フォルダに**すべて展開**します。
-2. 展開した`setup.bat`を通常のダブルクリックで実行します。
-3. 初回はブラウザでTradingViewへログインし、アクセス許可します。
-4. 画面に接続確認成功・セットアップ完了が表示されたら準備完了です。
+1. リリース公開後は[GitHub Releases](https://github.com/TakamKaji/tradingview_mcp_support/releases)で対象バージョンを開き、**Assets → Source code (zip)**を取得します。
+2. ZIPを右クリックして、フォルダに**すべて展開**します。ZIP内から直接実行しないでください。
+3. 展開した`setup.bat`を通常のダブルクリックで実行します。
+4. 初回はブラウザでTradingViewへログインし、アクセス許可します。認証済みなら再利用します。
+5. 画面に接続確認成功・セットアップ完了が表示されたら準備完了です。
 
-専用のGitHub Release配布ZIPは準備中です。**まだGitHub Releaseやtagは公開していません。**
+**現在はバージョン`0.1.0b1`の準備段階で、GitHub Release・tagは未公開、リポジトリはPrivateです。** 公開前に試用する場合は、アクセス権のあるアカウントで配布構成のmainを開き、**Code → Download ZIP**で取得します。mainのZIPは開発中に更新されるため、公開後の版を固定した取得にはReleasesのSource code ZIPを使います。専用ZIP生成ツールや別の配布assetは使用しません。
 
 ## 安全な初回操作
 
