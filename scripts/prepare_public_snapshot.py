@@ -284,8 +284,8 @@ def build_snapshot(repo: Path, output: Path, ref: str = "HEAD") -> tuple[int, st
     contents["docs/README.md"] = make_docs_index()
     # The existing PowerShell UI points at this historical manual path.
     contents["docs/WINDOWS_SETUP.md"] = (
-        b"# Windows Setup\\n\\n[Current Japanese guide](user/WINDOWS_SETUP.md)\\n"
-    ).replace(b"\\\\n", b"\\n")
+        "# Windows Setup\n\n[現在の日本語ガイド](user/WINDOWS_SETUP.md)\n"
+    ).encode("utf-8")
     contents[".gitignore"] = b"runtime/\n.local/\nresults/\ndist/\n.env\n.env.*\n*.pem\n*.key\n__pycache__/\n*.egg-info/\n"
     validated_version = validate_snapshot(contents)
     digest = [
