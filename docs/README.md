@@ -15,6 +15,4 @@
 
 **developをmainへ丸ごとmergeしません。** main用PRは配布ファイルだけを選んで反映し、`tests/`・開発仕様・検証資料・開発ツールを復活させないことを差分で確認します。専用ZIP生成ツール・Actions・独立リポジトリ・独立履歴は使用しません。
 
-現在はRelease・tag・Public公開とも未実施です。developや過去の履歴も公開後に閲覧可能になります。所有者はこの可視性を了承していますが、[Issue #32](https://github.com/TakamKaji/tradingview_mcp_support/issues/32)の第三者資料の転載・権利確認は別の未解決事項であり、mainの整理だけでは解消しません。
-
 [トップREADME](../README.md)

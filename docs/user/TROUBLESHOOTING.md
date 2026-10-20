@@ -4,7 +4,7 @@
 
 | 状況 | 確認・対処 |
 | --- | --- |
-| GitHubを開けない／404 | 現在Privateです。権限のあるアカウントでログインしてください |
+| GitHubのページを開けない／404 | URLとアクセス権を確認してください。Releaseの一覧に版がない場合はmainのCode → Download ZIPを利用します |
 | setupが見つからない | ZIPを「すべて展開」し、setup.batとapp.batがあるフォルダを開きます |
 | ダウンロード・依存導入に失敗 | [必要な通信先](WINDOWS_SETUP.md#通信先と未確認事項)とネットワーク設定を確認し、setupを再実行します |
 | AUTH_REQUIRED / exit 3 | 未認証・失効のためです。setup.batを通常実行するか、明示的にapp.bat mcp authで認可します |

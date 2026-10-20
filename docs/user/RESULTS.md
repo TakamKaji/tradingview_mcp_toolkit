@@ -12,7 +12,7 @@ app.bat results latest sample_standard_screen
 
 `screen`と保存を有効にしたJobの成功結果は`results/YYYY-MM-DD/`に入ります。時刻はAsia/Tokyo、同じ秒の実行は連番で保存され、既存結果を上書きしません。失敗は保存しません。`results/`はGit管理外なので、必要な履歴は利用者がバックアップしてください。
 
-米国セクターbuiltinの保存形式は別で、`results latest/history/compare`の対象ではありません。全米株集計は現在未対応です。
+米国セクターbuiltinの保存形式は別で、`results latest/history/compare`の対象ではありません。全米株の条件なし取得は**TradingView公式MCP Providerが拒否**するため、誤った全米株集計を避ける目的で対象Jobを無効にしています（[実測と制限](SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
 
 ## 履歴を見る
 
