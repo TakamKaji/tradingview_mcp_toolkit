@@ -14,6 +14,7 @@
 | Job Runner・Scheduler | [Job/Task契約](JOBS_SCHEDULER.md)、[CLI・builtin契約](CLI_CONTRACT.md) |
 | Windows bootstrap・isolated mode | [Runtime内部構造](WINDOWS_RUNTIME.md) |
 | 開発依存・テスト | [開発・検証手順](DEVELOPMENT.md) |
+| Public公開前の監査・未解決事項 | [公開前監査（2026-10-20）](PUBLIC_RELEASE_AUDIT.md)、[依存ライセンス調査](PUBLIC_DEPENDENCY_LICENSES_2026-10-20.md) |
 | 公式MCPの根拠資料 | [公式リファレンス保存版](TRADINGVIEW_MCP_OFFICIAL_REFERENCE.md)、[公式の現行ページ](https://www.tradingview.com/mcp/docs) |
 
 全米株の取得は未対応です。仕様書[19.3](tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)のblocking limitationを維持し、[19.5](tradingview_screening_system_spec.md#195-builtin-job保存scheduler)の同梱`us_sector_morning.enabled=false`を変更しません。S&P 500限定503件・20分類の実測は全米株成功の根拠にはなりません。[Issue #18](https://github.com/TakamKaji/tradingview_mcp_support/issues/18)で追跡します。

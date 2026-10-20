@@ -7,6 +7,16 @@ _local_env/
 # Generated results
 results/
 
+# Accidental local credential files (not a replacement for secret scanning)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+/credentials.json
+/token.json
+/tokens.json
+
 # Python
 __pycache__/
 *.py[cod]
