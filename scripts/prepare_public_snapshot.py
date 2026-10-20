@@ -86,7 +86,7 @@ SOURCE_PATHS = frozenset(
     "src/tradingview_screening/screening/watchlist_sync.py",
     )
 )
-GENERATED_PATHS = frozenset({"README.md", "docs/README.md", ".gitignore"})
+GENERATED_PATHS = frozenset({"README.md", "docs/README.md", "docs/WINDOWS_SETUP.md", ".gitignore"})
 MANIFEST_PATH = "PUBLIC_SOURCE_MANIFEST.json"
 MD_LINK = re.compile(r"(?<!!)\[([^\]\n]+)\]\(([^)\n]+)\)")
 PRIVATE_URL_PARTS = (
@@ -238,7 +238,8 @@ def make_docs_index() -> bytes:
 def validate_snapshot(contents: dict[str, bytes]) -> str:
     metadata = tomllib.loads(contents["pyproject.toml"].decode("utf-8"))
     version = metadata["project"]["version"]
-    assert re.fullmatch(r"[0-9A-Za-z.+-]+", version)
+    if not isinstance(version, str) or not re.fullmatch(r"[0-9A-Za-z.+-]+", version):
+        raise ValueError("Invalid project version.")
     if not contents["setup.bat"].isascii() or not contents["setup-runtime.bat"].isascii():
         raise ValueError("Windows CMD launcher/runtime must be ASCII.")
     if not contents["scripts/setup-ui.ps1"].startswith(b"\xef\xbb\xbf"):
@@ -281,6 +282,10 @@ def build_snapshot(repo: Path, output: Path, ref: str = "HEAD") -> tuple[int, st
     version = tomllib.loads(contents["pyproject.toml"].decode())["project"]["version"]
     contents["README.md"] = make_readme(version)
     contents["docs/README.md"] = make_docs_index()
+    # The existing PowerShell UI points at this historical manual path.
+    contents["docs/WINDOWS_SETUP.md"] = (
+        b"# Windows Setup\\n\\n[Current Japanese guide](user/WINDOWS_SETUP.md)\\n"
+    ).replace(b"\\\\n", b"\\n")
     contents[".gitignore"] = b"runtime/\n.local/\nresults/\ndist/\n.env\n.env.*\n*.pem\n*.key\n__pycache__/\n*.egg-info/\n"
     validated_version = validate_snapshot(contents)
     digest = [
