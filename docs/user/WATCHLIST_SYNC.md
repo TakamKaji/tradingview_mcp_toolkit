@@ -31,4 +31,4 @@ Jobで同期を有効にし、Screening側でもWatchlistが有効な場合に�
 
 mapping保存失敗やアクセス不能の場合、`.local/`やcredentialの一括削除で直そうとせず、元データを残して診断します。mappingを失うと同じ名前から管理対象を復元できず、新規作成につながる場合があります。
 
-[同期の内部契約・Python API](../development/SCREENING_API.md) / [Scheduler](SCHEDULE_MANUAL.md) / [利用者マニュアル一覧](README.md)
+[同期の内部契約・Python API](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/SCREENING_API.md) / [Scheduler](SCHEDULE_MANUAL.md) / [利用者マニュアル一覧](README.md)

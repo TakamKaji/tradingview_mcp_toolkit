@@ -64,4 +64,4 @@ app.bat schedule list
 - 同じJobが実行中なら重複実行は`already_running`でスキップし、終了コード0です。
 - 失敗時は`status`、`errors`、保存・同期済みの情報を確認します。一部操作を自動で取り消すことはありません。
 
-[Job・Taskの内部契約](../development/JOBS_SCHEDULER.md) / [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)
+[Job・Taskの内部契約](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/JOBS_SCHEDULER.md) / [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)

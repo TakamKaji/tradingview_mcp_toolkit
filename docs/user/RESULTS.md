@@ -65,6 +65,6 @@ app.bat results compare sample_standard_screen
 
 比較不能は`status=not_comparable`、終了コード1です。初回の`NO_BASELINE`は想定された結果です。壊れたJSONや危険なリンクは候補から除外されますが、直近2件として選ばれた結果の条件不一致などは飛ばしません。
 
-履歴・比較は既存結果を移行・削除せず、差分ファイルも自動保存しません。詳細な[JSON契約と架空データ例](../development/RESULTS.md)は開発者向け資料にあります。
+履歴・比較は既存結果を移行・削除せず、差分ファイルも自動保存しません。詳細な[JSON契約と架空データ例](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/RESULTS.md)は開発者向け資料にあります。
 
 [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)

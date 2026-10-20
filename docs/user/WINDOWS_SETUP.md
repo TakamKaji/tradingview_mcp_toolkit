@@ -63,6 +63,6 @@ app.bat mcp tools
 
 導入時は`www.python.org`、`bootstrap.pypa.io`、標準PyPIの場合は`pypi.org`・`files.pythonhosted.org`へHTTPS接続します。独自indexを設定している場合はその配布先も必要です。利用時は`mcp.tradingview.com`、ブラウザ認証は`www.tradingview.com`など公式の認証先を使います。初回OAuth時だけPC内の`127.0.0.1:8765`で認可の戻りを受信します。
 
-独立した新規Windowsユーザーでの初回OAuthは未検証です。保存済み認証での接続成功とは区別しています。過去の実測と個人利用の判断は[記録索引](../archive/README.md)に保持しています。
+独立した新規Windowsユーザーでの初回OAuthは未検証です。保存済み認証での接続成功とは区別しています。過去の実測と個人利用の判断は[記録索引](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/archive/README.md)に保持しています。
 
 [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)

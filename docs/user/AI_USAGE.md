@@ -41,4 +41,4 @@ token・認可code・credential・Providerの生応答全文をチャットへ�
 
 全米株集計は現在未対応です。`us_sector_morning`を実行して成功を作ろうとしたり、S&P 500や先頭1000件へ範囲を狭めて全米株結果と説明したりしません。
 
-[CLIの技術契約](../development/CLI_CONTRACT.md) / [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)
+[CLIの技術契約](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/CLI_CONTRACT.md) / [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)
