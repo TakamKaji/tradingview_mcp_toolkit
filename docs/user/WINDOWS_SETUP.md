@@ -4,18 +4,15 @@
 
 - Windows 64-bit（amd64）、PowerShell、インターネット接続
 - TradingView Essential以上の対象有料プラン。試用プランは対象外です（[公式案内](https://www.tradingview.com/mcp/docs)、2026-10-19確認）
-- 公開前の現在は、[Privateリポジトリ](https://github.com/TakamKaji/tradingview_mcp_support)へのGitHubアクセス権
 
 システムPython、管理者権限、環境変数の恒久変更は不要です。セットアップはPythonとライブラリをダウンロードするため、完全オフラインでは導入できません。
 
 ## ダウンロードする
 
-1. 公開後は[GitHub Releases](https://github.com/TakamKaji/tradingview_mcp_support/releases)で対象バージョンを選び、**Assets → Source code (zip)**を取得します。タグが指すmainの配布構成一式を使います。
-2. ZIPを右クリックして「すべて展開」し、`setup.bat`と`app.bat`のあるフォルダを開きます。ZIP内で直接BATを実行しないでください。
+1. [GitHub Releases](https://github.com/TakamKaji/tradingview_mcp_support/releases)で対象バージョンの**Assets → Source code (zip)**を取得します。Releaseがない場合は`main`ブランチの**Code → Download ZIP**を利用します。
+2. ZIPを「すべて展開」し、`setup.bat`と`app.bat`のあるフォルダを開きます。ZIP内から直接BATを実行しないでください。
 
-**現在は`v0.1.0b1`のRelease・tagとも未公開で、リポジトリもPrivateです。** 公開前の試用ではGitHubへログインし、配布構成の`main`を選んで**Code → Download ZIP**から取得します。これはその時点のmainであり、公開後の版を固定するReleasesのZIPとは区別してください。別の専用ZIP assetを探す必要はありません。
-
-Gitを利用する方はmainをcloneしても取得できます。初回利用にGitや開発ツールの導入は必要ありません。開発・テスト用のdevelopブランチは一般利用のダウンロード対象ではありません。
+Gitでmainをcloneしても利用できますが、導入にGitや開発ツールは必要ありません。
 
 ## セットアップする
 
