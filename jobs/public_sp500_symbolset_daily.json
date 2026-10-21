@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "public_sp500_symbolset_daily",
+  "enabled": false,
+  "task": {
+    "type": "screening",
+    "definition": "public_sp500_symbolset"
+  },
+  "schedule": {
+    "type": "daily",
+    "time": "15:40",
+    "timezone": "Asia/Tokyo"
+  },
+  "output": {
+    "save": true,
+    "watchlistSync": false
+  }
+}

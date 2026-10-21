@@ -1,0 +1,110 @@
+"""Pydantic contract for one screening definition."""
+
+from __future__ import annotations
+
+import math
+from typing import Annotated, Literal
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictFloat,
+    StrictInt,
+    StrictStr,
+    field_validator,
+    model_validator,
+)
+
+from tradingview_screening.integrations.tradingview.schemas import ScreenerFilterPreset
+
+Number = StrictInt | StrictFloat
+Range = tuple[Number | None, Number | None]
+NonEmptyString = Annotated[StrictStr, Field(min_length=1)]
+FilterValue = Range | NonEmptyString
+SPECIAL_FILTER_KEYS = frozenset({"index", "sector", "industry", "analyst_rating"})
+
+
+class WatchlistConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: StrictBool
+    name: StrictStr | None = Field(default=None, max_length=500)
+
+    @field_validator("name")
+    @classmethod
+    def nonblank_name(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("name must not be empty")
+        return value
+
+    @model_validator(mode="after")
+    def enabled_requires_name(self) -> WatchlistConfig:
+        if self.enabled and self.name is None:
+            raise ValueError("enabled watchlist requires name")
+        return self
+
+
+class ScreeningDefinition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schemaVersion: StrictInt
+    name: NonEmptyString
+    description: StrictStr | None = None
+    market: NonEmptyString
+    symbolTypes: list[NonEmptyString] = Field(min_length=1)
+    filters: dict[NonEmptyString, FilterValue] = Field(default_factory=dict)
+    filterPreset: ScreenerFilterPreset | None = None
+    symbolset: list[NonEmptyString] | None = Field(default=None, min_length=1)
+    sortBy: StrictStr | None = None
+    sortOrder: Literal["asc", "desc"] = "desc"
+    limit: StrictInt = Field(ge=1, le=1000)
+    columns: list[NonEmptyString] = Field(min_length=1)
+    watchlist: WatchlistConfig | None = None
+
+    @field_validator("schemaVersion")
+    @classmethod
+    def valid_schema_version(cls, value: int) -> int:
+        if value != 1:
+            raise ValueError("schemaVersion must be 1")
+        return value
+
+    @field_validator("name", "market", "symbolTypes", "columns", "symbolset")
+    @classmethod
+    def reject_blank(cls, value: str | list[str] | None) -> str | list[str] | None:
+        if value is None:
+            return value
+        values = [value] if isinstance(value, str) else value
+        if any(not item.strip() for item in values):
+            raise ValueError("value must not be empty")
+        return value
+
+    @field_validator("sortBy")
+    @classmethod
+    def reject_blank_sort(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("sortBy must not be empty")
+        return value
+
+    @field_validator("filters")
+    @classmethod
+    def validate_filters(cls, value: dict[str, FilterValue]) -> dict[str, FilterValue]:
+        for field, filter_value in value.items():
+            if not field.strip():
+                raise ValueError("filter field must not be empty")
+            if field in SPECIAL_FILTER_KEYS:
+                if not isinstance(filter_value, str) or not filter_value.strip():
+                    raise ValueError(f"special filter {field} requires a non-empty string")
+                continue
+            if isinstance(filter_value, str):
+                # Pydantic field validators convert ValueError, not TypeError, to ValidationError.
+                raise ValueError(f"filter {field} requires a numeric [min, max] range")  # noqa: TRY004
+            minimum, maximum = filter_value
+            if minimum is None and maximum is None:
+                raise ValueError(f"filter {field} requires a bound")
+            if any(isinstance(bound, float) and not math.isfinite(bound) for bound in (minimum, maximum)):
+                raise ValueError(f"filter {field} requires finite bounds")
+            if minimum is not None and maximum is not None and minimum > maximum:
+                raise ValueError(f"filter {field} minimum exceeds maximum")
+        return value
