@@ -1,11 +1,13 @@
-# Issue #40 Mac Docker検証記録（2026-10-21）
+# Issue #40 Dockerコンテナ検証記録（2026-10-21）
+
+> この記録の検証は旧ファイル名（Dockerfile.mac／compose.mac.yml）で実施しました。その後、ファイル名をOS非依存へ変更しています。改名後の再ビルドは別途確認してください。
 
 ## 実装と保護境界
 
-- `Dockerfile.mac`、`compose.mac.yml`、`mac.command`を追加。既定はヘルプ表示のみで、Job・Watchlist Write・定期登録は自動実行しない。
+- `Dockerfile`、`compose.docker.yml`、`mac.command`を追加。既定はヘルプ表示のみで、Job・Watchlist Write・定期登録は自動実行しない。
 - Linuxに限る明示containerモードと、通常のOS-native keyringモードを分離。Windows backendの検査を緩和しない。
 - 認証は固定`/credentials`の専用Docker volume。UID10001所有・dir0700/file0600・通常ファイル・link数1を要求し、原子的に更新する。破損JSON、symlink、hardlink、FIFO、不適切な権限を拒否する。
-- 認証volumeは暗号化Keychainではない。Docker管理権限者・同じUIDの悪意あるプロセス・VMバックアップからの秘匿を保証しない。ホストKeychain中継やtoken環境変数は導入しない。利用者向けの説明は[Mac Docker](../user/MAC_DOCKER.md)。
+- 認証volumeは暗号化Keychainではない。Docker管理権限者・同じUIDの悪意あるプロセス・VMバックアップからの秘匿を保証しない。ホストKeychain中継やtoken環境変数は導入しない。利用者向けの説明は[Docker](../user/DOCKER.md)。
 - SDKの認可URLはメモリに保持し、localhostの固定入口からHTTP 302でブラウザへ渡す。SDKのPKCE・state・issuer検証を維持。localhostのみport公開し、通常コマンドはport公開しない。
 - 定義はホストのread-only bind mount、results・.local・credentialsは別volume。root filesystemは読み取り専用、非root、capability全削除。Docker socket、host network、privileged、cronは使わない。
 
@@ -19,7 +21,7 @@ Windows上のDocker Desktop 4.92.0 / Linux Engine 29.8.0（amd64）、Compose v5
 
 | 項目 | 結果 |
 | --- | --- |
-| Compose設定 | `docker compose -f compose.mac.yml config --quiet`成功。localhost限定、volume分離、既定--help等も解析して確認 |
+| Compose設定 | `docker compose -f compose.docker.yml config --quiet`成功。localhost限定、volume分離、既定--help等も解析して確認 |
 | shell | `bash -n mac.command`成功。Git実行bitとLF改行を指定 |
 | amd64 build / CLI | 実イメージbuild成功。ネットワークなしの`--version`で0.1.0b1 |
 | イメージ収録 | `.git`・ホスト.local・results・credential・testsなし、pytest/ruffなし、USER10001:10001 |

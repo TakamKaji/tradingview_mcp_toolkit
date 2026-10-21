@@ -2,7 +2,7 @@
 
 本ツールの共通機能、設定の使用例、Python APIだけにある操作を分けて説明します。公式MCPにToolがあることと、本ツールのCLIや定期Jobからそのまま使えることは別です。
 
-Windowsは[setup.batから導入](WINDOWS_SETUP.md)、Macは[Docker Desktopから導入](MAC_DOCKER.md)します。Mac版は共通CLIの認証・Screening・保存結果・手動Jobを使い、Windows Task Schedulerによる定期登録は使いません。
+Windowsネイティブは[setup.batから導入](WINDOWS_SETUP.md)、Dockerコンテナは[Docker導入手順](DOCKER.md)から実行します。コンテナ内では共通CLIの認証・Screening・保存結果・手動Jobを使えますが、Windows Task Schedulerによる定期登録は使いません。
 
 ## A. 本体の共通機能
 
