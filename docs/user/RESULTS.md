@@ -2,22 +2,24 @@
 
 結果の読み取りはPC内の保存JSONだけを使います。TradingViewへの接続や認証、Watchlist更新、Scheduler操作は行いません。
 
+任意の名前付きScreeningで共通して使える機能です。以下は[作成手順](SCREENING_MANUAL.md#自分の条件を追加する)の`my_japan_value`を実行・保存した後の例で、別の条件では自分のScreening名へ読み替えます。
+
 ## 最新結果を見る
 
 ```bat
-app.bat results latest sample_standard_screen
+app.bat results latest my_japan_value
 ```
 
-`public_sample_screen_daily`の保存結果名は`sample_standard_screen`です。Job名をそのまま指定しないでください。名前を省略した`app.bat results latest`は、すべてのScreeningから最新を探します。有効な結果がなければエラーになります。
+結果はJob名ではなくScreening名で検索します。名前を省略した`app.bat results latest`は、すべてのScreeningから最新を探します。有効な結果がなければエラーになります。
 
 `screen`と保存を有効にしたJobの成功結果は`results/YYYY-MM-DD/`に入ります。時刻はAsia/Tokyo、同じ秒の実行は連番で保存され、既存結果を上書きしません。失敗は保存しません。`results/`はGit管理外なので、必要な履歴は利用者がバックアップしてください。
 
-米国セクターbuiltinの保存形式は別で、`results latest/history/compare`の対象ではありません。全米株集計は現在未対応です。
+米国セクターbuiltinの保存形式は別で、`results latest/history/compare`の対象ではありません。全米株の条件なし取得は**TradingView公式MCP Providerが拒否**するため、誤った全米株集計を避ける目的で対象Jobを無効にしています（[実測と制限](SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
 
 ## 履歴を見る
 
 ```bat
-app.bat results history sample_standard_screen --limit 10
+app.bat results history my_japan_value --limit 10
 ```
 
 日付フォルダをまたいで新しい順に列挙します。`--limit`は既定20、1〜1000です。0件のときは空の`items`で正常終了します。
@@ -35,7 +37,7 @@ app.bat results history sample_standard_screen --limit 10
 ## 直前の結果と比較する
 
 ```bat
-app.bat results compare sample_standard_screen
+app.bat results compare my_japan_value
 ```
 
 直近2件の成功結果を比較し、次のJSONを返します。古い方が`from`、新しい方が`to`です。
@@ -65,6 +67,12 @@ app.bat results compare sample_standard_screen
 
 比較不能は`status=not_comparable`、終了コード1です。初回の`NO_BASELINE`は想定された結果です。壊れたJSONや危険なリンクは候補から除外されますが、直近2件として選ばれた結果の条件不一致などは飛ばしません。
 
-履歴・比較は既存結果を移行・削除せず、差分ファイルも自動保存しません。詳細な[JSON契約と架空データ例](../development/RESULTS.md)は開発者向け資料にあります。
+履歴・比較は既存結果を移行・削除せず、差分ファイルも自動保存しません。詳細な[JSON契約と架空データ例](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/RESULTS.md)は開発者向け資料にあります。
+
+## 同梱サンプルの場合
+
+`public_japan_value_daily`の結果は`public_japan_value`、`public_sample_screen_daily`と`sample_screen_daily`の結果は`sample_standard_screen`で参照します。`my_japan_value_daily`を自作した場合は`my_japan_value`です。サンプル専用の履歴機能ではありません。
+
+ローソク足・ニュース等の任意Python API応答はこのScreening結果の保存・比較には接続していません。[機能の対応範囲](FEATURES.md)を参照してください。
 
 [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)

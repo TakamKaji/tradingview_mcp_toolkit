@@ -4,7 +4,10 @@
 
 | 状況 | 確認・対処 |
 | --- | --- |
-| GitHubを開けない／404 | 現在Privateです。権限のあるアカウントでログインしてください |
+| my_japan_valueが見つからない | [全文例](SCREENING_MANUAL.md#自分の条件を追加する)をscreenings/my_japan_value.jsonへ保存し、内部nameも一致させます。説明用の名前で、最初から同梱されていません |
+| Jobから自分の条件を呼べない | task.typeをscreening、task.definitionを拡張子なしのScreening名にします。runにはJob名、resultsにはScreening名を指定します |
+| get_ohlcv等をCLI/Jobで呼べない | [公式Tool・Python API・CLIの違い](FEATURES.md#c-公式toolと本ツールの接続範囲)を確認します。任意Tool実行CLIやローソク足の定期取得Jobは未実装です |
+| GitHubのページを開けない／404 | URLとアクセス権を確認してください。Releaseの一覧に版がない場合はmainのCode → Download ZIPを利用します |
 | setupが見つからない | ZIPを「すべて展開」し、setup.batとapp.batがあるフォルダを開きます |
 | ダウンロード・依存導入に失敗 | [必要な通信先](WINDOWS_SETUP.md#通信先と未確認事項)とネットワーク設定を確認し、setupを再実行します |
 | AUTH_REQUIRED / exit 3 | 未認証・失効のためです。setup.batを通常実行するか、明示的にapp.bat mcp authで認可します |
@@ -32,4 +35,4 @@ app.bat mcp tools
 
 比較だけを行う場合はMCP接続確認自体が不要です。`results history/compare`はPC内の保存結果だけを読みます。
 
-[利用者マニュアル一覧](README.md) / [開発・診断資料](../development/README.md)
+[利用者マニュアル一覧](README.md) / [開発・診断資料](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/README.md)
