@@ -16,12 +16,17 @@ TradingView公式MCPを利用して銘柄をスクリーニングし、結果を
 
 ## 必要な環境
 
-- Windows 64-bit、PowerShell、インターネット接続
+- Windows 64-bit＋PowerShell、またはmacOS（Apple Silicon / Intel）＋Docker Desktop
+- インターネット接続
 - TradingView公式MCPを利用できるプラン（[公式の利用条件](https://www.tradingview.com/mcp/docs)を確認）
 
-システムPythonの事前インストールや管理者権限は不要です。
+システムPythonの事前インストールは不要です。本ツールのWindowsセットアップは管理者権限も不要です。MacではDocker Desktopを事前に導入してください。
 
 ## ダウンロード・セットアップ
+
+[Windows導入・認証](docs/user/WINDOWS_SETUP.md) / [Mac Docker導入・認証](docs/user/MAC_DOCKER.md)
+
+MacではZIPを展開してDocker Desktopを起動し、`mac.command`をダブルクリックします。初回認証は`./mac.command mcp auth`です。以下はWindowsの手順です。
 
 1. [GitHub Releases](https://github.com/TakamKaji/tradingview_mcp_support/releases)で利用するバージョンの**Assets → Source code (zip)**を取得します。Releaseがない場合は、`main`ブランチの**Code → Download ZIP**から取得します。
 2. ZIPを「すべて展開」し、展開先の`setup.bat`をダブルクリックします。ZIP内から直接実行しないでください。
@@ -31,6 +36,8 @@ TradingView公式MCPを利用して銘柄をスクリーニングし、結果を
 ## 基本的な使い方
 
 展開フォルダをエクスプローラーで開き、アドレス欄に`cmd`と入力してEnterを押します。
+
+Macではターミナルで展開フォルダを開き、以下の`app.bat`を`./mac.command`に読み替えます。Mac版は手動Jobまでで、Windows Scheduler登録には対応しません。
 
 ```bat
 app.bat screen public_japan_value
@@ -56,6 +63,7 @@ Jobの初回試用は`app.bat run public_sample_screen_daily`で、保存結果�
 
 - [機能と利用方法の対応範囲](docs/user/FEATURES.md)
 - [Windows導入・認証](docs/user/WINDOWS_SETUP.md)
+- [Mac Docker導入・認証](docs/user/MAC_DOCKER.md)
 - [Screening](docs/user/SCREENING_MANUAL.md)
 - [結果・履歴・比較](docs/user/RESULTS.md)
 - [Watchlist同期（書き込みあり）](docs/user/WATCHLIST_SYNC.md)

@@ -1,0 +1,5 @@
+# Shell launchers must also work when checked out on Windows with autocrlf.
+mac.command text eol=lf
+Dockerfile.mac text eol=lf
+compose.mac.yml text eol=lf
+.dockerignore text eol=lf

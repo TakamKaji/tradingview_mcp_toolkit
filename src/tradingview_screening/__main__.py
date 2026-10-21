@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from . import __version__
 from .common.errors import AppError, ConfigError, TransientRequestError
-from .integrations.tradingview.auth import KeyringTokenStorage
+from .integrations.tradingview.auth import create_token_storage
 from .integrations.tradingview.client import ENDPOINT, TradingViewClient
 from .integrations.tradingview.oauth_bootstrap import bootstrap_oauth
 from .integrations.tradingview.tool_catalog import EXPECTED_TOOLS
@@ -151,7 +151,7 @@ async def _execute(command: str) -> dict[str, Any]:
 
 async def _credential_present() -> bool | None:
     try:
-        return await KeyringTokenStorage().get_tokens() is not None
+        return await create_token_storage().get_tokens() is not None
     except AppError:
         return None
 

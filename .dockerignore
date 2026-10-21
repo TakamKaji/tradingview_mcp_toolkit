@@ -1,0 +1,20 @@
+# Allow only application source and package metadata into the build context.
+**
+!Dockerfile.mac
+!pyproject.toml
+!README.md
+!LICENSE
+!src/
+!src/**/
+!src/**/*.py
+
+# Never include generated files or credentials, even below an allowed directory.
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/credentials*
+**/tokens*
+**/token.json
