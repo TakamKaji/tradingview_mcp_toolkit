@@ -1,6 +1,6 @@
 # Allow only application source and package metadata into the build context.
 **
-!Dockerfile.mac
+!Dockerfile
 !pyproject.toml
 !README.md
 !LICENSE

@@ -4,7 +4,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.mac
+      dockerfile: Dockerfile
     environment:
       TRADINGVIEW_MCP_AUTH_MODE: container
     # Only `run --service-ports ... mcp auth` publishes this port.
