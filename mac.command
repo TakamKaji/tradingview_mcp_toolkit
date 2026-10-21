@@ -12,7 +12,7 @@ if ! docker compose version >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; th
     exit 1
 fi
 
-compose=(docker compose -f compose.mac.yml)
+compose=(docker compose -f compose.docker.yml)
 no_args=false
 if [ "$#" -eq 0 ]; then
     no_args=true

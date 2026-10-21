@@ -33,15 +33,15 @@ TradingView公式MCPを使い、自分で定義した条件のスクリーニン
 
 ### Dockerコンテナ
 
-Docker Desktop等を起動し、展開フォルダで実行します。`Dockerfile.mac`と`compose.mac.yml`を使いますが、Mac専用の構成ではありません。
+Docker Desktop等を起動し、展開フォルダで実行します。`Dockerfile`と`compose.docker.yml`を使います。
 
 ```sh
-docker compose -f compose.mac.yml build app
-docker compose -f compose.mac.yml run --rm app --version
-docker compose -f compose.mac.yml run --rm app jobs list
+docker compose -f compose.docker.yml build app
+docker compose -f compose.docker.yml run --rm app --version
+docker compose -f compose.docker.yml run --rm app jobs list
 ```
 
-初回OAuthと取得操作は[Dockerマニュアル](docs/user/MAC_DOCKER.md)へ。`mac.command`はmacOS向けの補助起動ファイルです。初回起動でJobや定期登録は自動実行しません。
+初回OAuthと取得操作は[Dockerマニュアル](docs/user/DOCKER.md)へ。`mac.command`はmacOS向けの補助起動ファイルです。初回起動でJobや定期登録は自動実行しません。
 
 ## 基本的な使い方
 
@@ -52,7 +52,7 @@ app.bat screen public_japan_value
 app.bat results latest public_japan_value
 ```
 
-`screen`単体はWatchlistを更新しません。Dockerでの[同じ操作](docs/user/MAC_DOCKER.md#screening手動job結果)も共通CLIを使います。Windowsネイティブの結果は展開先の`results/`、Dockerの結果・認証情報は専用volumeに保存されます。
+`screen`単体はWatchlistを更新しません。Dockerでの[同じ操作](docs/user/DOCKER.md#screening手動job結果)も共通CLIを使います。Windowsネイティブの結果は展開先の`results/`、Dockerの結果・認証情報は専用volumeに保存されます。
 
 ## 自分の条件を作る
 
@@ -66,7 +66,7 @@ Jobは`run Job名`、結果参照は`results latest Screening名`を使います
 
 ## マニュアル
 
-- [Windows導入](docs/user/WINDOWS_SETUP.md) / [Docker導入・OAuth・保存先](docs/user/MAC_DOCKER.md)
+- [Windows導入](docs/user/WINDOWS_SETUP.md) / [Docker導入・OAuth・保存先](docs/user/DOCKER.md)
 - [Screening](docs/user/SCREENING_MANUAL.md) / [結果・履歴・比較](docs/user/RESULTS.md)
 - [Watchlist同期](docs/user/WATCHLIST_SYNC.md) / [Job・Scheduler](docs/user/SCHEDULE_MANUAL.md)
 - [AIからのCLI利用](docs/user/AI_USAGE.md) / [トラブル対応](docs/user/TROUBLESHOOTING.md)
@@ -75,7 +75,7 @@ Jobは`run Job名`、結果参照は`results latest Screening名`を使います
 
 - **条件なしの全米株取得は公式MCP Providerが拒否するため未対応**です。最大取得数は1,000行で、上位N件を全件とは扱いません。`us_sector_morning`は無効です（[取得制約](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
 - **`schedule apply`は有効な全Jobを登録・更新します。** 同梱の`sample_screen_daily`は有効かつWatchlist Writeありなので、不要なら登録前に無効化してください。
-- DockerはWindows上のDocker Desktop・Linux/amd64でOAuth、Screening、Job、認証・結果の永続化を確認しています。**Mac実機・arm64は未検証**です。[認証volumeの保護と限界](docs/user/MAC_DOCKER.md#データと認証情報の保存場所)も確認してください。
+- DockerはWindows上のDocker Desktop・Linux/amd64でOAuth、Screening、Job、認証・結果の永続化を確認しています。**Mac実機・arm64は未検証**です。[認証volumeの保護と限界](docs/user/DOCKER.md#データと認証情報の保存場所)も確認してください。
 
 ## ライセンス
 

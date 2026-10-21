@@ -5,7 +5,7 @@ Windows・macOS等のホストから既存CLIを手動実行する構成です�
 ## 準備
 
 1. ホストに合う[Docker Desktop](https://docs.docker.com/desktop/)等を導入し、起動します。Dockerの利用条件も確認してください。
-2. リポジトリの配布ZIPを展開します。`compose.mac.yml`、`mac.command`、`screenings/`、`jobs/`が同じフォルダにあることを確認します。
+2. リポジトリの配布ZIPを展開します。`compose.docker.yml`、`mac.command`、`screenings/`、`jobs/`が同じフォルダにあることを確認します。
 3. 展開フォルダで[Composeのコマンド](#ターミナルからcomposeを直接使う)を実行します。macOSでは、以下の補助起動も利用できます。
 
 ## macOSの補助起動ファイル
@@ -33,18 +33,18 @@ Windows・macOS等のホストから既存CLIを手動実行する構成です�
 `mac.command`はフォルダを選び、buildしてCLIへ引数を渡す補助です。Composeだけでも実行できます。
 
 ```sh
-docker compose -f compose.mac.yml build app
-docker compose -f compose.mac.yml run --rm app --version
-docker compose -f compose.mac.yml run --rm --service-ports app mcp auth
-docker compose -f compose.mac.yml run --rm app mcp status
-docker compose -f compose.mac.yml run --rm app mcp tools
+docker compose -f compose.docker.yml build app
+docker compose -f compose.docker.yml run --rm app --version
+docker compose -f compose.docker.yml run --rm --service-ports app mcp auth
+docker compose -f compose.docker.yml run --rm app mcp status
+docker compose -f compose.docker.yml run --rm app mcp tools
 ```
 
 Composeでのauthは、表示された固定入口をホストのブラウザで手動で開きます。通常の読み取りコマンドには`--service-ports`を付けません。イメージはPython 3.12公式イメージを使い、通常はホストのCPUに合うアーキテクチャでbuildします。
 
 ## Screening・手動Job・結果
 
-Composeでは、以下の`./mac.command`を`docker compose -f compose.mac.yml run --rm app`に読み替えます。macOSの補助起動ではそのまま実行できます。
+Composeでは、以下の`./mac.command`を`docker compose -f compose.docker.yml run --rm app`に読み替えます。macOSの補助起動ではそのまま実行できます。
 
 ```sh
 ./mac.command screen public_japan_value
@@ -81,12 +81,12 @@ LinuxコンテナからMac Keychainを直接使う構成にはしていません
 
 `run --rm`は1コマンドごとの一時コンテナで、終了時にコンテナだけを削除します。実行中に止めるときはターミナルでCtrl+Cを使います。次のコマンドで新しいコンテナが同じvolumeを読みます。常駐サービスを起動する必要はなく、`compose up -d`やcronは使いません。
 
-更新は新しいZIPを別フォルダへ展開し、古いフォルダを残して自作`screenings/`・`jobs/`をコピーし、そこでComposeのbuild・version確認を行います。同じproject名・Docker Engineなら結果と認証volumeは継続します。`docker compose -f compose.mac.yml build --pull app`でベースイメージも更新できます。
+更新は新しいZIPを別フォルダへ展開し、古いフォルダを残して自作`screenings/`・`jobs/`をコピーし、そこでComposeのbuild・version確認を行います。同じproject名・Docker Engineなら結果と認証volumeは継続します。`docker compose -f compose.docker.yml build --pull app`でベースイメージも更新できます。
 
 結果・mappingのバックアップ例（**認証volumeは含みません**）。Windowsではバイナリ出力を変換しないコマンドプロンプト（cmd）で実行してください。
 
 ```sh
-docker compose -f compose.mac.yml run --rm --entrypoint tar app -czf - -C /workspace results .local > mac-results-backup.tgz
+docker compose -f compose.docker.yml run --rm --entrypoint tar app -czf - -C /workspace results .local > docker-results-backup.tgz
 ```
 
 自作定義はホスト側で別途バックアップします。mappingには利用者固有のWatchlist ID等が含まれるので、バックアップも非公開で保管してください。認証volumeは再認証で再作成でき、平文での持ち出しを推奨しません。Docker Desktopのデータ初期化・アンインストール・volume削除では永続データを失います。`docker compose down -v`やvolume pruneを通常の終了・更新手順として使わないでください。
