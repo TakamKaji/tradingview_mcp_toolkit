@@ -1,17 +1,20 @@
-# MacでDockerから使う
+# Dockerコンテナで使う
 
-macOS Apple Silicon（arm64）とIntel（amd64）向けの手動実行構成です。MacへのPythonインストールは不要です。[共通機能とサンプル](FEATURES.md)の区別はWindows版と同じで、Mac版はSchedulerに対応しません。
+Windows・macOS等のホストから既存CLIを手動実行する構成です。ホストへのPythonインストールは不要です。Windows上のDocker Desktop・Linux/amd64で実OAuth、Screening、Job、認証・結果の永続化を確認しています。Mac実機・arm64は未検証です。[共通機能とサンプル](FEATURES.md)の区別は同じで、コンテナ内のSchedulerには対応しません。
 
-## 準備・ダブルクリック起動
+## 準備
 
-1. [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/)をMacのCPUに合う版で導入し、起動します。Dockerの利用条件も確認してください。
+1. ホストに合う[Docker Desktop](https://docs.docker.com/desktop/)等を導入し、起動します。Dockerの利用条件も確認してください。
 2. リポジトリの配布ZIPを展開します。`compose.mac.yml`、`mac.command`、`screenings/`、`jobs/`が同じフォルダにあることを確認します。
-3. `mac.command`をダブルクリックします。イメージをbuildし、ターミナルへCLIのヘルプを表示します。**認証・Job・Watchlist Write・定期登録は自動実行しません。**
-4. 初回認証と以後の操作は、そのフォルダを開いたターミナルから以下を実行します。
+3. 展開フォルダで[Composeのコマンド](#ターミナルからcomposeを直接使う)を実行します。macOSでは、以下の補助起動も利用できます。
+
+## macOSの補助起動ファイル
+
+`mac.command`をダブルクリックするとbuildし、ターミナルへCLIのヘルプを表示します。**認証・Job・Watchlist Write・定期登録は自動実行しません。**
 
 展開方法によって実行権限が失われた場合は、ターミナルで`chmod +x mac.command`を実行します。Macのセキュリティ確認で開けない場合は、取得元とファイルを確認してFinderの「開く」を使ってください。セキュリティ機能全体を無効にする必要はありません。
 
-## 初回TradingView認証
+### 初回TradingView認証
 
 ```sh
 ./mac.command mcp auth
@@ -37,9 +40,11 @@ docker compose -f compose.mac.yml run --rm app mcp status
 docker compose -f compose.mac.yml run --rm app mcp tools
 ```
 
-Composeでのauthは、表示された固定入口をMacブラウザで手動で開きます。通常の読み取りコマンドには`--service-ports`を付けません。イメージはPython 3.12公式イメージを使い、通常はホストのCPUに合うアーキテクチャでbuildします。
+Composeでのauthは、表示された固定入口をホストのブラウザで手動で開きます。通常の読み取りコマンドには`--service-ports`を付けません。イメージはPython 3.12公式イメージを使い、通常はホストのCPUに合うアーキテクチャでbuildします。
 
 ## Screening・手動Job・結果
+
+Composeでは、以下の`./mac.command`を`docker compose -f compose.mac.yml run --rm app`に読み替えます。macOSの補助起動ではそのまま実行できます。
 
 ```sh
 ./mac.command screen public_japan_value
@@ -51,7 +56,7 @@ Composeでのauthは、表示された固定入口をMacブラウザで手動で
 
 これらは同梱のRead-only例です。`screen`は条件の実行、`run`はJobの実行で、保存結果の参照には**Screening名**を使います。上のJobは保存を行いますがWatchlistを同期しません。`sample_screen_daily`は別のWrite付き例なので取り違えないでください。
 
-自分の条件・Jobは[Screeningの全文例](SCREENING_MANUAL.md#自分の条件を追加する)と[Jobの全文例](SCHEDULE_MANUAL.md#自分のjobを作る)をコピーします。ファイルはMac上の`screenings/`と`jobs/`で編集でき、次回の実行から反映されます。マニュアルの`app.bat`を`./mac.command`へ読み替えます。定期登録の節はWindows専用です。
+自分の条件・Jobは[Screeningの全文例](SCREENING_MANUAL.md#自分の条件を追加する)と[Jobの全文例](SCHEDULE_MANUAL.md#自分のjobを作る)をコピーします。ファイルはホスト上の`screenings/`と`jobs/`で編集でき、次回の実行から反映されます。定期登録の節はWindowsネイティブ専用です。
 
 履歴・比較も`./mac.command results history 名前 --limit 10`、`./mac.command results compare 名前`で使えます。ローソク足・ニュース等の定期取得Jobはありません。全米株の条件なし取得はProvider拒否により未対応で、`us_sector_morning.enabled=false`を維持します。
 
@@ -66,7 +71,7 @@ Composeでのauthは、表示された固定入口をMacブラウザで手動で
 
 固定のCompose project名を使うので、展開先を変えても同じDocker Engineの同名volumeを再利用します。並行して別の利用者・別環境を動かす場合は、Composeの`-p`で別project名を明示します。その場合`mac.command`の既定volumeとは別になります。異なる環境でWatchlist mappingだけをコピーして使い回さないでください。
 
-**コンテナ版の認証volumeは暗号化されたmacOS Keychainではありません。** ファイルの所有者・モードとDocker DesktopのVMで保護する方式です。同じMacのDocker管理権限者・管理者・VMバックアップへのアクセス権者は内容を読めます。信頼できる個人用Macで使い、FileVaultやMacログイン保護を有効にし、認証volumeを共有・通常の結果バックアップへ同梱しないでください。Docker secretも書込み・更新可能なOAuth永続ストアではないため採用していません。
+**コンテナの認証volumeは暗号化されたOS Keychainではありません。** ファイルの所有者・モードとDocker DesktopのVMで保護する方式です。ホストのDocker管理権限者・管理者・VMバックアップへのアクセス権者は内容を読めます。信頼できる個人用環境で使い、OSログイン・ディスク暗号化で保護し、認証volumeを共有・通常の結果バックアップへ同梱しないでください。Docker secretも書込み・更新可能なOAuth永続ストアではないため採用していません。
 
 LinuxコンテナからMac Keychainを直接使う構成にはしていません。ホスト側のCredential中継を追加すると通信・認可の境界が増えるため、今回は専用volumeを選びました。WindowsのCredential Manager、通常macOS PythonのOS keyring経路は変更しません。
 
@@ -76,9 +81,9 @@ LinuxコンテナからMac Keychainを直接使う構成にはしていません
 
 `run --rm`は1コマンドごとの一時コンテナで、終了時にコンテナだけを削除します。実行中に止めるときはターミナルでCtrl+Cを使います。次のコマンドで新しいコンテナが同じvolumeを読みます。常駐サービスを起動する必要はなく、`compose up -d`やcronは使いません。
 
-更新は新しいZIPを別フォルダへ展開し、古いフォルダを残して自作`screenings/`・`jobs/`をコピーし、そこで`./mac.command --version`を実行します。同じproject名・Docker Engineなら結果と認証volumeは継続します。`docker compose -f compose.mac.yml build --pull app`でベースイメージも更新できます。
+更新は新しいZIPを別フォルダへ展開し、古いフォルダを残して自作`screenings/`・`jobs/`をコピーし、そこでComposeのbuild・version確認を行います。同じproject名・Docker Engineなら結果と認証volumeは継続します。`docker compose -f compose.mac.yml build --pull app`でベースイメージも更新できます。
 
-結果・mappingのバックアップ例（**認証volumeは含みません**）：
+結果・mappingのバックアップ例（**認証volumeは含みません**）。Windowsではバイナリ出力を変換しないコマンドプロンプト（cmd）で実行してください。
 
 ```sh
 docker compose -f compose.mac.yml run --rm --entrypoint tar app -czf - -C /workspace results .local > mac-results-backup.tgz
@@ -88,15 +93,15 @@ docker compose -f compose.mac.yml run --rm --entrypoint tar app -czf - -C /works
 
 ## トラブル対応・検証範囲
 
-- Dockerに接続できない：Docker Desktopを起動し、`docker compose version`を確認します。MacへのPython追加では解決しません。
+- Dockerに接続できない：Docker Desktopを起動し、`docker compose version`を確認します。ホストへのPython追加では解決しません。
 - ポート8765が使用中：別の認証を終了してから再実行します。ポートを外部へ公開したりredirect URIを独自変更しません。
 - ブラウザが開かない／認証タイムアウト：auth実行中に固定入口を開きます。古いページでなく新しい認証を使います。callbackのcode等は貼り付けません。
 - `CREDENTIAL_STORE_ERROR`：専用volumeの所有UID10001・dir0700/file0600、symlinkでないことを確認します。読み出しや権限緩和、Windows credentialのエクスポートで回避しません。既存volumeを消す前に原因を診断します。
 - `Mounts denied`・ファイルを読めない：展開フォルダだけをDocker DesktopのFile Sharingへ許可し、ホスト上のscreenings/jobsの存在・読み取り権限を確認します。ホーム全体の共有や`chmod -R 777`は不要です。これらのbind mountはコンテナから書き込めません。
 - 結果がホストのresultsに見えない：コンテナ版は専用volumeです。`results latest/history`またはバックアップで確認します。
-- Scheduler：Windows Task Scheduler専用です。Mac版では手動Jobまでを使い、`schedule apply/list/remove`を実行しません。
+- Scheduler：Windowsネイティブ専用です。コンテナでは手動Jobまでを使い、`schedule apply/list/remove`を実行しません。
 
-Mac実機での初回OAuth、Appleの`open`によるブラウザ起動、実アカウントのstatus/tools・Screeningの成否は、Linuxコンテナの模擬テストと区別して確認する必要があります。実施状況はIssue #40と対応PRに記録します。
+Windows上のDocker Desktop・Linux/amd64での実通信成功を、Mac実機・arm64の動作保証とは扱いません。Macのダブルクリック、Appleの`open`、ファイル共有・権限とOAuthは実機で別途確認が必要です。
 
 参照：[Dockerのrunとポート公開](https://docs.docker.com/reference/cli/docker/compose/run/)、[Macのbind mount権限](https://docs.docker.com/desktop/setup/install/mac-permission-requirements/)、[macOS Keychain](https://support.apple.com/guide/keychain-access/what-is-keychain-access-kyca1083/mac)。
 
