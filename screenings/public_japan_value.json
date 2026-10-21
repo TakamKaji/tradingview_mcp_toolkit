@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "name": "public_japan_value",
+  "description": "日本株PER 0〜15・予想配当利回り3%以上",
+  "market": "japan",
+  "symbolTypes": [
+    "stock"
+  ],
+  "filters": {
+    "pe": [
+      0,
+      15
+    ],
+    "div_yield": [
+      3,
+      null
+    ]
+  },
+  "sortBy": "volume",
+  "sortOrder": "desc",
+  "limit": 5,
+  "columns": [
+    "close",
+    "change",
+    "price_earnings_ttm",
+    "dividends_yield",
+    "RSI",
+    "volume"
+  ],
+  "watchlist": {
+    "enabled": false
+  }
+}

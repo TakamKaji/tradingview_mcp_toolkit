@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=75,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tradingview-mcp-support"
+version = "0.1.0b1"
+description = "Deterministic local support layer for the official TradingView MCP server"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { file = "LICENSE" }
+dependencies = [
+  "mcp>=2.2,<3",
+  "httpx2>=2.13,<3",
+  "pydantic>=2,<3",
+  "aiolimiter>=1.3,<2",
+  "tenacity>=9,<10",
+  "cachetools>=5,<8",
+  "keyring>=25,<26",
+  "filelock>=3.12.1,<5",
+  "tzdata>=2025.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<10",
+  "ruff>=0.9,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--basetemp=.pytest-tmp"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100

@@ -1,0 +1,4 @@
+# GPT-6 Sol implementation worker
+model = "gpt-6-sol"
+model_reasoning_effort = "high"
+model_verbosity = "low"

@@ -1,0 +1,1 @@
+"""Official TradingView MCP integration."""
