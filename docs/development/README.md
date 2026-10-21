@@ -15,6 +15,7 @@
 | Windows bootstrap・isolated mode | [Runtime内部構造](WINDOWS_RUNTIME.md) |
 | Dockerコンテナ認証の境界と受入状況 | [Issue #40の実装・検証記録](DOCKER_VALIDATION.md) |
 | 開発依存・テスト | [開発・検証手順](DEVELOPMENT.md) |
+| develop/mainの共有コミット運用 | [cherry-pick手順](BRANCH_WORKFLOW.md) |
 | Public公開前の監査・未解決事項 | [公開前監査（2026-10-20）](PUBLIC_RELEASE_AUDIT.md)、[依存ライセンス調査](PUBLIC_DEPENDENCY_LICENSES_2026-10-20.md) |
 | 公式MCPの根拠資料 | [公式リファレンス保存版](TRADINGVIEW_MCP_OFFICIAL_REFERENCE.md)、[公式の現行ページ](https://www.tradingview.com/mcp/docs) |
 

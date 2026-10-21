@@ -12,6 +12,13 @@
 - 実装後は変更に対応するテストとlintを実行し、失敗した場合は原因を直してから完了報告する。
 - 実行できない検証は、未実行であることと理由を明記する。
 
+## ブランチ同期ルール
+
+- 開発正本は`develop`、配布は`main`。同じ変更を両方で別々に実装せず、配布対象だけを独立コミットに分け、もう一方へ`git cherry-pick -x`で同期する。
+- 通常のコード作業は`develop`先行、共通README等の文書は`main`先行も可。tests・開発資料を含むコミットを`main`へcherry-pickしない。
+- `develop`全体を`main`へmergeしない。main/devともにPRでレビューし、直接push・自動マージ・公開・tag/Releaseをしない。
+- 詳細手順は[ブランチ運用](docs/development/BRANCH_WORKFLOW.md)を参照する。
+
 ## プロジェクト境界
 
 - TradingView連携は公式MCP `https://mcp.tradingview.com/mcp` を本線とする。
