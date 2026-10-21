@@ -317,7 +317,7 @@ def test_compare_no_baseline_and_cli_read_only(
     monkeypatch.setattr(cli, "TradingViewClient", forbidden)
     monkeypatch.setattr(cli, "run_job", forbidden)
     monkeypatch.setattr(cli, "save_result", forbidden)
-    monkeypatch.setattr(cli, "KeyringTokenStorage", forbidden)
+    monkeypatch.setattr(cli, "create_token_storage", forbidden)
     assert cli.main(["results", "history", "sample"]) == 0
     assert json.loads(capsys.readouterr().out)["items"] == []
     assert cli.main(["results", "compare", "sample"]) == 1
@@ -335,7 +335,7 @@ def test_cli_history_compare_and_invalid_limit(
     def forbidden(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("remote or write path called")
     for name in (
-        "TradingViewClient", "KeyringTokenStorage", "run_job", "save_result",
+        "TradingViewClient", "create_token_storage", "run_job", "save_result",
         "apply_schedules", "list_schedules", "remove_schedule", "_execute_screen", "_execute",
         "_credential_present",
     ):

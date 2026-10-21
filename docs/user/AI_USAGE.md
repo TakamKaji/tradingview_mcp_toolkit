@@ -1,44 +1,53 @@
 # AIから共通CLIを使う
 
-AIアプリでこのリポジトリを開き、展開フォルダから共通`app.bat`を実行するよう依頼します。別のTradingView connectorや独自スクリプトを用意する必要はありません。初回導入は先に[Windows導入](WINDOWS_SETUP.md)を完了してください。
+AIには展開フォルダで共通`app.bat`を使うよう依頼します。通常のScreening・結果管理・Job実行に、別のTradingView connectorや条件ごとのPythonスクリプトは不要です。初回導入は[Windows導入](WINDOWS_SETUP.md)を完了してください。
 
-## Read-onlyの依頼例
+## 共通機能と依頼範囲を確認する
 
-> jobs listで定義を確認し、public_sample_screen_dailyを実行してください。保存されたsample_standard_screenの最新結果と直近10件の履歴を表示してください。Watchlist・AlertのWrite、Scheduler登録・削除は行わないでください。
+[機能一覧](FEATURES.md)のとおり、CLIは定義済みScreeningの実行、結果の参照、Job、Scheduler、MCP認証・一覧確認を扱います。公式Toolの全操作を任意に呼ぶCLIではありません。ローソク足・ニュース・財務のPythonラッパーがあっても、それを取得・定期保存するJobがあるとは説明しないでください。
 
-対応するコマンドは次のとおりです。
+## 自分の条件・Jobを作る依頼例
+
+> public_japan_value.jsonを別名のmy_japan_value.jsonへコピーし、nameも一致させてください。日本株、PER 0〜15、予想配当利回り3%以上、出来高降順、limit 20、Watchlist無効にします。JSONを確認し、既存サンプルは変更しないでください。
+
+全文と許可される設定は[Screeningマニュアル](SCREENING_MANUAL.md#自分の条件を追加する)を参照します。定期実行も必要なら、[Jobの作成手順](SCHEDULE_MANUAL.md#自分のjobを作る)に従い別名のJobを作り、最初は`enabled=false`・`watchlistSync=false`で手動確認します。定義作成とTask登録は別の依頼です。
+
+## Read-only実行の依頼例
+
+上のScreeningを作成してから、次のように依頼できます。
+
+> my_japan_valueをscreenで実行し、最新結果と直近10件の履歴を表示してください。Watchlist・Alert WriteとScheduler登録・削除は行わないでください。
 
 ```bat
-app.bat jobs list
-app.bat run public_sample_screen_daily
-app.bat results latest sample_standard_screen
-app.bat results history sample_standard_screen --limit 10
+app.bat screen my_japan_value
+app.bat results latest my_japan_value
+app.bat results history my_japan_value --limit 10
 ```
 
-TradingViewへのReadとPC内へのJSON保存です。`enabled=false`でも手動runは実行します。Job名ではなくScreening名で履歴を取得する点に注意してください。
+TradingView ReadとPC内への保存です。Jobを作った場合は`run my_japan_value_daily`で実行しますが、結果参照には引き続きScreening名`my_japan_value`を使います。`enabled=false`でも手動runは実行します。
 
 ## 前回差分を確認する
 
-> 保存済みsample_standard_screenの直近2件を比較してください。条件のfingerprintとcoverageを確認し、比較できなければ理由を説明してください。データの新規取得は不要です。
+> 保存済みmy_japan_valueの直近2件を比較してください。条件のfingerprintとcoverageを確認し、比較できなければ理由を説明してください。新規取得は不要です。
 
 ```bat
-app.bat results compare sample_standard_screen
+app.bat results compare my_japan_value
 ```
 
-この操作はローカル読み取りだけです。1件以下なら`NO_BASELINE`、条件変更・旧形式などなら比較不能となります。比較可能な古いペアへ差し替えたり、古い結果へ現在のfingerprintを付け足したりしません。
+ローカル読み取りのみです。1件以下は`NO_BASELINE`、条件変更・旧形式等は比較不能です。古い比較可能ペアへの差し替えや、旧結果へのfingerprintの後付けは行いません。`observed_set_only`なら「今回未観測」と説明し、条件不適合と断定しません。Provider総件数`totalCount`と実取得行数`returnedCount`を区別します。
 
-`observed_set_only`なら「今回未観測」と説明し、条件に不適合になったとは断定しません。`totalCount`はProvider総該当件数、`returnedCount`は実取得行数です。詳細は[結果マニュアル](RESULTS.md)を参照してください。
+## 同梱例で試す場合
+
+同梱JSONは共通機能の使用例です。Jobの初回試用を依頼するなら`public_sample_screen_daily`を指定できます。これはRead-only＋ローカル保存で、結果名は`sample_standard_screen`です。`sample_screen_daily`は別のWrite付き例なので、名前を取り違えないでください。
 
 ## Write・登録・削除を依頼する場合
 
-Watchlist同期やScheduler登録は利用者が対象と副作用を理解して明示依頼する場合だけ行います。[Watchlist](WATCHLIST_SYNC.md)と[Scheduler](SCHEDULE_MANUAL.md)で操作を先に確認してください。`sample_screen_daily`は実Writeを伴い、`schedule apply`は有効な全Jobを登録・更新します。
+利用者が対象と副作用を理解して明示依頼する場合だけ行います。[Watchlist](WATCHLIST_SYNC.md)と[Scheduler](SCHEDULE_MANUAL.md)を先に確認します。`schedule apply`は**有効な全Job**を登録・更新するため、自分のJobだけでなく同梱の`sample_screen_daily`も点検してください。無効化だけでは既存Taskは削除されません。
 
-## AIが確認する出力
+## 出力と失敗時
 
-通常のstdoutはJSON、stderrは診断です。終了コード0でも部分成功や重複実行スキップの場合があるため、`status`、`errors`、`metadata`を確認します。終了コード1は実行時失敗、2は引数・定義不正、3は再認証要求です。
+stdoutはJSON、stderrは診断です。exit 0でも部分成功・重複スキップがあり、`status`、`errors`、`metadata`を確認します。exit 1は実行時失敗、2は引数・定義不正、3は再認証要求です。
 
-token・認可code・credential・Providerの生応答全文をチャットへ貼り付けないでください。失敗したWriteの自動再送やrollbackをせず、確認済みの結果を報告します。
+token・認可code・credential・Providerの生応答全文をチャットへ貼りません。Write失敗を自動再送・rollbackせず、確認済み結果を報告します。全米株の条件なし取得は公式Providerが拒否するため、S&P 500や先頭1000件へ縮小して全米株成功と説明しないでください。
 
-全米株集計は現在未対応です。`us_sector_morning`を実行して成功を作ろうとしたり、S&P 500や先頭1000件へ範囲を狭めて全米株結果と説明したりしません。
-
-[CLIの技術契約](../development/CLI_CONTRACT.md) / [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)
+[結果の読み方](RESULTS.md) / [トラブル対応](TROUBLESHOOTING.md) / [利用者マニュアル一覧](README.md)

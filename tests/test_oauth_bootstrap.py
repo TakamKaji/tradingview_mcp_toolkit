@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx2
@@ -43,19 +44,32 @@ class FakeCallback:
 
 
 @pytest.mark.parametrize(
-    ("advertise_cimd", "cimd_url", "registration", "client_id", "expected_strategy"),
+    ("advertise_cimd", "cimd_url", "registration", "client_id", "expected_strategy", "storage_mode"),
     [
-        (False, None, True, None, "dcr"),
-        (True, "https://example.org/tradingview-client.json", True, None, "cimd"),
-        (True, None, True, None, "dcr"),
-        (False, None, True, "my-issued-client", "pre_registered"),
+        (False, None, True, None, "dcr", "native"),
+        (True, "https://example.org/tradingview-client.json", True, None, "cimd", "native"),
+        (True, None, True, None, "dcr", "native"),
+        (False, None, True, "my-issued-client", "pre_registered", "native"),
+        (False, None, True, None, "dcr", "container"),
     ],
 )
 def test_sdk_bootstrap_to_saved_token_without_mcp_session(
     advertise_cimd: bool, cimd_url: str | None, registration: bool,
-    client_id: str | None, expected_strategy: str, monkeypatch: pytest.MonkeyPatch,
+    client_id: str | None, expected_strategy: str, storage_mode: str,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(auth.sys, "platform", "win32")
+    if storage_mode == "container":
+        if auth.sys.platform != "linux":
+            pytest.skip("Container credential storage requires Linux")
+        monkeypatch.setenv("TRADINGVIEW_MCP_AUTH_MODE", "container")
+        private = tmp_path / "credentials"
+        private.mkdir(mode=0o700)
+        monkeypatch.setattr(
+            auth.ContainerTokenStorage, "_directory_fd",
+            staticmethod(lambda: auth.ContainerTokenStorage._open_private_directory(private)),
+        )
+    else:
+        monkeypatch.setattr(auth.sys, "platform", "win32")
     seen: list[tuple[str, str]] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -113,7 +127,10 @@ def test_sdk_bootstrap_to_saved_token_without_mcp_session(
         raise AssertionError(f"unexpected request {request.method} {url}")
 
     async def scenario() -> None:
-        storage = auth.KeyringTokenStorage(_keyring=NativeKeyring())
+        storage = (
+            auth.ContainerTokenStorage() if storage_mode == "container"
+            else auth.KeyringTokenStorage(_keyring=NativeKeyring())
+        )
         if expected_strategy == "pre_registered":
             await storage.set_tokens(OAuthToken(access_token="old-token"))
         callback = FakeCallback()
