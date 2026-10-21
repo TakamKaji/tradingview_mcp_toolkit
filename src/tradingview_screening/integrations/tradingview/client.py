@@ -31,6 +31,7 @@ from .auth import (
     CALLBACK_PATH,
     CALLBACK_PORT,
     KeyringTokenStorage,
+    create_token_storage,
     noninteractive_callback,
     noninteractive_redirect,
 )
@@ -313,7 +314,7 @@ class TradingViewClient:
         _http_transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.governor = governor or RequestGovernor()
-        self._storage = _storage or KeyringTokenStorage()
+        self._storage = _storage or create_token_storage()
         self._sdk_factory = _sdk_factory or (
             lambda transport, **kwargs: Client(transport, mode="auto", **kwargs)
         )

@@ -1,0 +1,43 @@
+name: tradingview-mcp-support-mac
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.mac
+    environment:
+      TRADINGVIEW_MCP_AUTH_MODE: container
+    # Only `run --service-ports ... mcp auth` publishes this port.
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - type: bind
+        source: ./screenings
+        target: /workspace/screenings
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./jobs
+        target: /workspace/jobs
+        read_only: true
+        bind:
+          create_host_path: false
+      - results:/workspace/results
+      - local:/workspace/.local
+      - credentials:/credentials
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=32m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    # No job, background service, restart policy or scheduler is installed.
+    command: ["--help"]
+
+volumes:
+  results:
+  local:
+  credentials:

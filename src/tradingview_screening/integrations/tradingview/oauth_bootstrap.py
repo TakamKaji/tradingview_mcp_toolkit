@@ -26,7 +26,13 @@ from mcp.shared.auth import OAuthClientInformationFull, OAuthMetadata, Protected
 
 from tradingview_screening.common.errors import AppError
 
-from .auth import KeyringTokenStorage, LoopbackCallback
+from .auth import (
+    ContainerCallback,
+    KeyringTokenStorage,
+    LoopbackCallback,
+    auth_mode,
+    create_token_storage,
+)
 from .client import APP_USER_AGENT, ENDPOINT, _DropOAuthLogs, _oauth_client_metadata
 
 _ISSUER = "https://www.tradingview.com"
@@ -165,7 +171,7 @@ async def bootstrap_oauth(
     _client_metadata_url: str | None = None,
 ) -> None:
     """Run the public SDK authorization flow and stop after durable token storage."""
-    storage = _storage or KeyringTokenStorage()
+    storage = _storage or create_token_storage()
     client_id = _client_id if _client_id is not None else os.environ.get(_CLIENT_ID_ENV)
     cimd_url = _client_metadata_url if _client_metadata_url is not None else os.environ.get(_CIMD_ENV)
     async with AsyncExitStack() as stack:
@@ -174,7 +180,8 @@ async def bootstrap_oauth(
             logger = logging.getLogger(name)
             logger.addFilter(log_filter)
             stack.callback(logger.removeFilter, log_filter)
-        callback = _callback or await stack.enter_async_context(LoopbackCallback())
+        callback_type = ContainerCallback if auth_mode() == "container" else LoopbackCallback
+        callback = _callback or await stack.enter_async_context(callback_type())
         client = await stack.enter_async_context(httpx2.AsyncClient(
             timeout=httpx2.Timeout(30), transport=_http_transport,
             headers={"User-Agent": APP_USER_AGENT},
