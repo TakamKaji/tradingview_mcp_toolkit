@@ -1,82 +1,92 @@
 # TradingView MCP Support
 
-TradingView公式MCPを使い、自分で定義した条件のスクリーニングと結果管理を行う**非公式の補助ツール**です。TradingView社との提携・承認はありません。
+**日本語** | [English](README.en.md)
 
-## 主な機能
+TradingView公式MCPを使い、**自分で設定した条件で銘柄をスクリーニングし、結果を保存・比較できる**ローカルCLIツールです。条件や実行時刻はJSONで変更できます。
 
-- 公式MCPへの接続・OAuth認証
-- JSONで定義したスクリーニングの実行
-- 結果の保存・履歴参照・前回比較
-- 管理Watchlistへの差分同期（銘柄の追加・削除）
-- Jobの手動実行、Windows Task Schedulerによる日次実行
+> **非公式ツールです。** TradingView社の公式製品ではなく、提携・承認を受けたものでもありません。
 
-同梱の条件・日次Jobは設定サンプルです。市場・条件・取得列・実行時刻は利用者が設定します。
+## できること
 
-公式35 ToolのPythonラッパーもありますが、CLIの操作範囲とは異なります。OHLCV・ニュース・財務等の専用CLIや定期取得Jobは未実装です（[機能の対応範囲](docs/user/FEATURES.md)）。
-
-## 必要な環境
-
-| 起動方法 | 必要なもの |
+| 機能 | 概要 |
 | --- | --- |
-| Windowsネイティブ | Windows 64-bit、PowerShell |
-| Dockerコンテナ | Windows・macOS等のDocker実行環境とDocker Compose（例：Docker Desktop） |
+| スクリーニング | 日本株・米国株など、JSONで指定した市場・条件・取得列で検索 |
+| 結果の管理 | JSON保存、最新結果・履歴の表示、同条件での前回比較 |
+| Job | 複数の操作を設定ファイルで管理して手動実行 |
+| Watchlist同期 | 管理対象Watchlistへ銘柄を追加・削除（**書き込み操作**） |
+| 定期実行 | Windows Task Schedulerに日次Jobを登録（Windowsネイティブのみ） |
 
-ホストへのPythonインストールは不要です。インターネット接続と、TradingView公式MCPを利用できるプランが必要です（[公式の利用条件](https://www.tradingview.com/mcp/docs)）。
+TradingView公式MCPの**35 Toolに対応するPythonラッパー**もあります。ただし、すべてをCLIから直接実行できるわけではありません。OHLCV・ニュース・財務などの専用CLIや定期取得Jobは未実装です（[機能の対応範囲](docs/user/FEATURES.md)）。
 
-## インストール・起動
+## まず使ってみる
 
-[GitHub Releases](https://github.com/TakamKaji/tradingview_mcp_support/releases)の**Source code (zip)**、またはリポジトリの**main → Code → Download ZIP**を取得し、展開します。
+必要なものは、インターネット接続と[TradingView公式MCPを利用できるプラン](https://www.tradingview.com/mcp/docs)です。ホストPCへのPythonの事前インストールは不要です。
 
-### Windowsネイティブ
+[GitHubのmainブランチ](https://github.com/TakamKaji/tradingview_mcp_support)で **Code → Download ZIP** から取得し、ZIPを展開してください。GitHub Releaseが公開された場合は、その**Source code (zip)**も利用できます。
 
-`setup.bat`をダブルクリックし、ブラウザでTradingViewへの連携を許可します。接続確認後は、展開フォルダのコマンドプロンプトから`app.bat`を使います（[導入・認証手順](docs/user/WINDOWS_SETUP.md)）。
+### Windows（ネイティブ）
 
-### Dockerコンテナ
+1. Windows 64-bit環境で、展開フォルダ内の **`setup.bat` をダブルクリック**します。管理者権限は不要です。
+2. 画面の案内に従ってTradingViewのOAuth認証を完了します。
+3. 展開フォルダのエクスプローラーのアドレス欄に`cmd`と入力し、以下を実行します。
 
-Docker Desktop等を起動し、展開フォルダで実行します。`Dockerfile`と`compose.docker.yml`を使います。
+```bat
+app.bat run public_sample_screen_daily
+app.bat results latest sample_standard_screen
+```
+
+このJobは**Read-only＋ローカル保存**のサンプルです。Windowsでは結果を展開先の`results/`に保存します。
+
+[Windowsの詳しい導入手順](docs/user/WINDOWS_SETUP.md)
+
+### Docker（Windows・macOSなど）
+
+Docker Desktop等とDocker Composeが必要です。展開フォルダのターミナルで実行します。
 
 ```sh
 docker compose -f compose.docker.yml build app
 docker compose -f compose.docker.yml run --rm app --version
-docker compose -f compose.docker.yml run --rm app jobs list
+docker compose -f compose.docker.yml run --rm --service-ports app mcp auth
 ```
 
-初回OAuthと取得操作は[Dockerマニュアル](docs/user/DOCKER.md)へ。`mac.command`はmacOS向けの補助起動ファイルです。初回起動でJobや定期登録は自動実行しません。
+認証コマンド実行中に、表示される案内に従ってホストのブラウザから`http://127.0.0.1:8765/oauth/authorize`を開きます。認証後、以下で読み取りと保存結果を確認できます。
 
-## 基本的な使い方
-
-認証後、Windowsでは次のRead-onlyサンプルで取得・保存結果を確認できます。
-
-```bat
-app.bat screen public_japan_value
-app.bat results latest public_japan_value
+```sh
+docker compose -f compose.docker.yml run --rm app screen public_japan_value
+docker compose -f compose.docker.yml run --rm app results latest public_japan_value
 ```
 
-`screen`単体はWatchlistを更新しません。Dockerでの[同じ操作](docs/user/DOCKER.md#screening手動job結果)も共通CLIを使います。Windowsネイティブの結果は展開先の`results/`、Dockerの結果・認証情報は専用volumeに保存されます。
+コンテナの結果・認証情報は**Docker volume**に保存されます。`mac.command`はmacOS向けの補助起動ファイルですが、Docker構成自体はMac専用ではありません。Windows Docker Desktop／Linux amd64で実OAuth・取得・永続化を確認済みで、Mac実機・arm64は未検証です。
 
-## 自分の条件を作る
+[Dockerの認証・保存先・トラブル対応](docs/user/DOCKER.md)
 
-`screenings/public_japan_value.json`を同じフォルダの`my_japan_value.json`へコピーし、`name`も`my_japan_value`にします。条件・取得列・上限などを編集します（[全文JSONと実行手順](docs/user/SCREENING_MANUAL.md#自分の条件を追加する)）。
+## 自分のスクリーニング・Jobを作る
 
-## Job・定期実行
+1. `screenings/public_japan_value.json`を`screenings/my_japan_value.json`へコピーし、JSON内の`name`も`my_japan_value`に変更します。
+2. 市場・条件・取得列などを編集し、`app.bat screen my_japan_value`（Windows）で実行します。
+3. 日次Jobにする場合は`jobs/`のサンプルをコピーし、`task.definition`に自分のScreening名を指定します。まず`enabled=false`・`watchlistSync=false`で手動確認してください。
 
-`jobs/`のサンプルを別名でコピーし、`task.definition`に自分のScreening名を指定します。最初は`enabled=false`・`watchlistSync=false`で手動確認します（[Jobの作り方](docs/user/SCHEDULE_MANUAL.md#自分のjobを作る)）。
+結果を参照するコマンドには**Job名ではなくScreening名**を指定します。
 
-Jobは`run Job名`、結果参照は`results latest Screening名`を使います。Dockerでは手動実行まで、定期登録はWindowsネイティブのみです。
+[Screeningの作成手順](docs/user/SCREENING_MANUAL.md#自分の条件を追加する) / [Jobの作成手順](docs/user/SCHEDULE_MANUAL.md#自分のjobを作る)
+
+## 安全上の注意と制限
+
+- **書き込みに注意：** `sample_screen_daily`は初期状態で`enabled=true`かつ`watchlistSync=true`です。`schedule apply`は有効な**すべてのJob**を登録・更新します。利用前に設定と同期先を確認してください。上記の`public_sample_screen_daily`はWatchlistへ書き込みません。
+- **全米株の無条件一括取得は未対応：** TradingView公式MCP Providerが要求を拒否し、取得上限1,000行と全件列挙手段の制約があります。`us_sector_morning`は無効です（[詳細](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
+- **認証情報：** Dockerのcredential volumeはOSの暗号化Keychainではありません。`docker compose down -v`等によるvolume削除にも注意してください（[保存と保護](docs/user/DOCKER.md#データと認証情報の保存場所)）。
 
 ## マニュアル
 
-- [Windows導入](docs/user/WINDOWS_SETUP.md) / [Docker導入・OAuth・保存先](docs/user/DOCKER.md)
-- [Screening](docs/user/SCREENING_MANUAL.md) / [結果・履歴・比較](docs/user/RESULTS.md)
-- [Watchlist同期](docs/user/WATCHLIST_SYNC.md) / [Job・Scheduler](docs/user/SCHEDULE_MANUAL.md)
-- [AIからのCLI利用](docs/user/AI_USAGE.md) / [トラブル対応](docs/user/TROUBLESHOOTING.md)
+各マニュアルの本文は**日本語**です。
 
-## 制約・注意事項
-
-- **条件なしの全米株取得は公式MCP Providerが拒否するため未対応**です。最大取得数は1,000行で、上位N件を全件とは扱いません。`us_sector_morning`は無効です（[取得制約](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
-- **`schedule apply`は有効な全Jobを登録・更新します。** 同梱の`sample_screen_daily`は有効かつWatchlist Writeありなので、不要なら登録前に無効化してください。
-- DockerはWindows上のDocker Desktop・Linux/amd64でOAuth、Screening、Job、認証・結果の永続化を確認しています。**Mac実機・arm64は未検証**です。[認証volumeの保護と限界](docs/user/DOCKER.md#データと認証情報の保存場所)も確認してください。
+| 目的 | マニュアル |
+| --- | --- |
+| 導入・認証 | [Windows](docs/user/WINDOWS_SETUP.md) / [Docker](docs/user/DOCKER.md) |
+| 機能・条件作成 | [機能一覧](docs/user/FEATURES.md) / [Screening](docs/user/SCREENING_MANUAL.md) |
+| 保存・自動化 | [結果・履歴・比較](docs/user/RESULTS.md) / [Job・Scheduler](docs/user/SCHEDULE_MANUAL.md) |
+| その他 | [Watchlist同期](docs/user/WATCHLIST_SYNC.md) / [AIからのCLI利用](docs/user/AI_USAGE.md) / [トラブル対応](docs/user/TROUBLESHOOTING.md) |
 
 ## ライセンス
 
-[MIT License](LICENSE)。第三者の資料・ライブラリには各利用条件が適用されます。
+[MIT License](LICENSE)。第三者の資料・ライブラリには、それぞれの利用条件が適用されます。
