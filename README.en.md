@@ -60,6 +60,10 @@ Results and OAuth credentials are stored in **Docker volumes**, not the host's `
 
 [Docker authentication, storage, and troubleshooting (Japanese)](docs/user/DOCKER.md)
 
+## Create JSON with ChatGPT or Codex
+
+Ask ChatGPT or Codex to read the [AI JSON generation guide](docs/user/AI_JSON_GUIDE.md), its linked examples and the current configuration rules, then describe your screening in natural language. ChatGPT can provide a JSON file for you to save; Codex can create it directly in an accessible local project folder. **End users do not need Git or Codex.** Start with Watchlist writes and scheduling disabled. The detailed guide is primarily Japanese, with an English note.
+
 ## Create your own screening and job
 
 1. Copy `screenings/public_japan_value.json` to `screenings/my_japan_value.json` and change its internal `name` to `my_japan_value`.
