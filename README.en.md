@@ -60,9 +60,14 @@ Results and OAuth credentials are stored in **Docker volumes**, not the host's `
 
 [Docker authentication, storage, and troubleshooting (Japanese)](docs/user/DOCKER.md)
 
-## Create JSON with ChatGPT or Codex
+## Create screenings with ChatGPT or Codex
 
-Ask ChatGPT or Codex to read the [AI JSON generation guide](docs/user/AI_JSON_GUIDE.md), its linked examples and the current configuration rules, then describe your screening in natural language. ChatGPT can provide a JSON file for you to save; Codex can create it directly in an accessible local project folder. **End users do not need Git or Codex.** Start with Watchlist writes and scheduling disabled. The detailed guide is primarily Japanese, with an English note.
+Ask ChatGPT or Codex to read the [AI screening generation guide](docs/user/AI_JSON_GUIDE.md), the actual schemas, Provider capabilities and bundled examples, then describe your request. The AI chooses between two approaches:
+
+- **A (always preferred when sufficient): standard Screening JSON.** Create `screenings/*.json`; add `jobs/*.json` only when needed. Simple conditions do not need custom Python or BAT files.
+- **B: advanced composite Python processing.** Use this only when a single JSON definition cannot express the request, such as filtering by another timeframe after fixing a ranking, or joining an external universe. Explain why Python is needed and reuse the existing official MCP client, authentication, request controls, compatible storage and Watchlist safeguards where applicable. A generic pipeline engine and dedicated CLI are not implemented.
+
+**End users do not need Git or Codex.** ChatGPT provides complete files and save instructions; Codex saves and validates in an accessible local environment. Python requires an environment that can edit and validate the code. Report retrieval limits, missing data and unverified steps; never describe partial retrieval as complete coverage. File creation and live retrieval are separate actions. Start with Watchlist writes and scheduling disabled, and never write to TradingView or register scheduled tasks without explicit user instructions. Japanese documentation is authoritative; the guide includes an English note.
 
 ## Create your own screening and job
 
