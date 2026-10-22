@@ -6,6 +6,10 @@ AIには展開フォルダで共通`app.bat`を使うよう依頼します。通
 
 [機能一覧](FEATURES.md)のとおり、CLIは定義済みScreeningの実行、結果の参照、Job、Scheduler、MCP認証・一覧確認を扱います。公式Toolの全操作を任意に呼ぶCLIではありません。ローソク足・ニュース・財務のPythonラッパーがあっても、それを取得・定期保存するJobがあるとは説明しないでください。
 
+## 会話から設定JSONを作成する
+
+ChatGPT・Codexのどちらでも、[AI向けJSON作成ガイド](AI_JSON_GUIDE.md)を最初に参照させることで、リポジトリの実際のSchema・サンプルに沿ったScreening・Jobを作成できます。ChatGPTはダウンロード可能なJSONを返し、Codexはアクセス可能なローカルの`screenings/`・`jobs/`に新規ファイルを保存します。AIがリポジトリを読めない場合は、ガイドとサンプルを渡してください。公開URLを渡すだけで必ずファイル本文を読めるとは限りません。
+
 ## 自分の条件・Jobを作る依頼例
 
 > public_japan_value.jsonを別名のmy_japan_value.jsonへコピーし、nameも一致させてください。日本株、PER 0〜15、予想配当利回り3%以上、出来高降順、limit 20、Watchlist無効にします。JSONを確認し、既存サンプルは変更しないでください。
