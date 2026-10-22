@@ -60,6 +60,10 @@ docker compose -f compose.docker.yml run --rm app results latest public_japan_va
 
 [Dockerの認証・保存先・トラブル対応](docs/user/DOCKER.md)
 
+## AIとの会話からJSONを作る
+
+ChatGPT・Codexに[AI向けJSON作成ガイド](docs/user/AI_JSON_GUIDE.md)と実際のサンプルを読み込ませれば、自然な言葉で指定した条件からScreening・JobのJSONを作れます。**一般ユーザーはGitやCodexをインストールする必要はありません。** ChatGPTなら生成されたJSONファイルを保存し、Codexならローカルのアプリフォルダへ直接作成できます。まずはWatchlist同期・定期登録を無効にして確認してください。
+
 ## 自分のスクリーニング・Jobを作る
 
 1. `screenings/public_japan_value.json`を`screenings/my_japan_value.json`へコピーし、JSON内の`name`も`my_japan_value`に変更します。
