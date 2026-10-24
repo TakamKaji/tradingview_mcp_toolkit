@@ -76,6 +76,15 @@ docker compose -f compose.docker.yml run --rm app results latest public_japan_va
 - **全米株の無条件一括取得は未対応：** TradingView公式MCP Providerが要求を拒否し、取得上限1,000行と全件列挙手段の制約があります。`us_sector_morning`は無効です（[詳細](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
 - **認証情報：** Dockerのcredential volumeはOSの暗号化Keychainではありません。`docker compose down -v`等によるvolume削除にも注意してください（[保存と保護](docs/user/DOCKER.md#データと認証情報の保存場所)）。
 
+## 結果の4つの使い道
+
+- **JSON（標準）**：`results/`へ保存する正本。履歴・前回比較に使用。
+- **HTML（任意）**：保存済みJSONを別スクリプトで表形式へ変換。ブラウザで閲覧、銘柄からチャートへ移動。
+- **CSV（任意）**：同じJSONを表に変換し、Excelなどで加工。
+- **TradingView Watchlist（明示操作のみ）**：既存Jobによる管理リストへの差分同期。**結果ファイルの単純な変換ではなく、銘柄の追加・削除を伴うWrite操作**です。
+
+CSV・HTMLの作成は`export-results.bat`（Windows）またはDocker内の`tradingview_screening.export_results`を使います。詳細は[結果ファイルの変換手順](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換)へ。通常のScreening実行ではJSONだけを保存し、ほかの形式は自動生成しません。
+
 ## マニュアル
 
 各マニュアルの本文は**日本語**です。
