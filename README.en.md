@@ -85,6 +85,8 @@ When viewing results, use the **screening name**, not the job name.
 
 For CSV or HTML, use `export-results.bat` on Windows or the `tradingview_screening.export_results` Python module inside Docker. See the [results export instructions (Japanese)](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換). Normal screenings continue to save JSON only; other formats are never generated automatically.
 
+Japanese is the default display language. Use `--lang en` for English CSV headers or an initially English HTML report. Each generated HTML file includes an offline **日本語 / English** switch. Default English filenames end in `.en.csv` or `.en.html`; the source JSON and retrieved values remain unchanged.
+
 ## Documentation
 
 Detailed manuals are currently written in **Japanese**.
