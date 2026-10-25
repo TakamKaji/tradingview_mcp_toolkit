@@ -2,13 +2,13 @@
 setlocal enabledelayedexpansion
 
 rem カレントディレクトリをこのファイルの場所に固定
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 
 rem 文字コードをUTF-8に設定
 chcp 65001 >nul
 
 rem ポータブルPython環境の読み込み (ループの外で1回だけ実行する)
-call "%~dp0setenv.bat"
+call "%~dp0..\setenv.bat"
 
 :MAIN_MENU
 cls

@@ -4,7 +4,7 @@
 
 ## BATとPowerShellの責務
 
-**日本語の文字化け対策:** 入口の`setup.bat`はASCIIだけで記述した起動用ファイルです。従来のPython導入処理は`setup-runtime.bat`に分け、日本語の案内と認証制御はUTF-8 BOM付き`scripts/setup-ui.ps1`（Windows PowerShell）から行います。Windowsの`cmd.exe`でUTF-8の日本語を直接解釈させないため、文字化けや日本語がコマンドとして実行される問題を回避します。ダブルクリックするファイルは引き続き**`setup.bat`だけ**です。
+**日本語の文字化け対策:** 入口の`setup.bat`はASCIIだけで記述した起動用ファイルです。従来のPython導入処理は`scripts/setup-runtime.bat`に分け、日本語の案内と認証制御はUTF-8 BOM付き`scripts/setup-ui.ps1`（Windows PowerShell）から行います。Windowsの`cmd.exe`でUTF-8の日本語を直接解釈させないため、文字化けや日本語がコマンドとして実行される問題を回避します。初期設定でダブルクリックするファイルは引き続き**ルートの`setup.bat`だけ**です。内部用BATは`scripts/`に配置し、開発・検証専用BATは`scripts/development/`へ隔離します。
 
 
 通常起動は`mcp status`で未認証（exit 3）と通信失敗を区別し、未認証時だけ共通CLIの`mcp auth`を呼びます。既存認証があれば再利用し、status/toolsに失敗した場合は成功表示をせず停止します。`--no-pause`は待機と認証を、`--skip-auth`は認証を省略します。
@@ -22,7 +22,7 @@
 7. 通常起動時は `mcp status` で認証状態を確認。未認証（`AUTH_REQUIRED` / exit 3）なら `mcp auth` を起動してブラウザ認可を開始
 8. 認可後（または既に認証済みの場合）は `mcp status` と `mcp tools` の成功を確認して完了表示。MCPの失敗は成功扱いしない
 
-システムPythonは参照しません。`setenv.bat` が起動プロセス内だけEmbedded PythonをPATH先頭へ置き、`PYTHONHOME` / `PYTHONPATH` をクリアします。Windowsのユーザープロファイル、Credential Manager、既定ブラウザ、TEMPは置き換えません。
+システムPythonは参照しません。`scripts/setenv.bat` が起動プロセス内だけEmbedded PythonをPATH先頭へ置き、`PYTHONHOME` / `PYTHONPATH` をクリアします。Windowsのユーザープロファイル、Credential Manager、既定ブラウザ、TEMPは置き換えません。
 
 runtimeの再利用前に、`python.exe`・`python312._pth`・標準ライブラリZIP・DLLを確認し、Python 3.12.8の起動とSSL・site設定も検査します。不完全な場合は`runtime/python-3.12.8/`だけを再構築します。正常なruntimeは再利用し、依存導入は再実行します。ZIP由来のCRLFとLFの両方でsite設定を補正できます。
 

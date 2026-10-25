@@ -2,8 +2,8 @@
 setlocal
 title TradingView MCP Support Console
 
-call "%~dp0setenv.bat"
-cd /d "%~dp0"
+call "%~dp0..\setenv.bat"
+cd /d "%~dp0..\.."
 
 if not exist "%PYTHON_EXECUTABLE%" (
     echo Embedded Python was not found.

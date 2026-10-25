@@ -4,7 +4,7 @@
 
 ## Windows Embedded Python
 
-`setup.bat`で環境を準備してから、`console.bat`で開いたコンソールで次を実行します。
+`setup.bat`で環境を準備してから、`scripts/development/console.bat`で開いたコンソールで次を実行します。
 
 ```bat
 python -m pip install --no-build-isolation -r requirements-dev.txt
@@ -13,7 +13,7 @@ python -m ruff check .
 git diff --check
 ```
 
-非対話実行では`setenv.bat`経由でプロジェクトのPythonを選びます。システムPythonへpip installせず、Windowsユーザーの環境変数やプロファイルを恒久変更しません。Embedded Pythonのisolated modeを前提に、build backendを明示導入した環境で`--no-build-isolation`を使います。通常Python/macOSにはこの制約を広げません。
+非対話実行では`scripts/setenv.bat`経由でプロジェクトのPythonを選びます。システムPythonへpip installせず、Windowsユーザーの環境変数やプロファイルを恒久変更しません。Embedded Pythonのisolated modeを前提に、build backendを明示導入した環境で`--no-build-isolation`を使います。通常Python/macOSにはこの制約を広げません。
 
 pytestの一時領域はGit管理外の`.pytest-tmp/`です。実symlinkを作成できないWindowsでは権限依存テストがskipされる場合があります。skip理由を記録し、未実行を成功と扱いません。全テストを通すために管理者実行を標準にしません。
 

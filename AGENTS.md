@@ -42,7 +42,7 @@
 - `keyring`、Windows Credential Manager、既定ブラウザ、OAuth認証は通常のWindowsユーザー環境を利用する。
 - ローカル化する対象は、原則としてPython Runtimeとアプリ固有データのみとする。
 - `PYTHONHOME` / `PYTHONPATH` はシステムPython設定との混線防止のため、起動プロセス内でクリアしてよい。
-- Embedded Pythonを `PATH` の先頭へ追加する場合も、`setup.bat` / `console.bat` 等から起動したプロセス内だけに限定する。
+- Embedded Pythonを `PATH` の先頭へ追加する場合も、`setup.bat` / `scripts/development/console.bat` 等から起動したプロセス内だけに限定する。
 - OS環境変数の恒久変更、レジストリへのPythonパス登録、システムPythonへのpip installを行わない。
 - `.local/` はOAuth補助情報、lock、cache等のアプリ固有ローカルデータ用であり、Windowsユーザープロファイルの代替ディレクトリとして使わない。
 - 「ポータブル化」を理由に上記方針を変更しない。変更が必要な場合は、実装より先に仕様上の理由を明示する。
@@ -54,18 +54,18 @@
 - アーキテクチャ変更: 実装仕様書と関連docsを確認。
 - MCP Tool変更: TradingView公式MCPリファレンスとTool Discovery仕様を確認。
 - Job / Screening定義変更: 各マニュアルとSchemaを確認。
-- Windows bootstrap変更: `setup.bat`、`setenv.bat`、`console.bat`をまとめて確認。
+- Windows bootstrap変更: `setup.bat`、`scripts/setup-runtime.bat`、`scripts/setenv.bat`、`scripts/development/console.bat`をまとめて確認。
 
 ## 検証
 
-Windows Embedded Python環境では `console.bat` を開いて:
+Windows Embedded Python環境では `scripts/development/console.bat` を開いて:
 
 ```bat
 python -m pytest
 python -m ruff check .
 ```
 
-非対話実行ではシステムPythonを暗黙に使わず、プロジェクトの `setenv.bat` 経由を優先する。
+非対話実行ではシステムPythonを暗黙に使わず、プロジェクトの `scripts/setenv.bat` 経由を優先する。
 
 macOS / 通常Pythonでは:
 
