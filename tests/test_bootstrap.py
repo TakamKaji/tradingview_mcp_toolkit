@@ -18,7 +18,7 @@ def test_package_version_is_defined() -> None:
 def test_windows_release_install_does_not_install_dev_extras() -> None:
     runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8").strip()
     dev = (ROOT / "requirements-dev.txt").read_text(encoding="utf-8").strip()
-    setup = (ROOT / "setup-runtime.bat").read_text(encoding="utf-8")
+    setup = (ROOT / "scripts/setup-runtime.bat").read_text(encoding="utf-8")
     assert runtime == "-e ."
     assert dev == "-e .[dev]"
     assert 'pip install --no-build-isolation -r requirements.txt' in setup
@@ -31,16 +31,16 @@ def test_cli_parser_can_be_built() -> None:
 
 
 def test_windows_setup_uses_pinned_embedded_python_and_shared_entrypoint() -> None:
-    setup = (ROOT / "setup-runtime.bat").read_text(encoding="ascii")
+    setup = (ROOT / "scripts/setup-runtime.bat").read_text(encoding="ascii")
 
     assert 'set "PYTHON_VERSION=3.12.8"' in setup
     assert "python-%PYTHON_VERSION%-embed-%ARCH%.zip" in setup
     assert 'call "%~dp0setenv.bat"' in setup
-    assert 'call "%~dp0app.bat" --help >nul' in setup
+    assert 'call "%~dp0..\\app.bat" --help >nul' in setup
 
 
 def test_windows_setup_recovers_incomplete_runtime_and_supports_noninteractive_use() -> None:
-    setup = (ROOT / "setup-runtime.bat").read_text(encoding="ascii")
+    setup = (ROOT / "scripts/setup-runtime.bat").read_text(encoding="ascii")
 
     assert 'if /I "%~1"=="--no-pause" set "NO_PAUSE=1"' in setup
     assert 'if exist "%TARGET_DIR%\\python.exe"' in setup
@@ -74,7 +74,7 @@ def test_click_setup_uses_ascii_batch_and_bom_power_shell_ui() -> None:
     assert "@('mcp','tools')" in ui
     assert "'--no-pause' { $NoPause = $true; $SkipAuth = $true }" in ui
     assert "'--skip-auth' { $SkipAuth = $true }" in ui
-    assert "setup-runtime.bat" in ui
+    assert "$Runtime = Join-Path $PSScriptRoot 'setup-runtime.bat'" in ui
     assert "schedule apply" not in ui
     assert "run sample_screen_daily" not in ui
 
@@ -99,13 +99,48 @@ def test_powershell_ui_has_valid_syntax(tmp_path: Path) -> None:
 def test_app_entrypoint_never_falls_back_to_system_python() -> None:
     app = (ROOT / "app.bat").read_text(encoding="utf-8")
 
-    assert 'call "%~dp0setenv.bat"' in app
+    assert 'call "%~dp0scripts\\setenv.bat"' in app
     assert 'if not exist "%PYTHON_EXECUTABLE%"' in app
     assert '"%PYTHON_EXECUTABLE%" -m tradingview_screening %*' in app
 
 
+def test_only_user_bat_launchers_remain_at_project_root() -> None:
+    assert {item.name for item in ROOT.glob("*.bat")} == {
+        "setup.bat", "app.bat", "export-results.bat",
+    }
+    for internal in ("setenv.bat", "setup-runtime.bat"):
+        assert (ROOT / "scripts" / internal).is_file()
+        assert not (ROOT / internal).exists()
+    for developer in ("console.bat", "run_menu.bat", "second_pc_full_test.bat"):
+        assert (ROOT / "scripts" / "development" / developer).is_file()
+        assert not (ROOT / developer).exists()
+
+
+def test_moved_internal_entrypoints_keep_project_root() -> None:
+    runtime = (ROOT / "scripts/setup-runtime.bat").read_text(encoding="ascii")
+    env = (ROOT / "scripts/setenv.bat").read_text(encoding="utf-8")
+    ui = (ROOT / "scripts/setup-ui.ps1").read_text(encoding="utf-8-sig")
+    app = (ROOT / "app.bat").read_text(encoding="utf-8")
+    export = (ROOT / "export-results.bat").read_text(encoding="utf-8")
+
+    assert 'cd /d "%~dp0.."' in runtime
+    assert 'call "%~dp0setenv.bat"' in runtime
+    assert 'call "%~dp0..\\app.bat" --help >nul' in runtime
+    assert 'for %%I in ("%~dp0..") do set "DP0=%%~fI"' in env
+    assert "$Runtime = Join-Path $PSScriptRoot 'setup-runtime.bat'" in ui
+    assert 'call "%~dp0scripts\\setenv.bat"' in app
+    assert 'call "%~dp0scripts\\setenv.bat"' in export
+
+    console = (ROOT / "scripts/development/console.bat").read_text(encoding="utf-8")
+    menu = (ROOT / "scripts/development/run_menu.bat").read_text(encoding="utf-8")
+    assert 'call "%~dp0..\\setenv.bat"' in console
+    assert 'call "%~dp0..\\setenv.bat"' in menu
+    assert 'cd /d "%~dp0..\\.."' in console
+    assert 'cd /d "%~dp0..\\.."' in menu
+
+
 def test_setenv_preserves_windows_user_profile_and_credentials() -> None:
-    setenv = (ROOT / "setenv.bat").read_text(encoding="utf-8")
+    setenv = (ROOT / "scripts/setenv.bat").read_text(encoding="utf-8")
     for name in ("USERPROFILE", "HOME", "HOMEPATH", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
         assert f'set "{name}=' not in setenv
     assert 'set "PYTHONHOME="' in setenv
@@ -115,7 +150,7 @@ def test_setenv_preserves_windows_user_profile_and_credentials() -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows PowerShell bootstrap")
 @pytest.mark.parametrize("newline", ["\r\n", "\n"])
 def test_site_repair_handles_embedded_pth_line_endings(tmp_path: Path, newline: str) -> None:
-    setup = (ROOT / "setup-runtime.bat").read_text(encoding="ascii")
+    setup = (ROOT / "scripts/setup-runtime.bat").read_text(encoding="ascii")
     command = next(
         line.strip()[1:-1] for line in setup.splitlines()
         if line.strip().startswith('"$path = $env:PTH_FILEPATH;')

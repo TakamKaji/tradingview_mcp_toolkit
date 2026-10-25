@@ -18,7 +18,7 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
     set "DLL_FILENAME=python%%a%%b.dll"
 )
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 if errorlevel 1 goto :error
 
 echo Python version: %PYTHON_VERSION%
@@ -105,7 +105,7 @@ if errorlevel 1 goto :error
 
 echo.
 echo Verifying shared app entrypoint...
-call "%~dp0app.bat" --help >nul
+call "%~dp0..\app.bat" --help >nul
 if errorlevel 1 goto :error
 
 echo.
