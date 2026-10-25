@@ -69,6 +69,41 @@ app.bat results compare my_japan_value
 
 履歴・比較は既存結果を移行・削除せず、差分ファイルも自動保存しません。詳細な[JSON契約と架空データ例](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/RESULTS.md)は開発者向け資料にあります。
 
+## 保存JSONからCSV・HTMLを作る（任意の後変換）
+
+**JSONが正本で、CSV・HTMLは同じ保存JSONから必要なときだけ作る閲覧用ファイルです。** 元のJSON・履歴・fingerprintは変更しません。変換のためにTradingViewへ再接続せず、認証もWatchlistへの書き込みも発生しません。
+
+ファイルは既存の`results/YYYY-MM-DD/<Screening名>_HHMMSS.json`を指定します。パスとファイル名は`results history <Screening名>`で確認できます。以下の`2026-10-22`と`153000`はファイル名の書き方の例で、実際の保存ファイルへ読み替えてください。
+
+### Windows
+
+```bat
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format csv
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format html
+```
+
+同じ場所に`.csv`と`.html`がそれぞれ生成されます。CSVはExcelで開きやすいUTF-8 BOM付き、HTMLはオフライン閲覧できる表形式です。HTMLの`symbol`欄からTradingViewチャートを開くリンクは、押したときだけ外部サイトへアクセスします。
+
+既存の出力を置き換えるときだけ`--overwrite`を明示してください。`--output 保存先ファイル`で出力先も指定できます。ホストPCへの追加Python導入は不要で、`setup.bat`が準備する同梱Pythonを使います。
+
+### Docker
+
+Dockerでは結果JSONはホストの`results/`ではなく、専用volumeの`/workspace/results/`に保存されています。既存コンテナから変換するときは次の形式で実行します。
+
+```sh
+docker compose -f compose.docker.yml run --rm --entrypoint python app -m tradingview_screening.export_results /workspace/results/2026-10-22/my_japan_value_153000.json --format html
+```
+
+同様に`--format csv`も指定可能です。出力は同じDocker volume内なので、ホストでファイルが必要なら[Dockerマニュアルのバックアップ手順](DOCKER.md#終了再実行更新バックアップ)に従って取り出してください。
+
+### 対応する結果・注意点
+
+- 現行の標準Screening結果のほか、`status=success`または`partial`かつ`results`がオブジェクト配列の独自複合処理JSONにも対応します。配列内のキーを全件調べて表の列にします。
+- `partial`は成功扱いの全件結果として表示せず、HTMLに注意書きを表示します。`failed`は変換を拒否します。CSVには結果行だけを出し、実行日時・coverage・取得範囲等の正本メタデータは元JSONに残ります。
+- 独自形式の`top100`などの補助配列はCSV/HTMLに自動出力しません。表示対象は`results`配列です。
+- **Watchlist同期はCSV/HTMLへの変換とは別のWrite操作**です。既存のScreening Jobを明示的に実行する場合だけ同期します。保存済みJSONを任意に選んで直接Watchlistへ同期する機能は追加しません。
+- この変換はファイル形式の変更だけで、データ欠損やProvider制約を解決するものではありません。
+
 ## 同梱サンプルの場合
 
 `public_japan_value_daily`の結果は`public_japan_value`、`public_sample_screen_daily`と`sample_screen_daily`の結果は`sample_standard_screen`で参照します。`my_japan_value_daily`を自作した場合は`my_japan_value`です。サンプル専用の履歴機能ではありません。

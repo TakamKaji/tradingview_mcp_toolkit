@@ -85,6 +85,15 @@ When viewing results, use the **screening name**, not the job name.
 - **Full US-stock universe unavailable:** The official TradingView MCP provider rejects an unrestricted all-US-stock request. Its 1,000-row limit and lack of a verified full-universe enumeration method prevent complete coverage. `us_sector_morning` is disabled ([details in Japanese](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)).
 - **Credentials:** The Docker credentials volume is **not an encrypted OS keychain**. Avoid deleting persistent volumes with commands such as `docker compose down -v` ([storage and security details, Japanese](docs/user/DOCKER.md#データと認証情報の保存場所)).
 
+## Four ways to use results
+
+- **JSON (default):** The authoritative saved result under `results/`, used for history and comparisons.
+- **HTML (optional):** Convert a saved JSON file with a separate script into a browser-friendly table with chart links.
+- **CSV (optional):** Convert the same JSON into a spreadsheet-friendly file.
+- **TradingView Watchlist (explicit action only):** A managed Job can synchronize symbols with a Watchlist. **This is a write operation that adds/removes symbols, not a file conversion.**
+
+For CSV or HTML, use `export-results.bat` on Windows or the `tradingview_screening.export_results` Python module inside Docker. See the [results export instructions (Japanese)](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換). Normal screenings continue to save JSON only; other formats are never generated automatically.
+
 ## Documentation
 
 Detailed manuals are currently written in **Japanese**.
