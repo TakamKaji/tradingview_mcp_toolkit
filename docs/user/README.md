@@ -10,7 +10,7 @@
 | 3. 保存結果・履歴・前回差分を確認 | [Results](RESULTS.md) |
 | 任意：Watchlistを書き換える | [Watchlist](WATCHLIST_SYNC.md) |
 | 任意：自分のJob・Windowsの定期実行 | [Jobの作成手順と全文JSON](SCHEDULE_MANUAL.md#自分のjobを作る) |
-| AIと会話してScreeningを作成（JSON優先・複合処理はPython） | [ChatGPT・Codex用Screening生成ガイド](AI_JSON_GUIDE.md) |
+| AIと会話してScreeningを作成（JSON優先・複合処理はPython） | [AI共通Screening生成ガイド](AI_JSON_GUIDE.md) |
 | AIに操作を頼む | [AIからのCLI利用](AI_USAGE.md) |
 | 失敗したとき | [トラブル対応](TROUBLESHOOTING.md) |
 
