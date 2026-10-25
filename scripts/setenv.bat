@@ -1,7 +1,6 @@
 @echo off
 
-set "DP0=%~dp0"
-set "DP0=%DP0:~0,-1%"
+for %%I in ("%~dp0..") do set "DP0=%%~fI"
 
 set "PYTHON_VERSION=3.12.8"
 set "PYTHON_PATH=%DP0%\runtime\python-%PYTHON_VERSION%"

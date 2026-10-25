@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path -Parent $PSScriptRoot
 $App = Join-Path $Root 'app.bat'
-$Runtime = Join-Path $Root 'setup-runtime.bat'
+$Runtime = Join-Path $PSScriptRoot 'setup-runtime.bat'
 $ExitCode = 0
 $NoPause = $false
 $SkipAuth = $false
