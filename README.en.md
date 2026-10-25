@@ -60,6 +60,15 @@ Results and OAuth credentials are stored in **Docker volumes**, not the host's `
 
 [Docker authentication, storage, and troubleshooting (Japanese)](docs/user/DOCKER.md)
 
+## Create screenings with AI
+
+Start Gemini CLI, Codex or Claude Code in the project root; see the [entry files and loading limits](docs/user/AI_USAGE.md#プロジェクトルートでaiを起動する). Preserve the requested universe and processing order, and verify actual execution when requested. Ask the AI to read the [AI screening generation guide](docs/user/AI_JSON_GUIDE.md), the actual schemas, Provider capabilities and bundled examples, then describe your request. The AI chooses between two approaches:
+
+- **A (always preferred when sufficient): standard Screening JSON.** Create `screenings/*.json`; add `jobs/*.json` only when needed. Simple conditions do not need custom Python or BAT files.
+- **B: advanced composite Python processing.** Use this only when a single JSON definition cannot express the request, such as filtering by another timeframe after fixing a ranking, or joining an external universe. Explain why Python is needed and reuse the existing official MCP client, authentication, request controls, compatible storage and Watchlist safeguards where applicable. A generic pipeline engine and dedicated CLI are not implemented.
+
+**End users do not need Git or Codex.** ChatGPT provides complete files and save instructions; Codex saves and validates in an accessible local environment. Python requires an environment that can edit and validate the code. Report retrieval limits, missing data and unverified steps; never describe partial retrieval as complete coverage. File creation and live retrieval are separate actions. Start with Watchlist writes and scheduling disabled, and never write to TradingView or register scheduled tasks without explicit user instructions. Japanese documentation is authoritative; the guide includes an English note.
+
 ## Create your own screening and job
 
 1. Copy `screenings/public_japan_value.json` to `screenings/my_japan_value.json` and change its internal `name` to `my_japan_value`.

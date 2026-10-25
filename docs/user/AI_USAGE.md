@@ -2,9 +2,34 @@
 
 AIには展開フォルダで共通`app.bat`を使うよう依頼します。通常のScreening・結果管理・Job実行に、別のTradingView connectorや条件ごとのPythonスクリプトは不要です。初回導入は[Windows導入](WINDOWS_SETUP.md)を完了してください。
 
+## プロジェクトルートでAIを起動する
+
+`README.md`と`app.bat`があるフォルダを作業場所にして、対応CLIを起動します。配布mainの[GEMINI.md](../../GEMINI.md)・[AGENTS.md](../../AGENTS.md)・[CLAUDE.md](../../CLAUDE.md)は短い利用者向け入口、developの入口は開発規則も保持します。詳細なScreening規則の正本は両ブランチ共通の[AI生成ガイド](AI_JSON_GUIDE.md)です。
+
+| 製品 | 自動読込と起動条件 | ルート起動時の確認方法・限界 |
+| --- | --- | --- |
+| Gemini CLI | 既定の`GEMINI.md`をワークスペース・親階層等から探索。設定の`context.fileName`や信頼範囲に依存 | ルートで`gemini`を起動し、`/memory show`で入口の本文を確認。入口があってもリンク先本文まで自動展開されるとは限らない |
+| Codex | 起動時にプロジェクトルートから作業場所まで探索。同一階層は`AGENTS.override.md`優先、次に`AGENTS.md`。全体サイズ上限・設定の影響あり | ルートで`codex`を起動し、適用された指示の出典と要点を確認。途中で作成/切替したファイルは新しいセッションで確認する |
+| Claude Code | 作業場所と親階層の`CLAUDE.md`等を起動時に読込。除外・追加ディレクトリ設定等に依存 | ルートで`claude`を起動し、`/memory`または`/context`で読込対象を確認。Markdownリンクだけで参照先全文の読込済みとは扱わない |
+
+公式の読込仕様：[Gemini CLI](https://geminicli.com/docs/cli/gemini-md/)、[Codex](https://developers.openai.com/codex/guides/agents-md)、[Claude Code](https://code.claude.com/docs/en/memory)（2026-10-25確認）。この表は仕様の確認と利用者の確認手順です。**Gemini/Claude CLIは現環境のPATHに該当CLIがなく、実起動は未検証**。Codex CLI 0.163.0-alpha.10.2は存在を確認しましたが、ルートでの新規セッション試行は状態DB/初期化へのアクセス拒否（exit 1）で読込を実証できませんでした。3製品とも対応IDEでの動作は未検証です。静的な入口/リンク検査を3製品の動作確認と呼びません。
+
+AIにはREADME→共通ガイド→必要な実仕様を読むよう入口で指示しています。最初に参照したファイルと未確認事項を確かめてください。一般のAIチャットへフォルダ名だけを送ってもPC内の指示ファイルは自動適用されません。通常チャットには必要な本文やアクセス可能な資料を渡します。製品・IDE・設定の違いがあり、3製品の完全な遵守を保証しません。
+
 ## 共通機能と依頼範囲を確認する
 
 [機能一覧](FEATURES.md)のとおり、CLIは定義済みScreeningの実行、結果の参照、Job、Scheduler、MCP認証・一覧確認を扱います。公式Toolの全操作を任意に呼ぶCLIではありません。ローソク足・ニュース・財務のPythonラッパーがあっても、それを取得・定期保存するJobがあるとは説明しないでください。
+
+## 会話からScreeningを作成し、方式を選ぶ
+
+Gemini CLI・Codex・Claude Code・ChatGPTのいずれでも、最初に[AIによるScreening生成ガイド](AI_JSON_GUIDE.md)と実際のSchema・公式Provider対応項目・サンプルを読み、希望を整理します。公開URLだけで必ず本文を読めるとは限らないため、アクセスできなければ必要資料を渡してください。
+
+- **方式A（最優先）**：単一Screeningで表現できれば`screenings/*.json`を作り、Jobが必要な場合だけ`jobs/*.json`も作ります。通常の条件に独自Python・BATを追加しません。
+- **方式B**：ランキング確定後の別時間足判定や外部母集団との照合など、単一JSONで表現できない処理だけPythonを選び、理由を説明します。既存の公式MCPクライアント・認証・通信制御・互換性のある保存・Watchlist安全機構を再利用します。汎用pipelineエンジンや複合処理専用CLIはなく、Pythonファイルを標準`screen`やJobの参照先に指定しても動きません。
+
+ChatGPTは完成ファイルと保存手順を提供し、通常チャットから利用者PCへ自動設置しません。Codexはアクセス可能なローカル環境へ保存・検証します。Python方式では実際の保存先・依存・実行環境・起動方法・結果形式を明示します。外部データの出典・取得時刻・欠損・制限を示し、不完全な結果を全件取得と報告しません。
+
+ファイル作成・ローカル検証・実取得・Writeは別操作です。利用者から指示されない限りTradingViewへの実書き込みやScheduler登録・削除を実行しません。以下のCLI例は方式Aに対する操作です。
 
 ## 自分の条件・Jobを作る依頼例
 
