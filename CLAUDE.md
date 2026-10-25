@@ -4,6 +4,10 @@
 
 共通の製品境界・テスト方法・依存ルールはルートの `AGENTS.md` を参照し、このファイルではClaude Code固有の補足だけを定義する。
 
+## 利用者のScreening作成・実行を扱う場合
+
+[README](README.md)→[AIによるScreening生成ガイド](docs/user/AI_JSON_GUIDE.md)と実Schema・サンプルを確認する。母集団・抽出条件・処理順を保ち、全件と部分取得を区別し、Provider未対応機能を創作しない。依頼された実行は生成物だけでなく実行証跡・新しい保存結果まで確認し、明示依頼のないWrite・Scheduler操作・認証情報削除を行わない。詳細規則の正本は共通ガイドとし、以下の開発ルールも維持する。
+
 ## Opus 5.5向け作業方針
 
 - 長い事前説明より、対象コードを確認して実装を進める。
@@ -19,5 +23,5 @@
 
 - `.claude/settings.json` のプロジェクト設定を尊重する。
 - `.local/` の認証情報や `runtime/` のEmbedded Python実体を調査対象として走査しない。
-- WindowsでPythonコマンドを使う場合、Embedded Python環境が存在すれば `setenv.bat` / `console.bat` 経由を優先する。
+- WindowsでPythonコマンドを使う場合、Embedded Python環境が存在すれば `scripts/setenv.bat` / `scripts/development/console.bat` 経由を優先する。
 - サブエージェントや大規模並列作業は、単純な変更には使わない。明確に分離できる大規模作業でのみ使用する。

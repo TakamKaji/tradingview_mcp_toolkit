@@ -15,11 +15,13 @@
 例えば`feat/issue-XX`で次のように作る。
 
 1. **A: 共通・配布可能な差分**：`src/`、必要な起動ファイル・JSON・利用者マニュアル等。テストや開発専用資料を混ぜない。
-2. **B: 開発専用**：`tests/`、`docs/development/`、`docs/archive/`、`AGENTS.md`、開発設定・検証記録など。
+2. **B: 開発専用**：`tests/`、`docs/development/`、`docs/archive/`、開発用`AGENTS.md`・`CLAUDE.md`・`GEMINI.md`、開発設定・検証記録など。
 
 AとBを`develop`向けPRで検証する。`main`向けには**Aだけ**を元のコミットSHAでcherry-pickする。Bを拾ってからファイル削除する方式は避ける。Aに開発用差分が混ざったら、ソース側でコミットを分割し直してから持っていく。
 
-`main`は機能実行に必要なファイルだけを保つ。特に`tests/`、`docs/development/`、`docs/archive/`、`AGENTS.md`、`.codex/`、開発依存・検証ツールを持ち込まない。必要物は実際の`main` treeを見て決める。
+`main`は機能実行と利用に必要なファイルだけを保つ。`tests/`、`docs/development/`、`docs/archive/`、`.codex/`、`.claude/`、`scripts/development/`、開発依存・検証ツールを持ち込まない。必要物は実際の`main` treeを見て決める。
+
+**Issue #58の例外：ルートの`GEMINI.md`・`AGENTS.md`・`CLAUDE.md`は、配布利用者向けの短い入口に限りmainへ収録できる。** READMEと`docs/user/AI_JSON_GUIDE.md`への導線、母集団/完全性・Provider対応・実行結果の検証・明示依頼のないWrite禁止だけを案内し、詳細は共通ガイドを正本とする。モデル役割分担、subagent、実装/テスト指示、開発設定は配布しない。developの同名ファイルをそのままcherry-pickせず、共通利用者文書のコミットと各ブランチの入口コミットを分離する。
 
 ## develop → main の例
 
@@ -36,10 +38,14 @@ git cherry-pick -x <COMMIT_A_SHA>
 
 git diff --check
 git diff --name-only origin/main...HEAD
-git diff --name-only origin/main...HEAD -- tests docs/development docs/archive AGENTS.md .codex
+git diff --name-only origin/main...HEAD -- tests docs/development docs/archive .codex .claude scripts/development requirements-dev.txt
+# 配布候補の全treeにも開発専用資産がないこと（出力なし）
+git ls-tree -r --name-only HEAD -- tests docs/development docs/archive .codex .claude scripts/development requirements-dev.txt
+# 入口は存在だけで合格にせず、上記の短い利用者向け例外に合う本文を確認する
+git diff origin/main...HEAD -- AGENTS.md CLAUDE.md GEMINI.md
 ```
 
-最後のコマンドは**出力が空**であること。その他の開発専用ファイル・不要な差分がないことも個別確認する。`cherry-pick`で競合したら自動解決を信用せず、配布対象の差分・実装とテストの契約を再検証する。
+開発専用パスの差分・全tree列挙は**出力が空**であること。入口の差分は内容を確認し、ファイル名だけで開発用入口を許可しない。依存定義に開発依存が混入していないこと、入口と共通ガイドの相対リンク、現行BATパスも確認する。`cherry-pick`で競合したら自動解決を信用せず、配布対象の差分・実装とテストの契約を再検証する。
 
 ```sh
 # 競合を手作業で適切に解決した場合だけ
@@ -73,5 +79,5 @@ git diff --name-only origin/develop...HEAD
 - **実装**：developで関連pytest/ruff、配布側で必要なWindows/Docker実行確認。変更のない機能を毎回全件再テストする必要はない。未実施のライブ確認は未実施と書く。
 - **文書のみ**：リンク・見出し・CLI例、`git diff --check`を確認。無変更コードの全件pytestやDocker再buildは原則不要。
 - **絶対にしない**：`develop`ブランチ全体を`main`へmerge、`git merge develop`、履歴書換え・force push、不要な開発資産のmain混入。
-- **公開前Gate**：`main`マージはPublic化・tag・Release作成の許可ではない。Issue #32がNO-GOの間は公開操作をしない。
+- **公開前Gate**：[公開前チェック](PUBLIC_RELEASE_AUDIT.md#issue-58の配布入口チェック2026-10-25追記)でも上記の短い利用者向け入口だけを例外とし、開発用設定・subagent・テストは除外する。`main`マージはPublic化・tag・Release作成の許可ではない。Issue #32がNO-GOの間は公開操作をしない。
 - 新規Issueは実際に残課題がある時だけ作成。マージ済みの作業Issueは証拠を残して閉じ、Provider制約のような未完了事項だけOPEN維持。
