@@ -67,7 +67,7 @@ docker compose -f compose.docker.yml run --rm app results latest public_japan_va
 Gemini CLI・Codex・Claude Code・ChatGPTに[AIによるScreening生成ガイド](docs/user/AI_JSON_GUIDE.md)と実仕様・Schema・サンプルを読ませ、希望を自然な言葉で伝えます。AIは次の2方式から選択します。
 
 - **方式A（最優先）：標準Screening JSON。** 単一Screeningで表現できる条件は`screenings/*.json`を作り、Jobが必要な場合だけ`jobs/*.json`も作ります。簡単な条件にPythonやBATは不要です。
-- **方式B：高度な複合Python処理。** ランキング確定後の別時間足判定、外部母集団との照合など、単一JSONで表現できない処理だけ選び、理由を説明します。既存の公式MCPクライアント・認証・通信制御・保存・Watchlist安全機構を可能な範囲で再利用します。汎用pipelineエンジンや専用CLIは未実装です。
+- **方式B：高度な複合Python処理。** 単一JSONで表現できない処理は、既存`TradingViewClient`と型付きRequestを使うPythonを作成します。複数のRead関数、JPX等の外部母集団、OHLCVからのローカル指標計算を組み合わせます。AI側への別途MCPサーバー登録は不要です。専用CLIの有無だけで実装不能とは判断せず、事前の全件保証がなくても実用可能なら作成し、評価済/失敗件数・完全性を報告します。実行依頼と利用可能な環境があれば実行・検証します。詳細は共通ガイドに従います。
 
 **一般ユーザーはGitやCodexをインストールする必要はありません。** ChatGPTは完成ファイルと保存手順を提供し、Codexはアクセス可能なローカル環境への保存・検証まで対応します。Python方式は編集・検証できる実行環境が必要です。取得制限・欠損・未確認事項を明示し、不完全な取得を全件と扱いません。ファイル作成と実取得は別操作です。明示依頼なしにTradingViewへの実書き込みやScheduler登録を実行せず、初期はWatchlist同期・定期登録を無効にします。
 
