@@ -94,6 +94,8 @@ ChatGPT・Codexに[AIによるScreening生成ガイド](docs/user/AI_JSON_GUIDE.
 
 CSV・HTMLの作成は`export-results.bat`（Windows）またはDocker内の`tradingview_screening.export_results`を使います。詳細は[結果ファイルの変換手順](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換)へ。通常のScreening実行ではJSONだけを保存し、ほかの形式は自動生成しません。
 
+表示言語は日本語が既定で、`--lang en`ならCSVは英語見出し、HTMLは英語初期表示になります。HTMLは生成後も「日本語 / English」でオフライン切り替え可能です。英語の既定出力名は`.en.csv`・`.en.html`で、元JSONと取得値は変更しません。
+
 ## マニュアル
 
 各マニュアルの本文は**日本語**です。
