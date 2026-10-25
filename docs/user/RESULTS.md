@@ -80,11 +80,17 @@ app.bat results compare my_japan_value
 ```bat
 export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format csv
 export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format html
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format csv --lang en
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format html --lang en
 ```
 
-同じ場所に`.csv`と`.html`がそれぞれ生成されます。CSVはExcelで開きやすいUTF-8 BOM付き、HTMLはオフライン閲覧できる表形式です。HTMLの`symbol`欄からTradingViewチャートを開くリンクは、押したときだけ外部サイトへアクセスします。
+**表示言語は日本語（`ja`）が既定で、`--lang en`で英語を選べます。** 省略時または`--lang ja`では同じ場所に`my_japan_value_153000.csv`・`my_japan_value_153000.html`、英語指定では`my_japan_value_153000.en.csv`・`my_japan_value_153000.en.html`を生成します。`--output 保存先ファイル`を指定した場合は、そのパスを優先し、言語サフィックスを自動追加しません。
 
-既存の出力を置き換えるときだけ`--overwrite`を明示してください。`--output 保存先ファイル`で出力先も指定できます。ホストPCへの追加Python導入は不要で、`setup.bat`が準備する同梱Pythonを使います。
+CSVはExcelで開きやすいUTF-8 BOM付きです。`--lang`で列見出しだけを選び、取得値は翻訳せず、列順・行順も変えません。未知のフィールド名は元キーを表示し、翻訳後の見出しが衝突する場合も識別できるようにします。数式として解釈される危険な文字列・見出しには安全対策としてアポストロフィを付けますが、数値型の負数には付けません。元JSONの値は変更しません。
+
+HTMLは上部の**「日本語 / English」**で、生成した1ファイル内の列見出し・メタデータ項目名・ステータス・注意事項・フッターを切り替えられます。`--lang`は初期表示の指定で、どちらで生成しても両言語へ切り替え可能です。切り替えに外部通信・再生成・Webサーバーは不要です。HTMLの銘柄コード欄からTradingViewチャートを開くリンクは、押したときだけ外部サイトへアクセスします。
+
+既存の出力を置き換えるときだけ`--overwrite`を明示してください。`--output`・`--overwrite`でも元JSONへの上書きはできません。ホストPCへの追加Python導入は不要で、`setup.bat`が準備する同梱Pythonを使います。
 
 ### Docker
 
@@ -92,9 +98,10 @@ Dockerでは結果JSONはホストの`results/`ではなく、専用volumeの`/w
 
 ```sh
 docker compose -f compose.docker.yml run --rm --entrypoint python app -m tradingview_screening.export_results /workspace/results/2026-10-22/my_japan_value_153000.json --format html
+docker compose -f compose.docker.yml run --rm --entrypoint python app -m tradingview_screening.export_results /workspace/results/2026-10-22/my_japan_value_153000.json --format csv --lang en
 ```
 
-同様に`--format csv`も指定可能です。出力は同じDocker volume内なので、ホストでファイルが必要なら[Dockerマニュアルのバックアップ手順](DOCKER.md#終了再実行更新バックアップ)に従って取り出してください。
+Dockerでも`--lang ja|en`、`--output`、`--overwrite`は同じ指定です。出力は同じDocker volume内なので、ホストでファイルが必要なら[Dockerマニュアルのバックアップ手順](DOCKER.md#終了再実行更新バックアップ)に従って取り出してください。
 
 ### 対応する結果・注意点
 
