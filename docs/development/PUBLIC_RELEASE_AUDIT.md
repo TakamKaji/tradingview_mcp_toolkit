@@ -102,6 +102,15 @@ Issue #33の実行ZIPは、特定commitから許可リストでBAT・PowerShell�
 
 GitleaksのHEAD・全ref patch・全blob・GitHub本文・今回の変更5ファイルの検査はすべて検出0、終了コード0でした。補助パターン検査、API列挙、実環境ライセンス調査も実施しました。47 Markdownの相対リンク393件・アンカー171件とignoreの14条件、変更範囲が監査/文書/ignoreの5ファイルだけであることを確認しました。`git diff --check`も成功です。文書とignoreだけのため、pytest/ruffの全件再実行は行っていません。
 
+## Issue #58の配布入口チェック（2026-10-25追記）
+
+この追記は配布構成の例外規則であり、上記2026-10-20監査の再実施・NO-GO解除ではありません。
+
+- mainと将来の実行ZIPには、ルートの`GEMINI.md`・`AGENTS.md`・`CLAUDE.md`を**短い利用者向けAI入口に限り**許可する。READMEと共通ガイドへのリンク、母集団・完全性・Provider対応・実行証跡・Write禁止を確認する。ファイル名の一致だけでは許可しない。
+- developの開発用入口、モデル役割分担・実装/テスト契約、`.codex/`・`.claude/`・subagent・tests・内部資料・開発依存は引き続き配布除外。認証情報・runtime・結果を同梱しない。
+- 配布候補の差分と**全tree**を[ブランチ運用の確認コマンド](BRANCH_WORKFLOW.md#develop--main-の例)で検査し、入口本文の用途、相対リンク、正式BAT配置、production動作の無変更を確認する。ZIPの許可リスト/禁止物検査を将来実装する際にも同じ例外を適用する。ZIP生成・展開テストを済ませたという意味ではない。
+- AI自動読込は静的ファイル存在と実起動を区別する。今回の達成範囲・未検証事項は[Issue #58検証記録](AI_ENTRY_VERIFICATION_ISSUE_58.md)に記載する。
+
 ## 参照
 
 - [GitHub Secret scanning：検出範囲と利用条件](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning)
