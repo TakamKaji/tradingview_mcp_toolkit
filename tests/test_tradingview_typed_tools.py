@@ -123,6 +123,9 @@ def test_october_input_schema_preserves_existing_tool_contract(logical: str) -> 
         assert added == {"date_from", "date_to", "format"}
         for name in added:
             assert name not in current.get("required", [])
+        assert schema_is_compatible(logical, current)
+        assert not schema_is_compatible(logical, old)
+        for name in added:
             del current["properties"][name]
     else:
         assert not added
@@ -135,7 +138,7 @@ def test_october_input_schema_preserves_existing_tool_contract(logical: str) -> 
 @pytest.mark.parametrize("logical", LOGICAL_NAMES)
 def test_request_minimal_required_extra_optional_nullable_and_snapshot(logical: str) -> None:
     request_type = REQUEST_MODELS[logical]
-    provider = SNAPSHOT["tools"][TOOL_NAME_MAP[logical]]
+    provider = LATEST_SNAPSHOT["tools"][TOOL_NAME_MAP[logical]]
     minimal = _minimal(logical)
     assert schema_is_compatible(logical, provider)
     request = request_type.model_validate(minimal)
@@ -154,6 +157,8 @@ def test_request_minimal_required_extra_optional_nullable_and_snapshot(logical: 
         if name in provider.get("required", []):
             continue
         sample = _sample(request_type.model_json_schema()["properties"][name])
+        if logical == "get_ohlcv" and name in {"date_from", "date_to"}:
+            sample = "2026-10-27"
         populated = request_type.model_validate({**minimal, name: sample})
         assert populated.model_dump(mode="json", exclude_unset=True)[name] == sample
         if "null" in prop.get("type", []):
@@ -197,8 +202,13 @@ def test_all_wrappers_map_to_wire_and_correct_retry_policy(logical: str, monkeyp
 
 def test_documented_boundaries_and_strict_types() -> None:
     assert GetOhlcvRequest(symbol="TSE:7203", count=5000).count == 5000
+    assert GetOhlcvRequest(symbol="TSE:7203", count=8000, format="columns").count == 8000
     with pytest.raises(ValidationError):
         GetOhlcvRequest(symbol="TSE:7203", count=5001)
+    with pytest.raises(ValidationError):
+        GetOhlcvRequest(symbol="TSE:7203", count=5001, format="rows")
+    with pytest.raises(ValidationError):
+        GetOhlcvRequest(symbol="TSE:7203", count=8001, format="columns")
     with pytest.raises(ValidationError):
         GetOhlcvRequest(symbol="TSE:7203", count=True)
     assert len(GetSymbolDataBatchRequest(symbols=["TSE:7203"] * 50).symbols) == 50
@@ -211,6 +221,72 @@ def test_documented_boundaries_and_strict_types() -> None:
         GetEconomicCalendarRequest(min_importance=2)
     with pytest.raises(ValidationError):
         AddToWatchlistRequest(watchlist_id="x", symbols=[1])
+
+
+def test_ohlcv_new_date_bounds_and_column_format_use_existing_typed_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict[str, Any], bool, object]] = []
+    client = TradingViewClient()
+
+    async def fake_call(name: str, args: dict[str, Any], *, retry: bool, cache_key: object) -> ToolCallData:
+        calls.append((name, args, retry, cache_key))
+        return ToolCallData(
+            structured_content={
+                "success": True, "format": "columns", "count": 2,
+                "bars": {"t": [1, 2], "c": [3.0, 4.0]}, "next_date_to": "2026-10-01",
+            },
+            content=[{"type": "text", "text": "ok"}],
+        )
+
+    monkeypatch.setattr(client, "_call_tool", fake_call)
+
+    async def scenario() -> None:
+        old = await client.get_ohlcv(GetOhlcvRequest(symbol="TSE:7203"))
+        request = GetOhlcvRequest(
+            symbol="TSE:7203", date_from="2026-10-01",
+            date_to="2026-10-27T15:30:00+09:00", format="columns",
+        )
+        new = await client.get_ohlcv(request)
+        assert calls == [
+            ("mcp-tv-get-ohlcv", {"symbol": "TSE:7203"}, True, None),
+            ("mcp-tv-get-ohlcv", {
+                "symbol": "TSE:7203", "date_from": "2026-10-01",
+                "date_to": "2026-10-27T15:30:00+09:00", "format": "columns",
+            }, True, None),
+        ]
+        for response in (old, new):
+            assert isinstance(response, ObservedReadResponse)
+            assert response.structured_content is not None
+            assert response.structured_content.model_extra == {
+                "format": "columns", "bars": {"t": [1, 2], "c": [3.0, 4.0]},
+                "next_date_to": "2026-10-01",
+            }
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("field,invalid", [
+    ("date_from", None), ("date_from", 20261001), ("date_from", "2026-02-30"),
+    ("date_from", "2026-10-01T12:00:00"), ("date_from", "2026-10-01 12:00:00Z"),
+    ("date_from", "2026-10-01T12:00:00+00:60"),
+    ("date_from", "2026-10-01T12:00:00+24:00"),
+    ("date_from", "2026-10-01T12:60:00Z"),
+    ("date_to", None), ("date_to", "2026-13-01"),
+    ("date_to", "2026-10-01T24:00:00Z"),
+    ("format", None), ("format", "csv"), ("format", 1),
+])
+def test_ohlcv_new_arguments_reject_invalid_values(field: str, invalid: Any) -> None:
+    with pytest.raises(ValidationError):
+        GetOhlcvRequest.model_validate({"symbol": "TSE:7203", field: invalid})
+
+
+def test_ohlcv_rfc3339_preserves_original_value() -> None:
+    value = "2026-10-27t15:30:00.123z"
+    request = GetOhlcvRequest(symbol="TSE:7203", date_to=value, format="rows")
+    assert request.model_dump(mode="json", exclude_unset=True) == {
+        "symbol": "TSE:7203", "date_to": value, "format": "rows",
+    }
 
 
 @pytest.mark.parametrize(("logical", "field", "keyword"), tuple(OVERLAYS))
@@ -230,8 +306,12 @@ def test_every_derived_contract_boundary(logical: str, field: str, keyword: str)
         assert len(getattr(request_type.model_validate({**baseline, field: [item] * bound}), field)) == bound
         invalid = [item] * (bound + 1)
     elif keyword == "maximum":
-        assert getattr(request_type.model_validate({**baseline, field: bound}), field) == bound
+        candidate = {**baseline, field: bound}
+        if logical == "get_ohlcv" and field == "count":
+            candidate["format"] = "columns"
+        assert getattr(request_type.model_validate(candidate), field) == bound
         invalid = bound + 1
+        baseline = {key: value for key, value in candidate.items() if key != field}
     else:
         assert keyword == "minimum"
         assert getattr(request_type.model_validate({**baseline, field: bound}), field) == bound
