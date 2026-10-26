@@ -18,9 +18,9 @@
 
 ## ブランチ同期ルール
 
-- 開発正本は`develop`、配布は`main`。同じ変更を両方で別々に実装せず、配布対象だけを独立コミットに分け、もう一方へ`git cherry-pick -x`で同期する。
-- 通常のコード作業は`develop`先行、共通README等の文書は`main`先行も可。tests・開発資料を含むコミットを`main`へcherry-pickしない。
-- `develop`全体を`main`へmergeしない。main/devともにPRでレビューし、直接push・自動マージ・公開・tag/Releaseをしない。
+- 開発・文書修正は原則`develop`から開始し、配布対象と開発専用変更のコミットを分け、実装・テスト・レビューを原則1本のdevelop向けPRで完結させる。既存PRを継続する場合はbase/headと既存コミットを保持する。
+- develop向けPRのマージ後、mainへの反映が必要な時だけ、別の配布工程で配布対象コミットを`git cherry-pick -x`等で選択的に取り込む。毎回main/developの2本のPRを同時作成しない。tests・開発資料・開発設定をmainへ持ち込まない。
+- `develop`全体を`main`へmergeせず、main/developへの直接push・force push・自動マージ・公開・tag/Releaseをしない。main同期・公開操作は通常のdevelop作業とは別の依頼範囲として扱う。
 - 詳細手順は[ブランチ運用](docs/development/BRANCH_WORKFLOW.md)を参照する。
 
 ## プロジェクト境界

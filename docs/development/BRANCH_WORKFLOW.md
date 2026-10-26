@@ -1,14 +1,14 @@
-# 2ブランチ運用：共有コミットをcherry-pickする
+# develop-first運用：開発PRと配布工程を分ける
 
-`develop`はテスト・開発資料を含む開発正本、`main`は利用者に渡す配布構成。**同じ変更を両ブランチで二重実装せず、片方で作った配布対象コミットをもう一方へ`git cherry-pick -x`する。**
+`develop`はテスト・開発資料を含む開発正本、`main`は利用者に渡す配布構成。**開発・文書修正は原則developから開始し、実装・テスト・レビューを1本のdevelop向けPRで完結させる。** main同期はdevelop向けPRのマージ後、配布が必要になった時だけ行う別工程であり、毎回2本のPRを同時作成しない。
 
 関連：[Issue #33](https://github.com/TakamKaji/tradingview_mcp_support/issues/33)（配布・Release）、[Issue #32](https://github.com/TakamKaji/tradingview_mcp_support/issues/32)（Public公開前監査）。
 
 ## 作業の入口
 
-- **Python本体・認証・Job・Docker等の機能変更**：原則`develop`から作業ブランチを作り、実装・テストする。配布対象のファイルだけを**独立したコミット**にする。テスト・開発資料などは別コミット。
-- **READMEや利用者向け文書だけ**：`main`先行でもよい。両方に必要な変更は`develop`側の作業ブランチへ逆方向にcherry-pickする。配布構成と開発構成で文章に違いがあれば無理にcherry-pickせず、差を明示して調整する。
-- どちらも直接pushせず、対象ブランチへPRを作る。PRがマージ済みか・最新HEADかを確認してから同期する。
+- **すべての開発・文書修正**：原則最新`develop`から作業ブランチを作る。READMEや共通利用者ガイドも同じ。既存develop向けPRを継続する依頼では、そのbase/head・既存コミットと未コミット変更を確認して保持する。
+- **変更と検証**：配布可能な変更とテスト・開発資料・開発設定を別コミットに分け、develop向けPR内で実装・検証・レビューする。通常の作業完了にmain向けPRの同時作成を含めない。
+- **後日の配布**：develop向けPRのマージを確認し、必要な場合だけmainから別の配布作業ブランチを作る。配布対象コミットを選択的に取り込み、配布差分をレビューする。main/develop本体へ直接pushしない。
 
 ## コミットを分ける（重要）
 
@@ -17,7 +17,7 @@
 1. **A: 共通・配布可能な差分**：`src/`、必要な起動ファイル・JSON・利用者マニュアル等。テストや開発専用資料を混ぜない。
 2. **B: 開発専用**：`tests/`、`docs/development/`、`docs/archive/`、開発用`AGENTS.md`・`CLAUDE.md`・`GEMINI.md`、開発設定・検証記録など。
 
-AとBを`develop`向けPRで検証する。`main`向けには**Aだけ**を元のコミットSHAでcherry-pickする。Bを拾ってからファイル削除する方式は避ける。Aに開発用差分が混ざったら、ソース側でコミットを分割し直してから持っていく。
+AとBを`develop`向けPRで検証・レビューする。そのPRをマージした後、配布が必要な時だけ**Aだけ**を元のコミットSHAで`cherry-pick -x`等により選択する。PRのマージ方式によりSHAが変わる場合も、配布対象だけのコミットを特定できるよう記録し、開発専用差分を含むsquashコミットを丸ごと取り込まない。Bを拾ってからファイル削除する方式は避ける。
 
 `main`は機能実行と利用に必要なファイルだけを保つ。`tests/`、`docs/development/`、`docs/archive/`、`.codex/`、`.claude/`、`scripts/development/`、開発依存・検証ツールを持ち込まない。必要物は実際の`main` treeを見て決める。
 
@@ -25,7 +25,7 @@ AとBを`develop`向けPRで検証する。`main`向けには**Aだけ**を元�
 
 ## develop → main の例
 
-`develop`側で実装・テストし、共有コミットAのSHAを控える。配布用PRは**mainから切る別の作業ブランチ**で作成する。
+これは**develop向けPRマージ後、main反映が必要になった場合だけ**行う別の配布工程の例。配布可能な共有コミットAと、その検証済み内容・マージ状態を確認する。配布用PRはmainから切る別の作業ブランチで作り、通常の開発PRと同時作成しない。mainへの取り込み・Public化・tag・Releaseは個別の依頼範囲で判断する。
 
 ```sh
 git fetch origin
@@ -58,21 +58,11 @@ git cherry-pick --abort
 
 main向けPRに元コミットAのSHA、追加した検証結果と省略した開発専用コミットBを記載。`-x`の`(cherry picked from commit ...)`を残す。元と先のSHAが違うことは正常で、必要なら`git show`／Git blob SHAで**配布対象ファイルの中身が同じこと**を確認する。
 
-## main → develop の例
+## 既存develop向けPRを継続する場合
 
-利用者向けREADME修正などを先に`main`の作業ブランチで作った場合、共有コミットCを`develop`へ取り込む。
-
-```sh
-git fetch origin
-git switch develop
-git pull --ff-only origin develop
-git switch -c docs/issue-XX-develop-sync
-git cherry-pick -x <COMMIT_C_SHA>
-git diff --check
-git diff --name-only origin/develop...HEAD
-```
-
-`develop`に存在する開発資料やリンクを破壊しないことを確認し、develop向けPRを作る。README全文を両ブランチで手編集して別内容にする運用は原則避ける。
+- GitHub上のbase/head/SHAとローカル・remote-tracking refsを照合し、既存コミットを保持して同じheadへ追加commit・通常pushする。不要な作り直し・force pushをしない。
+- 既に同じ作業のmain向けPRがある場合、一本化の依頼に従って理由と後日の選択的取り込み方針を本文・コメントに残し、マージせずCloseする。共有元コミットとdevelop側の取り込み先を記録し、後日重複適用しない。
+- main用入口とdevelop用開発指示の用途差を維持し、ブランチ間の全文コピーやdevelop全体のmainへのmergeをしない。
 
 ## PR・検証・公開の境界
 
