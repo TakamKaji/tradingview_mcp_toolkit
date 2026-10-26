@@ -1,12 +1,21 @@
-"""Request contracts from TradingView's 2026-09-25 MCP Tool Discovery snapshot."""
+"""Request contracts from TradingView MCP Tool Discovery snapshots."""
 
 from __future__ import annotations
 
 import json
 import re
+from datetime import date, datetime
 from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
 
 ScreenerFilterPreset = Literal[
     "pullback_with_reversal", "breakout_with_volume", "oversold_healthy", "earnings_runup",
@@ -81,8 +90,44 @@ class UpdateWatchlistRequest(ToolRequest):
 class GetOhlcvRequest(ToolRequest):
     symbol: str
     interval: Literal["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "M", "1mo", "month"] = None
-    count: int = Field(default=None, le=5000)
+    count: int = Field(default=None, le=8000)
+    date_from: str = None
+    date_to: str = None
+    format: Literal["rows", "columns"] = None
     summary: bool = None
+
+    @model_validator(mode="after")
+    def validate_count_for_format(self) -> GetOhlcvRequest:
+        if self.count is not None and self.count > 5000 and self.format != "columns":
+            raise ValueError("OHLCV count above 5000 requires columns format")
+        return self
+
+    @field_validator("date_from", "date_to")
+    @classmethod
+    def validate_date_bound(cls, value: str) -> str:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            date.fromisoformat(value)
+            return value
+        match = re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}[Tt](?P<hour>\d{2}):(?P<minute>\d{2}):"
+            r"(?P<second>\d{2})(?:\.\d+)?(?:[Zz]|[+-](?P<offset_hour>\d{2}):"
+            r"(?P<offset_minute>\d{2}))",
+            value,
+        )
+        if match is not None:
+            if (
+                int(match["hour"]) > 23 or int(match["minute"]) > 59
+                or int(match["second"]) > 59
+                or (match["offset_hour"] is not None and int(match["offset_hour"]) > 23)
+                or (match["offset_minute"] is not None and int(match["offset_minute"]) > 59)
+            ):
+                raise ValueError("Date bound contains an out-of-range time component")
+            normalized = value.replace("t", "T")
+            if normalized.endswith(("Z", "z")):
+                normalized = normalized[:-1] + "+00:00"
+            datetime.fromisoformat(normalized)
+            return value
+        raise ValueError("Date bound must be YYYY-MM-DD or RFC3339")
 
 
 class GetEconomicDataRequest(ToolRequest):
