@@ -7,7 +7,7 @@
 ## AIが確認するファイル（この順）
 
 1. [README](../../README.md)、次に[このガイド](AI_JSON_GUIDE.md)、[機能の対応範囲](FEATURES.md)
-2. [Screeningの全項目・条件・制約](SCREENING_MANUAL.md)
+2. [Screeningの全項目・条件・制約](SCREENING_MANUAL.md)、[条件カタログと検証状態](SCREENER_CONDITIONS.md)、必要なToolの[公式MCP機能マニュアル](OFFICIAL_MCP_MANUAL.md)
 3. Jobが必要なら[Jobの全項目・時刻・副作用](SCHEDULE_MANUAL.md)
 4. 実際のサンプル：[Screening](../../screenings/public_japan_value.json)・[読み取り専用Job](../../jobs/public_sample_screen_daily.json)
 5. 実際の[Screening Schema](../../src/tradingview_screening/screening/schema.py)・[Job Schema](../../src/tradingview_screening/jobs/schema.py)、[公式Providerの資料](https://www.tradingview.com/mcp/docs)・[型付きRequest](../../src/tradingview_screening/integrations/tradingview/schemas.py)
@@ -21,7 +21,7 @@
 ### Step 1：標準Screeningで直接実現できるか
 
 - 上記README・本ガイド・FEATURES・SCREENING_MANUAL、実Schemaとサンプルを読み、`run_screener`の市場・母集団・条件・指標・並び順で依頼を表せるか調べる。
-- [公式Provider資料](https://www.tradingview.com/mcp/docs)に加え、必要なら既存`TradingViewClient.get_screener_columns()`で列・時間足・期間を調査する。**列の取得対応と同名のfilter対応は別**であり、Schemaが文字列を受理するだけでは対応済みとしない。未知のfilter・引数・市場指定を作らない。
+- [条件カタログ](SCREENER_CONDITIONS.md)の基準日・検証範囲と[最新の公式Provider資料](https://www.tradingview.com/mcp/docs)を確認し、必要なら既存`TradingViewClient.get_screener_columns()`で列・時間足・期間を調査する。**列の取得対応と同名のfilter対応は別**であり、Schemaが文字列を受理するだけでは対応済みとしない。未知のfilter・引数・市場指定を作らない。
 - 指標の対象市場・期間・価格基準・日時、条件の適用順を確認する。返却の`ignored_filters`等、実際の条件適用、`totalCount`と取得件数・完全性を確認し、条件の無視や切捨てを成功にしない。無視の申告がないだけでも適用を保証しない。
 - 単一JSONで正しく実現できるなら**方式Aを最優先**し、`screenings/*.json`を作る。Jobは依頼された場合だけ作り、通常条件ごとのPython/BATは増やさない。
 
@@ -43,6 +43,14 @@ Step 1・2の既存ラッパーで要求された母集団を正しく確定で�
 | 複数段階の抽出、ランキング確定後の別時間足判定、外部母集団との照合が必要 | **B：複合Python** | 単一JSONには段階・結合・後段判定を記述できない。Pythonと必要設定・依存・起動手順 |
 | 直接のProvider指標や全件保証を事前確認できないが、既存Readラッパーとデータ処理で実用可能 | **B：作成し、制約を明記** | 直接指標・一括取得を先に調べ、必要ならOHLCV計算。外部母集団はStep 3の条件時だけ使う。作成を完全取得の成功とは扱わない |
 | 必要データ・接続が利用できない | **制約と実行状態を報告** | 作成可能な成果物と不足条件を示す。実行不能なら未実行、実行失敗なら失敗とし、架空データや別母集団で成功にしない |
+
+### 条件提示・代替案の契約
+
+元の市場・母集団・条件・閾値・時間足・指標期間・処理順を保持します。直接対応が未確認なのか、試した指定が非対応だったのかを[カタログの状態区分](SCREENER_CONDITIONS.md#状態と今回の確認範囲)で示し、方式Bの既存Read・Python処理で元の要求を実現できるか先に調べます。実用可能な方式Bを、直接filterがないという理由で打ち切りません。
+
+条件の変更が必要なら、Providerで確認できた代替案を**最大3件程度**に絞り、各案で元の要求から変わる市場/母集団・条件・閾値・時間足・期間と、検証状態・制約を説明します。元の条件を方式Bで保てる場合は、その方法も選択肢に含めます。**利用者の承諾なしに変更案を採用・実行しません。** 元の要求どおりの方式Bの作成・依頼済み実行には、代替案の承諾待ちを追加しません。
+
+簡単な依頼で長い条件一覧を毎回表示せず、条件を尋ねられた時や要求の変更が必要な時だけ、該当項目を簡潔に提示します。
 
 ### 判定例（条件固有のファイルは同梱しない）
 
@@ -181,6 +189,7 @@ Read the actual manuals, schemas, Provider-supported fields and bundled examples
 
 - **A — standard JSON, always preferred when sufficient:** Create `screenings/<name>.json`; add `jobs/<name>.json` only when requested. Supported market/filter/sort/limit/columns/symbolset/preset combinations do not need custom Python or BAT files. Japanese stocks with PER/yield filters, volume descending and limit 20 belong here. Clarify PER bounds and forecast versus TTM yield; the bundled `div_yield` filter uses forecast yield.
 - **Discovery order:** First investigate run_screener and column/filter/timeframe support; use standard JSON whenever it can express the request correctly. Otherwise inspect the existing typed Read wrappers for candidate selection, direct indicators and batch reads before local OHLCV calculations. Candidates must not omit true matches. Use an external universe only when the wrappers cannot establish the requested population; a JPX download is not a default prerequisite.
+- Consult the dated conditions catalog and current Provider specification. Distinguish unverified support from a rejected key. After investigating the original request through existing wrappers, offer at most about three verified alternatives when needed, explaining every changed constraint. Keep a viable original-condition Python option and obtain consent before adopting or executing a changed request. Do not display the entire catalog for simple requests.
 - Use the existing client, authentication and request governor; never require a separate TradingView MCP registration in the AI, reimplement MCP/OAuth/TradingView HTTP transport, or add another MCP library or unofficial API. Local extension calculations from validated OHLCV are allowed; production core changes are outside this workflow.
 - For Prime/SMA25, investigate direct screening first, then existing indicator reads; only fetch OHLCV or an external universe when needed. Validate the actual response structure, finite values, 25 completed daily bars, dates, duplicates and price adjustments. Create a practical script even without advance full-coverage assurance, record partial progress and failures, and verify execution when requested and available. Otherwise explain why it was not run; never label partial results as full success.
 - For external data, report source, retrieval time, universe count, missing/unmatched symbols, limits and usage terms. Track counts and errors per stage. Never describe partial retrieval as a complete universe, or convert failure into a successful empty Watchlist sync. Custom results need an explicit format and storage path; standard result history does not automatically support them.
