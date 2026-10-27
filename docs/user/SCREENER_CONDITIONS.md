@@ -19,6 +19,8 @@
 
 10/27の公式MCP直接実行（本リポジトリのClientは未使用）では、`run_screener`の取得列`SMA25`、`get_symbol_data`、`get_symbol_data_batch`からSMA25実値を確認しました。続く第1ラウンド（19:26〜19:27 JST、18 Read Tool・40回）では、列一覧にない`SMA13`/`EMA13`/`EMA25`/`RSI7`、時間足指定`RSI|60`/`EMA25|1W`/`MACD.macd|60`等の直接値取得を確認しました。`price_vs_sma25_pct`と`market_segment`をfilterに渡すと`ignored_filters`で無視されました。公式公開ページ自体はSMA25列やそのfilterの対応を明記していません。第2ラウンド（19:55〜19:59 JST、12 Read Tool・50回）の検証では、`RSI24/48/96/192`・`SMA48/96/192`・`EMA48/96/192`はトヨタとAppleでnullとなり、**一部期間で値を取得できることは任意整数期間の対応を意味しない**と確認しました。nullの理由は未確定です。これらは**直接接続で試した指定についての観測**であり、別alias・全市場・ラッパー経由での新規再実行の成功保証ではありません。
 
+第5ラウンドの公式MCP直接Readでは、`get_screener_columns(search="currency",market="stock")`が`success:false`（該当なし）でも、`get_symbol_data_batch`の`currency`・`fundamental_currency_code`は9銘柄で取得できました。**Discovery検索0件と列Read対応は別判定**です。また日本株4銘柄のraw予想EPS/売上と`get_forecasts`には同一の期間別倍率差（次FQ約157.40595倍、次FY約158.78057倍）が再現しました。**列が取得できることと同単位・同定義の予想として利用できることは別**です。倍率による自動補正はせず、経路・単位・期末・品質フラグを検証してください。日本株の決算/配当カレンダー0件は予定なしの証拠ではありません。[公式MCPマニュアル](OFFICIAL_MCP_MANUAL.md)の第5ラウンド実測を参照。
+
 ## 市場・銘柄集合・時間足を先に固定する
 
 - `run_screener.market`の公式例：`japan`、`america`、`uk`、`germany`、`india`、`crypto`、`forex`、`futures`、`bonds`、`cfd`。完全な対応市場一覧・組合せの固定enumは今回確認できていません。未知市場名を作りません。
