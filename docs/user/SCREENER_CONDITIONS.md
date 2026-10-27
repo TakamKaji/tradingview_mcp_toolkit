@@ -17,7 +17,7 @@
 
 `get_screener_columns(market="stock")`は**17分類・163列**を返しました。valuation 20列・technicals 26列をgroupで詳細取得し、SMA/EMA/primeをsearchしました。これは固定保証の件数ではありません。表の32項目は用途別の索引で、動的な全列を無差別に転記したものではありません。
 
-10/27の公式MCP直接実行（本リポジトリのClientは未使用）では、`run_screener`の取得列`SMA25`、`get_symbol_data`、`get_symbol_data_batch`からSMA25実値を確認しました。`price_vs_sma25_pct`と`market_segment`をfilterに渡すと`ignored_filters`で無視されました。公式公開ページ自体はSMA25列やそのfilterの対応を明記していません。これらは**直接接続で試した指定についての観測**であり、別alias・全市場・ラッパー経由での新規再実行の成功保証ではありません。
+10/27の公式MCP直接実行（本リポジトリのClientは未使用）では、`run_screener`の取得列`SMA25`、`get_symbol_data`、`get_symbol_data_batch`からSMA25実値を確認しました。続く第1ラウンド（19:26〜19:27 JST、18 Read Tool・40回）では、列一覧にない`SMA13`/`EMA13`/`EMA25`/`RSI7`、時間足指定`RSI|60`/`EMA25|1W`/`MACD.macd|60`等の直接値取得を確認しました。`price_vs_sma25_pct`と`market_segment`をfilterに渡すと`ignored_filters`で無視されました。公式公開ページ自体はSMA25列やそのfilterの対応を明記していません。これらは**直接接続で試した指定についての観測**であり、別alias・全市場・ラッパー経由での新規再実行の成功保証ではありません。
 
 ## 市場・銘柄集合・時間足を先に固定する
 
@@ -49,12 +49,13 @@
 | 負債/資本 | — | — | `debt_to_equity_fq` | stock一覧、FQ | 列取得のみ確認（一覧） |
 | 流動比率 | — | — | `current_ratio_fq` | stock一覧、FQ | 列取得のみ確認（一覧） |
 | RSI | `rsi` | `[null,40]` | `RSI` | Japan、列説明は既定1D。期間14の同一性は未照合 | 公式仕様確認・実機確認済み（3件の閾値適合） |
-| 1時間足RSI | 時間足filterは— | — | `RSI`の派生`RSI`＋区切り記号＋`60`（下記） | TSE:7203、1h派生列 | 列取得のみ確認（値）。期間/直接filterは未確認 |
-| MACD | — | — | `MACD.macd` / `MACD.signal` | stock他、派生足は要個別確認 | macd値取得確認、signalは一覧variants確認。filter未確認 |
+| 1時間足RSI | 時間足filterは— | — | `RSI|60` | TSE:7203、1h派生列 | 直接MCPで値取得済み。1h filter・RSIの平滑化/価格源は未確認 |
+| MACD | — | — | `MACD.macd` / `MACD.signal`、`MACD.macd|60` / `MACD.signal|60` | TSE:7203の1h派生値 | 公式MCP直接観測で両1h列の数値取得済み。期間設定・filter未確認 |
 | ストキャスティクス | — | — | カタログ`Stoch`、technicals応答`oscillators.stoch_k/stoch_d` | 既知銘柄1D | 列一覧/Read応答項目のみ確認。`Stoch`をそのままfilterにしない |
 | SMA20/50等 | — | — | technicals応答`moving_averages.sma20/sma50`等 | 既知銘柄1D | Read応答項目のみ確認。Screener列名ではない |
 | SMA25 | 数値filterは未確認 | — | `SMA25`（Screener・単体・一括Readで値取得）。`get_technicals_rating`の確認済み応答にはなし | Japan/TSE、日足との値照合は代表1銘柄 | 公式MCP直接観測（2026-10-27）。列DiscoveryのSMA検索は一致なし。filter対応は未確認 |
 | SMA25乖離率 | `price_vs_sma25_pct`は無視 | 不合格：`price_vs_sma25_pct:[20,null]` | `close`と`SMA25`を取得し`(close/SMA25-1)*100`を計算 | 価格とSMAの基準時点・確定足に注意 | 公式MCP直接観測で当該filterは無視。他の直接filterは未確認 |
+| 任意期間MA/RSIの値取得 | `EMA25`/`SMA13`はfilterで無視 | 不合格：`EMA25:[0,null]`、`SMA13:[0,null]` | `SMA13`、`EMA13`、`EMA25`、`RSI7`、`SMA25|60`、`EMA25|1W` | TSE:7203で直接Read（10/27第1ラウンド） | 列Discoveryに見えない期間も値取得成功。ただしfilterは別契約、全期間・全銘柄保証なし |
 | EMA50/200 | — | — | `EMA50` / `EMA200` | america、oversold_healthy応答 | 列取得のみ確認（値）。EMA検索だけでは発見できなかった |
 | EMA乖離率 | — | — | `price_vs_ema50_pct` / `price_vs_ema200_pct` | 同上、% | 列取得のみ確認（応答の値）。直接filter未確認 |
 | ボラティリティ | — | — | `Volatility.D` | TSE:7203単体Read | 列取得のみ確認（値）、計算基準/filterは未確認 |
@@ -138,7 +139,7 @@ Pythonでは既存`GetScreenerColumnsRequest(market="stock")`で概要を読み�
 
 取得日時は2026-10-26 23:16 JST頃、既存Windows Embedded Python・Client・保存済み認証を使用しました。件数・値は当日の観測で、固定値ではありません。応答は要求していないEMA等の追加項目も含んだため、標準Engineの正規化と必要列の意味を照合します。生の市場データ・認証情報を配布文書へ大量転載しません。
 
-10/27の公式MCP直接観測では、`exchange="TSE"`と`close`の価格範囲を分割し、各問合せの`totalCount`が`limit=1000`以内に収まるようにして重複除去後3,761銘柄を取得しました。`run_screener`自体にoffset/pageが追加されたわけではありません。範囲の境界・重複・`ignored_filters`・各区間の`totalCount`と実行数を検証しても、**TradingViewが持つ東証全銘柄の完全網羅やプライム所属の証明にはなりません**。既存ラッパー経由での分割取得は別途検証が必要です。
+10/27の公式MCP直接観測では、`exchange="TSE"`と`close`の価格範囲を分割し、各問合せの`totalCount`が`limit=1000`以内に収まるようにして重複除去後3,761銘柄を取得しました。後続のA05/A06試験（米国株、RSI 55〜60の先頭3件）では`filters.rsi`と`filters.RSI`は同じ`totalCount:998`・先頭3件を返し、`EMA25`・`SMA13`だけが`ignored_filters`に入りました。`success:true`でも無視された条件は有効になりません。要求した小文字`rsi`が応答では`RSI`になる例や、単体Readで`price_vs_ema50_pct:null`でもScreenerでは値が返る例があり、**列の大小文字と派生列の可用性はTool別に検証**します。`run_screener`自体にoffset/pageが追加されたわけではありません。範囲の境界・重複・`ignored_filters`・各区間の`totalCount`と実行数を検証しても、**TradingViewが持つ東証全銘柄の完全網羅やプライム所属の証明にはなりません**。既存ラッパー経由での分割取得は別途検証が必要です。
 
 ## AIへの提示と4回帰ケース
 
@@ -146,7 +147,7 @@ Pythonでは既存`GetScreenerColumnsRequest(market="stock")`で概要を読み�
 
 | ケース | カタログから選ぶ判断 |
 | --- | --- |
-| 東証プライム全体・SMA25乖離率+20% | プライム区分/直接SMA25は未確認。公式MCPの直接対応→既存Read→必要時のOHLCV計算を調査し、元条件が成立しなければ制約を説明。JPX自動取得・63銘柄等への無断変更や、小規模テストを全件成功とする判断は禁止 |
+| 東証プライム全体・SMA25乖離率+20% | SMA25の値取得は公式MCP直接観測で確認済み。ただし`market_segment`は無視され、プライム母集団は依然未確定。公式MCPの直接対応→既存Read→必要時のOHLCV計算を調査し、元条件が成立しなければ制約を説明。JPX自動取得・63銘柄等への無断変更や、東証全体をプライム全件とする判断は禁止 |
 | 日本株PER15倍以下・予想配当利回り3%以上 | pe/div_yieldの検証範囲とPER下限・予想配当の基準を確認して標準JSONを優先 |
 | 指定3銘柄のSMA25計算 | 指定母集団を保持し、必要なら既存MCPのOHLCVで方式Bの計算・検証。外部銘柄一覧は不要 |
 | JPX公式一覧を明示的に許可 | 承諾範囲の外部利用を別拡張として行い、公式MCP経路と分離。基準日・対応付け・完全性を検証 |
