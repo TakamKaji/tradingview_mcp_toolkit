@@ -1,6 +1,6 @@
 # スクリーニング条件カタログ
 
-調査基準日：**2026-10-26 JST**。機能全体は[公式MCP機能マニュアル](OFFICIAL_MCP_MANUAL.md)、JSON全項目は[Screening操作](SCREENING_MANUAL.md)、方式選択・代替提案の正本は[AIガイド](AI_JSON_GUIDE.md)を参照します。[公式Provider資料](https://www.tradingview.com/mcp/docs)・既存Schema・当日の小規模Readを照合しています。
+調査基準日：**2026-10-26 JST**（既存ラッパー）、追加観測：**2026-10-27 JST**（別環境での公式MCP直接実行）。機能全体は[公式MCP機能マニュアル](OFFICIAL_MCP_MANUAL.md)、JSON全項目は[Screening操作](SCREENING_MANUAL.md)、方式選択・代替提案の正本は[AIガイド](AI_JSON_GUIDE.md)を参照します。[公式Provider資料](https://www.tradingview.com/mcp/docs)・既存Schema・当日の小規模Readを照合しています。
 
 ## 状態と今回の確認範囲
 
@@ -9,12 +9,15 @@
 | **公式仕様確認** | 公開ページに明記された引数/例。個別市場での成功を保証しない |
 | **実機確認済み** | 既存Clientで取得し、試した範囲の条件適合を実値で確認。市場・日時・件数を併記する |
 | **列取得のみ確認** | 列一覧に存在、または値取得を確認。filter対応は別。表で「一覧」「値」「応答項目」を区別する |
+| **公式MCP直接観測** | ラッパーを介さない別セッションの実行証跡による確認。本ツールの実行成功とは区別する |
 | **未確認** | 期間・市場・filter対応等の根拠不足。非対応の意味ではない |
 | **非対応確認** | 指定した市場・キー・試験でProviderが無視/拒否したことを確認。別aliasや別方式まで不可能とはしない |
 
-当日の実機は日本株の各3件を中心とする少量Readです。数値filterは**5種類を試し、3種類で適合、2種類で指定キーの無視を確認**しました。加えて米国preset 1種類、既知銘柄の単体/一括指標・テクニカル・日足を確認しました。母集団全件や全期間・全市場の検証ではありません。
+10/26のラッパー経由実機検証は日本株の各3件を中心とする少量Readです。数値filterは**5種類を試し、3種類で適合、2種類で指定キーの無視を確認**しました。加えて米国preset 1種類、既知銘柄の単体/一括指標・テクニカル・日足を確認しました。母集団全件や全期間・全市場の検証ではありません。
 
 `get_screener_columns(market="stock")`は**17分類・163列**を返しました。valuation 20列・technicals 26列をgroupで詳細取得し、SMA/EMA/primeをsearchしました。これは固定保証の件数ではありません。表の32項目は用途別の索引で、動的な全列を無差別に転記したものではありません。
+
+10/27の公式MCP直接実行（本リポジトリのClientは未使用）では、`run_screener`の取得列`SMA25`、`get_symbol_data`、`get_symbol_data_batch`からSMA25実値を確認しました。`price_vs_sma25_pct`と`market_segment`をfilterに渡すと`ignored_filters`で無視されました。公式公開ページ自体はSMA25列やそのfilterの対応を明記していません。これらは**直接接続で試した指定についての観測**であり、別alias・全市場・ラッパー経由での新規再実行の成功保証ではありません。
 
 ## 市場・銘柄集合・時間足を先に固定する
 
@@ -30,7 +33,7 @@
 
 | 条件・用途 | filter名 / 公式フィールド | 条件指定例 | 取得列・Read応答項目 | 市場・時間足/期間 | 検証状態 |
 | --- | --- | --- | --- | --- | --- |
-| 株価・終値 | filterは— | — | `close` | Japan、時点を別確認 | 列取得のみ確認（値、単体Read） |
+| 株価・終値 | `close`の数値範囲は直接観測 | `[500,1000]`（調査例） | `close` | Japan/TSE、時点を別確認 | 公式MCP直接観測（価格区間の取得に使用）。本ツールでの同一手順は未再試験 |
 | 騰落率 | filterは— | — | `change` | stock一覧、基準価格は要確認 | 列取得のみ確認（一覧） |
 | 出来高 | 数値filterは— | 並替`sortBy="volume"` | `volume` | Japan、日足/時点を別確認 | 実機確認済み（3件の出来高降順のみ。数値filter未検証） |
 | 時価総額 | filterは— | — | `market_cap_basic` | stock、通貨/単位を要確認 | 列取得のみ確認（一覧）、filter未確認 |
@@ -50,8 +53,8 @@
 | MACD | — | — | `MACD.macd` / `MACD.signal` | stock他、派生足は要個別確認 | macd値取得確認、signalは一覧variants確認。filter未確認 |
 | ストキャスティクス | — | — | カタログ`Stoch`、technicals応答`oscillators.stoch_k/stoch_d` | 既知銘柄1D | 列一覧/Read応答項目のみ確認。`Stoch`をそのままfilterにしない |
 | SMA20/50等 | — | — | technicals応答`moving_averages.sma20/sma50`等 | 既知銘柄1D | Read応答項目のみ確認。Screener列名ではない |
-| SMA25 | — | — | 直接列・technicalsのSMA25は未確認 | 市場/足/期間を要確認 | 未確認。SMA検索不一致だけで非対応としない |
-| SMA25乖離率 | — | — | 直接列は未確認。必要なら既存OHLCVでPython計算 | 確定日足25本と同じ基準日の終値 | 未確認（直接filter）。ローカル計算経路はAIガイド参照 |
+| SMA25 | 数値filterは未確認 | — | `SMA25`（Screener・単体・一括Readで値取得）。`get_technicals_rating`の確認済み応答にはなし | Japan/TSE、日足との値照合は代表1銘柄 | 公式MCP直接観測（2026-10-27）。列DiscoveryのSMA検索は一致なし。filter対応は未確認 |
+| SMA25乖離率 | `price_vs_sma25_pct`は無視 | 不合格：`price_vs_sma25_pct:[20,null]` | `close`と`SMA25`を取得し`(close/SMA25-1)*100`を計算 | 価格とSMAの基準時点・確定足に注意 | 公式MCP直接観測で当該filterは無視。他の直接filterは未確認 |
 | EMA50/200 | — | — | `EMA50` / `EMA200` | america、oversold_healthy応答 | 列取得のみ確認（値）。EMA検索だけでは発見できなかった |
 | EMA乖離率 | — | — | `price_vs_ema50_pct` / `price_vs_ema200_pct` | 同上、% | 列取得のみ確認（応答の値）。直接filter未確認 |
 | ボラティリティ | — | — | `Volatility.D` | TSE:7203単体Read | 列取得のみ確認（値）、計算基準/filterは未確認 |
@@ -60,7 +63,7 @@
 | セクター | `sector`（文字列） | 値を調べて指定 | `sector` | stock/bond等の列説明に従う | 公式仕様確認、列一覧確認。今回filter値未検証 |
 | 業種 | `industry`（文字列） | 値を調べて指定 | `industry`は公式の既定列例 | 対応市場/分類値を要確認 | 公式仕様確認、今回の個別適用は未確認 |
 | 指数 | `index`（文字列） | `"S&P 500"` | 指数は母集団指定 | america、他指数は個別確認 | 公式仕様確認。過去2026-10-18にS&P 500の取得記録、今回未再試験 |
-| 東証プライム区分 | — | 未確認キーを作らない | prime検索では発見できず | japanと区別 | 未確認。列検索の不一致を市場区分の非対応証拠にしない |
+| 東証プライム区分 | `market_segment`は無視 | 不合格：`market_segment:"Prime"` | `exchange="TSE"`ではプライム/スタンダード/グロースを区別できない | japanと上場区分を区別 | 公式MCP直接観測で当該filter無視。プライム全銘柄の正規の確定方法は未確認 |
 | アナリスト評価 | `analyst_rating`（文字列） | 許容値は要確認 | `AnalystRating` | stock一覧 | 公式仕様確認（filterキー）、列一覧確認。文字列条件と数値列を混同しない |
 
 時間足列の区切り記号は縦棒（U+007C）です。今回値を確認した完全な表記：
@@ -134,6 +137,8 @@ Pythonでは既存`GetScreenerColumnsRequest(market="stock")`で概要を読み�
 | dividends_yield_ttm=[3,null] | 同上 | ignored_filtersにキー、返却値null | このfilterキーは非対応確認。別alias/別方式は未確認 |
 
 取得日時は2026-10-26 23:16 JST頃、既存Windows Embedded Python・Client・保存済み認証を使用しました。件数・値は当日の観測で、固定値ではありません。応答は要求していないEMA等の追加項目も含んだため、標準Engineの正規化と必要列の意味を照合します。生の市場データ・認証情報を配布文書へ大量転載しません。
+
+10/27の公式MCP直接観測では、`exchange="TSE"`と`close`の価格範囲を分割し、各問合せの`totalCount`が`limit=1000`以内に収まるようにして重複除去後3,761銘柄を取得しました。`run_screener`自体にoffset/pageが追加されたわけではありません。範囲の境界・重複・`ignored_filters`・各区間の`totalCount`と実行数を検証しても、**TradingViewが持つ東証全銘柄の完全網羅やプライム所属の証明にはなりません**。既存ラッパー経由での分割取得は別途検証が必要です。
 
 ## AIへの提示と4回帰ケース
 
