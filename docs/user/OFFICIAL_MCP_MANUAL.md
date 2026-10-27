@@ -396,7 +396,7 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | --- | --- | --- | --- |
 | `symbol` | 必須 | string | 未記載 |
 
-2026-10-27の**公式MCP直接観測（第2・第5ラウンド）**では、トヨタ・ソニーに加え、三菱UFJ（8306）・日立（6501）でもraw予想EPS/売上と`get_forecasts`の比率が期間別に同一でした（次FQ `157.4059499449`倍、次FY `158.7805652588`倍、基本EPS TTM `162.6280696048`倍）。価格・財務・forecast表示通貨はJPYですが、予想対象期末・換算元通貨・適用レートは取得できず、**変換の原因は未確定**です。AppleとTSM ADRでは数値のある次FQ/FY予想がrawと一致しましたが、検証対象の全海外銘柄への一般化はできません。4日本株の`get_forecasts`は`success:true`でも`target_mismatch:true`で目標株価がnullとなり、raw目標の値が存在することは品質ガードを迂回してよい根拠ではありません。`quality_note`・通貨・単位・期間を検証できるまで、これらの予想を自動換算したり予想PER/成長率/目標株価へ結合したりしません。**画面との追加照合（ユーザーによる2026-10-27の確認）**：日立製作所のTradingView画面にEPS **176.99 JPY**と表示され、公式MCPのraw列`earnings_per_share_basic_ttm=176.9908`を小数2位へ丸めた値と一致。対照の`get_forecasts.estimates.eps_ttm=1.0883164292`とは約162.628倍異なります。**画面のEPS表示対象期間・基本/希薄化のUIラベルは未照合**ですが、この数値一致は少なくともraw TTM値の表示整合性を支持します。全日本株のraw値の正確性まで保証しません。 **追加の仮説検証（公式MCP外の公開為替履歴・TradingView株式Screener通貨変換説明）：** raw/`get_forecasts`の共通倍率は、次FQ≈157.40595、次FY≈158.78057、EPS TTM≈162.62807。USDJPYの公開過去レートは2026-09-30≈157.404（Yahoo）、2026-03-31≈158.75075、2026-06-30≈162.62350（exchange-rates.org）で、**3つとも関連する四半期/年度末付近の為替に極めて近い**。TradingView公式サポートは株価を元通貨のまま、基本EPSを含む財務値をUSD等へ変換可能と説明しています。ただしこれは**公式MCP内部の換算アルゴリズムの証明ではありません**。特に次FY予想は2027-03期を指す可能性があり、2026-03末のレートを適用する仕組みは未確定です。外部履歴と倍率の近似を根拠に予想を自動補正しないでください。参照：[TradingView公式の株式Screener通貨変換](https://jp.tradingview.com/support/solutions/43000639101/) / [2026-09-30 USDJPY履歴](https://finance.yahoo.com/quote/JPY%3DX/history/) / [2026-03-31](https://www.exchange-rates.org/exchange-rate-history/usd-jpy-2026-03-31) / [2026-06-30](https://www.exchange-rates.org/exchange-rate-history/usd-jpy-2026-06-30)。
+2026-10-27の**公式MCP直接観測（第2・第5ラウンド）**では、トヨタ・ソニーに加え、三菱UFJ（8306）・日立（6501）でもraw予想EPS/売上と`get_forecasts`の比率が期間別に同一でした（次FQ `157.4059499449`倍、次FY `158.7805652588`倍、基本EPS TTM `162.6280696048`倍）。価格・財務・forecast表示通貨はJPYですが、予想対象期末・換算元通貨・適用レートは取得できず、**変換の原因は未確定**です。AppleとTSM ADRでは数値のある次FQ/FY予想がrawと一致しましたが、検証対象の全海外銘柄への一般化はできません。4日本株の`get_forecasts`は`success:true`でも`target_mismatch:true`で目標株価がnullとなり、raw目標の値が存在することは品質ガードを迂回してよい根拠ではありません。`quality_note`・通貨・単位・期間を検証できるまで、これらの予想を自動換算したり予想PER/成長率/目標株価へ結合したりしません。**画面との追加照合（ユーザーによる2026-10-27の確認）**：日立製作所のTradingView画面にEPS **176.99 JPY**と表示され、公式MCPのraw列`earnings_per_share_basic_ttm=176.9908`を小数2位へ丸めた値と一致。対照の`get_forecasts.estimates.eps_ttm=1.0883164292`とは約162.628倍異なります。**画面のEPS表示対象期間・基本/希薄化のUIラベルは未照合**ですが、この数値一致は少なくともraw TTM値の表示整合性を支持します。全日本株のraw値の正確性まで保証しません。 **為替変換モデルの直接検証（公式MCP Read、2026-10-27 22:16〜22:18 JST）：** 上述の各社に見られた倍率差は、公式MCPで実取得した`FX_IDC:JPYUSD`の日足終値との**数値的な完全一致**が追加確認されました。全4社×5項目で`get_forecasts値 = raw値 × JPYUSD終値`がPython floatの厳密比較（==）で20/20件成立し、最大誤差0。係数は次FQ（2026-09-30候補日）`0.006353`、次FY（2026-03-31候補日）`0.006298`、EPS TTM（2026-06-30候補日）`0.006149`。直接`FX:USDJPY`または`FX_IDC:USDJPY`のOHLCには厳密一致せず、**逆通貨ペアの実取得終値**が一致しました。JPYラベル付きforecastがUSD換算相当の数値となることを強く支持しますが、**MCP内部でのペア選択・換算実行箇所・会計期間の基準日選択は未証明**です。前回の外部USDJPY履歴との近似に比べ、今回は逆通貨ペアの係数を直接再現できています。次FYの2026-03-31は4社の直近実績FY末ですが、次FY予想の基準日になる仕組みは不明。固定係数の適用や品質ガードの迂回は行いません。公式通貨変換の背景は[TradingView株式Screenerの通貨変換説明](https://www.tradingview.com/support/solutions/43000639101-currency-conversion-in-the-stock-screener/)、実測詳細は下記「JPYUSD終値と日本株forecastの20件一致」を参照。
 
 根拠：[公式のget_forecasts](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -737,6 +737,22 @@ Windowsのコマンドプロンプトではリポジトリルートで`call scri
 - **Discovery不一致：** `get_screener_columns(search=currency,market=stock)`は該当なしでも`get_symbol_data_batch`で`currency`と`fundamental_currency_code`が9銘柄とも非null。カタログ検索の空をフィールド取得非対応とは扱いません。
 
 AI企業分析では、確認できた**実績の明示suffix値**を、通貨・期末・EPS定義を保持して条件付き採用します。raw予想・生の目標株価・カレンダー・配当は検証待ちとし、日本株`get_forecasts`の未検証単位による自動評価、品質ガード迂回、カレンダー0件による通知抑止、要約の増減方向の無検証採用を避けます。調査証跡は会話添付`tradingview_mcp_capability_matrix_round5.md`と`tradingview_mcp_probe_evidence_round5.json`（GitHubに生応答全文を転載しない）です。
+
+### JPYUSD終値と日本株forecastの20件一致（公式MCP追加観測）
+
+10/27 22:16〜22:18 JSTの公式MCP直接Readは**3種類・15回、全件Provider success:true、Write/設定変更0**でした。前回の日本株forecastとraw数値は再取得せず、第5ラウンドの証跡を再利用しています。為替の数値は公式MCPの`get_ohlcv`で`FX_IDC:JPYUSD`の該当期間を取得し、同じraw/forecast比較で確認しました。
+
+| 比較した項目 | 期末候補日（バー開始日はUTC前日22:00） | `FX_IDC:JPYUSD`の終値 | raw / forecast |
+| --- | --- | ---: | ---: |
+| 次FQ予想EPS・売上 | 2026-09-30 | `0.006353` | `157.40594994490792` |
+| 次FY予想EPS・売上 | 2026-03-31 | `0.006298` | `158.78056525881232` |
+| 実績EPS TTM | 2026-06-30 | `0.006149` | `162.6280696048138` |
+
+トヨタ・ソニー・三菱UFJ・日立の各5項目（EPS次FQ/FY/TTM、売上次FQ/FY）すべてで`raw × 上記の日足終値 = get_forecasts`がPython floatで完全一致し、20/20・誤差0でした。例：日立EPS TTM `176.9908 × 0.006149 = 1.0883164292`。Decimalの文字列表現まで厳密一致するとは主張しません。`FX:USDJPY`と`FX_IDC:USDJPY`の日足・比較した1h OHLCには逆数の厳密一致がなく、バー時刻と価格提供元も異なります。Pineの[通貨変換説明](https://www.tradingview.com/pine-script-docs/concepts/other-timeframes-and-data/#currency)は本MCPの内部計算契約を証明するものではありません。
+
+数値モデルを再現できたことと**MCPが内部でこの系列を使っていることの因果的証明**を区別します。`JPY`通貨ラベル、次FY予想への直近FY末レート適用、原データ/変換後データの由来、`target_mismatch`の内部条件は未解明。`get_forecasts`のJPYラベル値をそのまま円建て予想PER・EPSへ利用せず、固定レート補正も実装しません。
+
+別の重要なOHLCV上の注意として、1hのRFC3339 `date_to`を指定した3回はいずれも、要求した時刻の**後**に開始する23本を含む32本を返しました（`has_more:true`、指定窓内52本のうち一部）。Provider `success:true`だけで「指定時刻までに制限された」と判断せず、返却`t`と要求範囲を自前で検査してください。実測根拠は会話添付`tradingview_mcp_fx_conversion_validation.md`／`tradingview_mcp_fx_conversion_evidence.json`。提供元の生応答全文は本リポジトリに転載しません。
 
 ## Provider制限・プラン・安全性
 
