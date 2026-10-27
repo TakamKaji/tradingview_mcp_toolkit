@@ -206,7 +206,7 @@ IDでリストを削除する。利用例：利用者が対象を明示して削
 
 生の足を使う場合は`summary=False`を指定します。実測では`structured_content`直下の`bars`が、rowsでは`t,o,h,l,c,v`を持つ足ごとの辞書配列、columnsでは`t/o/h/l/c/v`それぞれの配列を持つ辞書でした。tはUTC Unix秒です。`ObservedReadResponse.structured_content`はモデルなので、辞書で扱う場合は`response.model_dump(mode="json")["structured_content"]`を使います。`has_more`・`next_date_to`等は追加応答項目として保持されますが、自動ページングはしません。遡る場合は返却されたnext_date_toを使い、重複・欠損・対象日時・完全性を検証します。
 
-2026-10-27の少量Readで、日付/RFC3339・rows/columns全OHLCV値の一致・カーソル遡り・旧引数の互換を確認しました。columnsのcount=5001/8000指定は5営業日windowで受理され、実取得は5本です。**8000本全件の取得成功を意味しません。** 巨大応答、全期間、価格調整、確定足の完全性は未確認です。別セッションの直接MCP Readでは`count=9000,summary=true`を短い18本窓に指定しても拒否されませんでしたが、実取得上限の突破は示しません。返却noticeは形成中足の可能性、通常取引時間、株式分割調整について注意喚起しており、確定足フラグの存在は未確認です。第2ラウンドの公式MCP直接Readでは、同じ5本のrows/columns全OHLCVが一致し、Apple日足と1h/4hの同取引日最終closeに343.91/343.99の差がありました。350本から算出した日足RSI7/SMA13/EMA13は直接列と一致した一方、日中足のRSI/EMA/MACDには差が残り、原因は未確定です。さらに`count=9000,summary=true`ではAppleの日足6,744本を**集計**できましたが、生バーを6,744本取得したわけではなく、rows5000/columns8000の生データ上限は未検証です。
+2026-10-27の少量Readで、日付/RFC3339・**限定した短い期間の**rows/columns全OHLCV値の一致・カーソル遡り・旧引数の互換を確認しました。**第4ラウンドの長い系列・特定日付窓では形式による値差も再現**されており、rows/columnsの同一性を一般保証しません。columnsのcount=5001/8000指定は5営業日windowで受理され、実取得は5本です。**8000本全件の取得成功を意味しません。** 巨大応答、全期間、価格調整、確定足の完全性は未確認です。別セッションの直接MCP Readでは`count=9000,summary=true`を短い18本窓に指定しても拒否されませんでしたが、実取得上限の突破は示しません。返却noticeは形成中足の可能性、通常取引時間、株式分割調整について注意喚起しており、確定足フラグの存在は未確認です。第2ラウンドの公式MCP直接Readでは、同じ5本のrows/columns全OHLCVが一致し、Apple日足と1h/4hの同取引日最終closeに343.91/343.99の差がありました。350本から算出した日足RSI7/SMA13/EMA13は直接列と一致した一方、日中足のRSI/EMA/MACDには差が残りました。**続く第4ラウンドではToyotaの日中足の差は過去バーの形式別値差で数値上説明でき、Appleの日中足では未解決のまま**です。さらに`count=9000,summary=true`ではAppleの日足6,744本を**集計**できましたが、生バーを6,744本取得したわけではなく、rows5000/columns8000の生データ上限は未検証です。
 
 根拠：[公式のget_ohlcv](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -710,6 +710,20 @@ Windowsのコマンドプロンプトではリポジトリルートで`call scri
 | ドル指数 | `TVC:DXY` | 1h | `type:index/subtype:cfd`。volumeはnull、ICEUS版との同一性未確認 |
 
 調査では`run_screener`の`market:futures/forex/cfd/bonds`がそれぞれ応答しましたが、市場名を純粋な商品種別と扱えません。実際`market:cfd`でCRYPTOCAPの暗号資産時価総額指数が返りました。`type/subtype/typespecs/exchange`を照合してください。連続・限月先物は同じcloseでも指標履歴が異なり、ロール/接続・調整方式は未確認です。債券利回りの`change`を利回りのパーセントポイント変化と読み替えず、null出来高をゼロに補完しません。遅延表記の数値単位、取引時間、足確定の厳密条件は未検証です。
+
+### 第4ラウンド公式MCP直接観測：OHLCV形式差と指標の再現性
+
+2026-10-27 21:25〜21:29 JSTに公式MCP直接Readを3種類・27回（全件Provider `success:true`、Writeなし）実施し、Toyota（`TSE:7203`）/Apple（`NASDAQ:AAPL`）の1D・1h・4hの600本OHLCVと直接指標を照合しました。**本ラッパーの追加実行結果ではありません。** 結果の一致許容誤差は絶対`1e-8`です。
+
+- **日足：** 両銘柄のRSI7、既定RSI（14期間Wilder候補）、SMA13、EMA13/25、MACD本線/シグナルがすべて一致。これは試験した銘柄・時点・計算定義での結果です。
+- **Toyota 1h・4h：** 1hの2026-10-23 15:00 JSTバーは`rows`のclose=3105/volume=8,365,100に対し`columns`のclose=3096/volume=1,393,000。4hの2026-10-02 13:00 JSTバーは`rows`のclose=2856.5/volume=14,758,300、`columns`のclose=2867/volume=6,343,600。各volume差は同日15:30の30mバーに一致。`columns`600本の該当close各1か所を**実取得したrowsの値にローカル診断用として置換**すると、各時間足の7指標すべてが直接値と一致しました（Providerには書き戻していない）。引けオークションやキャッシュ等、Provider内部原因は未確定です。Toyota全600本のrowsを通算検査したわけではありません。
+- **Apple 1h・4h：** 各600本の`rows`と`columns`は全OHLCVが一致しましたが、RSI/SMA/EMA/MACDの各7項目は直接指標と不一致のままです。`close|60`/`close|240`は343.98、OHLCV最終closeは343.99であり、米国株の価格系列/配信元等の原因は未確定。日足と日中足の終値・volumeも同一視できません。**rowsを全銘柄の真値・自動修復先として固定しません。**
+- **Tech Rating：** 1h/4hを指定した`get_technicals_rating`のRSI・MACD本線/シグナルは同時間足のbatch値と一致しましたが、同Toolのprice/volumeは日足相当でした。レスポンス内フィールドの時間足粒度を混同しません。
+- **時刻・確定足：** `t`はバー開始時刻に対応する観測。Toyotaには昼休みと15:30の30mバー、AppleにはDSTに伴うUTC時刻の切替と4h最終区間の端数があります。`is_closed`/`barstate.isconfirmed`/調整係数の候補列は試験ではnull。Provider `update_time`は時間足ごとのバー終了や確定時刻を保証しません。
+- **カーソル：** `next_date_to`をそのまま次回`date_to`に渡し、Toyota 1hの600本＋遡り5本で重複0・継続を確認。ただし履歴の全期間・全銘柄の保証ではありません。生データ実取得の最大は600本で、公開Tool説明のrows5000/columns8000の上限到達は未試験です。
+- **長期RSI：** ローカルWilder RSI48/96/192は取得600本でもseed・履歴長の感度が残りました。例えばApple 1h RSI96の600本でseed差約0.244、RSI192では約5.165。これは**ローカル計算値のみ**であり、公式Provider RSI48/96/192の直接列に成功した証拠ではありません。必要な履歴を追加し、結果の収束を計測します。固定本数で精度を保証しません。
+
+重要な判定は**成功応答とデータ整合性は別**という点です。OHLCVのformat、取得した期間、UTC時点、セッション、バー確定状態、基礎系列と再計算指標を記録し、不一致のまま自動で直接指標と同一視しないでください。実行根拠は会話添付`tradingview_mcp_capability_matrix_round4.md`／`tradingview_mcp_probe_evidence_round4.json`（調査用データはGitHubに転載しない）です。
 
 ## Provider制限・プラン・安全性
 
