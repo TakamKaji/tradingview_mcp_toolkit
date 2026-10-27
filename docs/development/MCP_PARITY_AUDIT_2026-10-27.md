@@ -155,3 +155,17 @@ git diff --check
 4. SMA25等のローカル計算では、選んだformatの実応答を読む。日付指定対応を確定足・価格調整・全プライム完全性の保証としない。条件カタログのfilter対応状況は今回変更しない。
 
 配布は別工程で必要になった場合だけ、developレビュー/merge後の配布対象コミットのみcherry-pick -x等で選択する。本記録・tests・fixture・開発比較スクリプトはmainへ取り込まない。
+
+## PR #63・#65統合追記（2026-10-27）
+
+上記の「PR #63未マージ」「後から反映」は監査開始時の状態を残したもの。PR #63はMerge Commit `0095ee99d427e7463a569eedf6386f4485ce2b7e`でdevelopへマージ済み。そのdevelopを既存PR #65ブランチへmerge `b219917bf9ac2dc89648ca7bce64cd1960bb3b28`で取り込んだ。競合した開発索引は、10/26文書検証と10/27機能監査の両リンクを保持して解消した。
+
+現行マニュアルの旧4引数/一律5000/新引数未対応という説明を解消し、7引数・rows5000/columns8000・日付形式・両レイアウト・追加カーソル・省略互換を実装へ合わせた。Python例も新しい既存Client呼出しへ更新。条件カタログはOHLCV契約への導線だけを追加し、Screener filter対応の過去結果は維持した。FEATURES/AIガイド/開発API/README・索引も照合した。
+
+update_watchlist.descriptionは削除せず、最新記録の109対110引数の差として未検証を維持する。今回はproduction/テストの変更や新しい実機取得を行わず、上記15回のRead結果を再利用する。マニュアルの例は保存済みcolumns応答を現行型へ復元してオフラインで確認する。
+
+統合後の最終検証結果と配布対象コミットはPR #65本文へ記録する。mainへ将来取り込む場合は04c8eac（共通文書）、73c411b（OHLCV実装/FEATURES）、今回の利用者文書修正コミットを選択する。merge commitや開発専用d5d5125/a0defe9・今回の開発記録コミットを配布対象にしない。PR #65もMerge Commit方式でdevelopへ反映し、元のコミット分離を保持する。
+
+統合後の関連pytest10ファイルを上記と同じEmbedded Pythonでまとめて実行し、379 passed・1 skippedを再確認した。skipは同じWindows symlink作成不可の1件。対象production/監査処理/関連テストのruff、git diff --checkも合格。オフライン比較は引き続き35 Tool・Discovery109/ローカル110引数、description余剰1件のみを報告し、期待どおりexit 1となる。
+
+マニュアル全35節・110引数を現行Requestの必須性・型・enum・nullable・上限へ照合し、OHLCVの条件付き上限は本文と回帰テストで確認した。関連README/利用者文書/開発API/両検証記録の相対リンク・アンカー297件、Python例4件の構文、新しいOHLCV例の保存済みcolumns応答でのオフライン実行が合格。過去の監査本文は追記のみで保持し、統合後にproduction/テスト/依存関係を追加変更していないことも確認した。

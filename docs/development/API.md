@@ -38,7 +38,7 @@ async def read_window(client):
 
 rows時の`bars`は足ごとの辞書配列、columns時は`t/o/h/l/c/v`の配列を持つ辞書として観測しました。`ObservedReadResponse.structured_content`はモデルなので、辞書で処理する場合は`response.model_dump(mode="json")["structured_content"]`を使います。`has_more/next_date_to`は追加フィールドとして保持しますが、自動ページングや保存機能の追加ではありません。Providerのsuccess=falseと不正な応答Schema、通信エラーを区別し、任意Toolの返却にsuccessキーがあるとは仮定しません（経済カレンダーではstatus/result）。
 
-根拠・全35 Tool監査・未確認事項は[機能同等性監査](MCP_PARITY_AUDIT_2026-10-27.md)。PR #63の未マージ文書はこの作業へ取り込まず、同記録に後日の反映事項を記載します。
+根拠・全35 Tool監査・未確認事項は[機能同等性監査](MCP_PARITY_AUDIT_2026-10-27.md)。PR #63の文書をdevelopへマージした後、PR #65へ統合し、[公式MCPマニュアル](../user/OFFICIAL_MCP_MANUAL.md#get_ohlcv)も現行7引数へ更新しました。
 
 ### 共通契約
 
