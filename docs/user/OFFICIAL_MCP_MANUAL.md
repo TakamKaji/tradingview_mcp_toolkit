@@ -259,6 +259,8 @@ categoryはローカル列挙値。country=国コード、searchは部分検索�
 | `query` | 必須 | string | 未記載 |
 | `type_filter` | 省略可 | string：stock, etf, bond, forex, index, futures, crypto, all | all |
 
+第3ラウンドの公式MCP直接Readでは、`search_symbols`が返した先物rootが`get_symbol_data_batch`ではmissingになる例がありました。検索はfuzzy候補の発見であり、価格Read可能な識別子の保証ではありません。先物は`run_screener`のmarket/exchangeとtype/subtype/descriptionから連続・限月識別子を発見し、その**返却された正確なシンボル**で少量Readを検証します。金先物・原油先物ではrootから連続・標準/Microなど商品が変わるため、自動的な別名変換をしません。米10年利回りは`type_filter:index`検索で見つからず、型指定なしで`TVC:US10Y`（`type:bond`）を確認しました。
+
 根拠：[公式のsearch_symbols](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
 ## Screener
@@ -296,7 +298,7 @@ categoryはローカル列挙値。country=国コード、searchは部分検索�
 | `filter_preset` | 省略可 | string：pullback_with_reversal, breakout_with_volume, oversold_healthy, earnings_runup, relative_strength, new_highs | 未記載 |
 | `symbolset` | 省略可 | 配列<string> / null | 未記載 |
 
-最大1000行。offset/page/cursorはRequestにない。market=japanと東証プライムは同一ではない。10/27第2ラウンドの**公式MCP直接観測**では、日経225 symbolsetで`RSI7:[80,100]`が225→3件、`MACD.macd:[0,1]`が225→1件、`MACD.signal:[0,1]`が225→2件となり、取得全行が条件に適合しました。対して`RSI|60`・`RSI7|240`・`SMA96`・`EMA96`は`ignored_filters`に入りました。**単体Readで取得できる列でもfilterに利用可能とは限りません**。条件名・取得列・Presetは条件カタログを参照。
+最大1000行。offset/page/cursorはRequestにない。market=japanと東証プライムは同一ではない。10/27第2ラウンドの**公式MCP直接観測**では、日経225 symbolsetで`RSI7:[80,100]`が225→3件、`MACD.macd:[0,1]`が225→1件、`MACD.signal:[0,1]`が225→2件となり、取得全行が条件に適合しました。対して`RSI|60`・`RSI7|240`・`SMA96`・`EMA96`は`ignored_filters`に入りました。**単体Readで取得できる列でもfilterに利用可能とは限りません**。第3ラウンドの公式MCP直接Readでは、S&P 500の`symbolset:["SYML:SP;SPX"]`でstock 503/503行、NASDAQ 100のindex filterで型省略101/101行、stock限定98/98行、日経225の`symbolset:["SYML:TVC;NI225"]`でstock 225/225行を取得（重複0）しました。NASDAQ 100の差3行は`type:"dr"`のARM/ASML/PDDで、**指数全構成員の依頼に`symbol_types:["stock"]`を安易に追加すると欠落**します。`filters.index:"nikkei 225"`は成功0行、`filters.index:"TOPIX"`は明示拒否でした。全返却はProviderが定義する集合の完全取得であり、指数算出元との独立の網羅性保証ではありません。条件名・取得列・Presetは条件カタログを参照。
 
 根拠：[公式のrun_screener](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -692,6 +694,22 @@ async def read_window():
 ```
 
 Windowsのコマンドプロンプトではリポジトリルートで`call scripts\setenv.bat`後の`"%PYTHON_EXECUTABLE%"`を使います。通常Screeningは`app.bat screen <name>`で実行します。独自Pythonをscreen/Jobへ渡さず、[AIガイドの起動・実行契約](AI_JSON_GUIDE.md#作成して実行の完了契約)に従います。
+
+### 第3ラウンド公式MCP直接観測：株式以外の識別子と時系列
+
+以下は**公式MCPへの直接接続**で得た数値Readと各3本のOHLCV成功例です。ラッパー側の新規成功ではなく、未実行の時間足へ一般化しません。
+
+| 対象 | Quote/OHLCVに成功したシンボル | OHLCV時間足 | データ解釈上の注意 |
+| --- | --- | --- | --- |
+| 日経225ミニ連続先物 | `OSE:NK225M1!` | 1D | 現物日経・通常先物と別契約。`update_mode:delayed_streaming_900` |
+| NASDAQ 100連続先物 | `CME_MINI:NQ1!` | 4h | 限月付き`NQZ2026`とはEMA50が異なる |
+| 金連続先物 | `COMEX:GC1!` | 1h | 現物XAUUSDではない。`GCZ2026`とEMA50に差 |
+| WTI原油連続先物 | `NYMEX:CL1!` | 1D | Micro WTIの`MCL`とは別、`CLZ2026`とEMA50/SMA25に差 |
+| USDJPY | `FX:USDJPY` | 4h | volumeは数値だが単位未確認 |
+| 米10年国債利回り | `TVC:US10Y` | 1D | volume・標準RSI/SMA25/EMA50はnull。`change`は利回り水準の増減幅ではなく相対変化率の実例 |
+| ドル指数 | `TVC:DXY` | 1h | `type:index/subtype:cfd`。volumeはnull、ICEUS版との同一性未確認 |
+
+調査では`run_screener`の`market:futures/forex/cfd/bonds`がそれぞれ応答しましたが、市場名を純粋な商品種別と扱えません。実際`market:cfd`でCRYPTOCAPの暗号資産時価総額指数が返りました。`type/subtype/typespecs/exchange`を照合してください。連続・限月先物は同じcloseでも指標履歴が異なり、ロール/接続・調整方式は未確認です。債券利回りの`change`を利回りのパーセントポイント変化と読み替えず、null出来高をゼロに補完しません。遅延表記の数値単位、取引時間、足確定の厳密条件は未検証です。
 
 ## Provider制限・プラン・安全性
 
