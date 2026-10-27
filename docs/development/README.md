@@ -18,6 +18,7 @@
 | develop/mainの共有コミット運用 | [cherry-pick手順](BRANCH_WORKFLOW.md) |
 | Public公開前の監査・未解決事項 | [公開前監査（2026-10-20）](PUBLIC_RELEASE_AUDIT.md)、[依存ライセンス調査](PUBLIC_DEPENDENCY_LICENSES_2026-10-20.md) |
 | 公式MCPの根拠資料 | [公式資料への参照先](TRADINGVIEW_MCP_OFFICIAL_REFERENCE.md)、[公式の現行ページ](https://www.tradingview.com/mcp/docs) |
+| 全Toolマニュアル・条件カタログの根拠と未確認事項 | [2026-10-26の静的・少量Read検証](MCP_MANUAL_VERIFICATION_2026-10-26.md) |
 
 全米株の取得は未対応です。仕様書[19.3](tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)のblocking limitationを維持し、[19.5](tradingview_screening_system_spec.md#195-builtin-job保存scheduler)の同梱`us_sector_morning.enabled=false`を変更しません。S&P 500限定503件・20分類の実測は全米株成功の根拠にはなりません。[Issue #18](https://github.com/TakamKaji/tradingview_mcp_support/issues/18)で追跡します。
 

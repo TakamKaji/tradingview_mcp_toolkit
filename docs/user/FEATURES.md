@@ -2,6 +2,8 @@
 
 本ツールの共通機能、設定の使用例、Python APIだけにある操作を分けて説明します。公式MCPにToolがあることと、本ツールのCLIや定期Jobからそのまま使えることは別です。
 
+利用者向けの詳しい機能解説は[公式MCP機能マニュアル](OFFICIAL_MCP_MANUAL.md)、条件名・取得列・実機検証状態は[スクリーニング条件カタログ](SCREENER_CONDITIONS.md)を参照してください。この文書は接続範囲の要約です。
+
 Windowsネイティブは[setup.batから導入](WINDOWS_SETUP.md)、Dockerコンテナは[Docker導入手順](DOCKER.md)から実行します。コンテナ内では共通CLIの認証・Screening・保存結果・手動Jobを使えますが、Windows Task Schedulerによる定期登録は使いません。
 
 ## A. 本体の共通機能

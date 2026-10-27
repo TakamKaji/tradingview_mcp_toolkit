@@ -5,6 +5,7 @@
 | 順序・目的 | マニュアル |
 | --- | --- |
 | できること・Python APIとCLIの違い | [共通機能・サンプル・公式Toolの範囲](FEATURES.md) |
+| 公式MCPの全機能・引数と条件の対応状況 | [全Toolマニュアル](OFFICIAL_MCP_MANUAL.md) / [スクリーニング条件カタログ](SCREENER_CONDITIONS.md) |
 | 1. ダウンロードしてTradingViewへ接続 | [Windowsネイティブ導入](WINDOWS_SETUP.md) / [Docker導入](DOCKER.md) |
 | 2. 自分の条件を作り、取得・保存する | [Screeningの作成手順と全文JSON](SCREENING_MANUAL.md#自分の条件を追加する) |
 | 3. 保存結果・履歴・前回差分を確認 | [Results](RESULTS.md) |
