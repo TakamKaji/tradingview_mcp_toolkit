@@ -1,6 +1,6 @@
 # 公式MCP機能マニュアル
 
-調査基準日：**2026-10-26 JST**。基点develop：`0a8cf09`（PR #62マージ済み）。[公式MCP資料](https://www.tradingview.com/mcp/docs)と既存Client/Request/Responseを照合した利用者向け機能解説の正本です。公式ページの転載ではなく、本リポジトリでの使い分けを説明します。
+調査基準日：**2026-10-27 JST（OHLCV契約更新）**。全Toolの初回調査は2026-10-26、基点developは`0a8cf09`。PR #63の文書をdevelopへマージした`0095ee9`と、PR #65の実装を統合して更新しています。[公式MCP資料](https://www.tradingview.com/mcp/docs)と既存Client/Request/Responseを照合した利用者向け機能解説の正本です。公式ページの転載ではなく、本リポジトリでの使い分けを説明します。
 
 ## このリポジトリと公式MCPの関係
 
@@ -196,10 +196,17 @@ IDでリストを削除する。利用例：利用者が対象を明示して削
 | --- | --- | --- | --- |
 | `symbol` | 必須 | string | 未記載 |
 | `interval` | 省略可 | string：1m, 5m, 15m, 30m, 1h, 4h, 1D, 1W, M, 1mo, month | 1D |
-| `count` | 省略可 | integer、上限5000 | 300 |
+| `count` | 省略可 | integer、上限8000。ただしrows/format省略時は5000 | 300 |
+| `date_from` | 省略可 | string：有効なYYYY-MM-DDまたは時差付きRFC3339 | 公開ページ未掲載、既定は未確認 |
+| `date_to` | 省略可 | string：有効なYYYY-MM-DDまたは時差付きRFC3339 | 公開ページ未掲載、既定は未確認 |
+| `format` | 省略可 | string：rows, columns | 公開ページ未掲載、Discovery説明ではrows |
 | `summary` | 省略可 | boolean | 未記載 |
 
-現行Requestのcount上限は5000。月足はM/1mo/monthを受理する。当日のDiscoveryにある追加引数は後述の差分表を参照。実測の`structured_content`にはトップ階層の`bars`があり、各足は`t,o,h,l,c,v`、tはUTC Unix秒でした。これは当該30本の観測であり、常に同じ内部構造とは決めつけません。
+日付の両端を含む範囲を指定でき、範囲内の新しい足からcount本まで取得します。日時文字列は変換せず送信します。新3引数は未指定なら送信せず従来動作を維持し、明示null、不正日付/時刻/時差、未知formatは拒否します。月足はM/1mo/monthを受理します。公開ページとDiscoveryの差は後述の差分表を参照してください。
+
+生の足を使う場合は`summary=False`を指定します。実測では`structured_content`直下の`bars`が、rowsでは`t,o,h,l,c,v`を持つ足ごとの辞書配列、columnsでは`t/o/h/l/c/v`それぞれの配列を持つ辞書でした。tはUTC Unix秒です。`ObservedReadResponse.structured_content`はモデルなので、辞書で扱う場合は`response.model_dump(mode="json")["structured_content"]`を使います。`has_more`・`next_date_to`等は追加応答項目として保持されますが、自動ページングはしません。遡る場合は返却されたnext_date_toを使い、重複・欠損・対象日時・完全性を検証します。
+
+2026-10-27の少量Readで、日付/RFC3339・rows/columns全OHLCV値の一致・カーソル遡り・旧引数の互換を確認しました。columnsのcount=5001/8000指定は5営業日windowで受理され、実取得は5本です。**8000本全件の取得成功を意味しません。** 巨大応答、全期間、価格調整、確定足の完全性は未確認です。
 
 根拠：[公式のget_ohlcv](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -654,17 +661,22 @@ limit上限2000。取得したmessageや配信状態に個人情報が含まれ�
 
 ### 既存ラッパーを呼ぶRead例
 
-これは既存認証を利用して1銘柄を読む例です。ファイルの作成/実行が依頼された時だけ、実際の保存先・環境・起動コマンド・結果保存先を提示して実行します。以下の関数定義だけではデータ取得や結果保存は行いません。
+これは既存認証を利用して1銘柄の日足を日付範囲・columns形式で読む例です。ファイルの作成/実行が依頼された時だけ、実際の保存先・環境・起動コマンド・結果保存先を提示して実行します。以下の関数定義だけではデータ取得や結果保存は行いません。
 
 ```python
 from tradingview_screening.integrations.tradingview.client import TradingViewClient
-from tradingview_screening.integrations.tradingview.schemas import GetSymbolDataRequest
+from tradingview_screening.integrations.tradingview.schemas import GetOhlcvRequest
 
-async def read_one():
+async def read_window():
     async with TradingViewClient() as client:
-        return await client.get_symbol_data(
-            GetSymbolDataRequest(symbol="TSE:7203", columns=["close"])
-        )
+        response = await client.get_ohlcv(GetOhlcvRequest(
+            symbol="TSE:7203", interval="1D", count=3, summary=False,
+            date_from="2026-10-05", date_to="2026-10-09", format="columns",
+        ))
+        data = response.model_dump(mode="json")["structured_content"]
+        if not isinstance(data, dict) or data.get("success") is not True:
+            raise RuntimeError("OHLCV取得失敗または応答構造の不一致")
+        return data  # bars/has_more/next_date_toを確認し、全件か部分取得かを判断する
 ```
 
 Windowsのコマンドプロンプトではリポジトリルートで`call scripts\setenv.bat`後の`"%PYTHON_EXECUTABLE%"`を使います。通常Screeningは`app.bat screen <name>`で実行します。独自Pythonをscreen/Jobへ渡さず、[AIガイドの起動・実行契約](AI_JSON_GUIDE.md#作成して実行の完了契約)に従います。
@@ -681,8 +693,8 @@ Providerの目安は約100要求/分、アプリ既定Governorは30要求/分・
 
 | 項目 | 照合結果と扱い |
 | --- | --- |
-| Tool集合 | 公開資料・ローカル・当日Discoveryの35名が一致。不足/追加は0。全Toolの実行成功を示すものではない |
-| get_ohlcvの追加引数 | 当日Discoveryにはdate_from/date_to/formatがあるが、公開ページは未掲載、現行Requestはsymbol/interval/count/summaryのみ。追加引数は既存ラッパーで未対応。独自通信で回避せず、必要なら別の実装課題とする |
+| Tool集合 | 公開資料・ローカル・2026-10-27 Discoveryの35名が一致。不足/追加は0。live109引数に対しローカル110引数で、差は保持したWatchlistのdescription。全Toolの実行成功を示すものではない |
+| get_ohlcvの追加引数 | date_from/date_to/formatは公開ページに未掲載だが、Discoveryと少量Readを根拠に既存Requestで対応済み。countもrows5000/columns8000へ対応。2026-10-26時点の未対応状態は解消した |
 | update_watchlist.description | 公開ページと現行Requestにはあるが、当日Discoveryにはない。Writeを実行しての可否検証はしていない |
 | Alert追加キー | ローカルCreateはwebhook/monitor、Updateはwebhookを受理し得るが、公開ページはwebhook等を制限。Schema適合を実行成功としない |
 | NULL・型・上限 | ローカルには必須nullableや公開資料で未指定の上限がある。表はローカル契約、意味的な成功はProvider側で別途確認 |
@@ -703,6 +715,8 @@ Providerの目安は約100要求/分、アプリ既定Governorは30要求/分・
 | 上記以外の29 Tool | 公開資料・ローカル契約・Discoveryのみ照合し、個別実行は未実施。Write10 Toolとget_active_watchlistは副作用を避けて除外 |
 
 filterの実値検証・無視されたキーは[条件カタログ](SCREENER_CONDITIONS.md#filter適用を確かめる手順)に記載しています。初回のsandbox内statusは接続待ちで中断し、ネットワーク利用可能な実行でstatus成功を確認しました。認証設定や資格情報の手動変更は行っていません。
+
+2026-10-27 08:43〜08:44 JSTには、既存ClientからOHLCV10回と、batch/財務/news/経済symbol/経済calendar各1回、計6 Tool・15回の少量Readを追加しました。success=true 13回、未知OHLCV銘柄のsuccess=false 1回、経済calendarのstatus=ok 1回です。batchは取得1・missing 1を保持しました。上表は10/26時点の記録であり、今回も全35 Tool・全市場・全件の成功を検証したものではありません。機能を変更しない今回の文書統合では、この既存結果を再利用しています。
 
 Beta更新時は公式ページのTool集合と既存TOOL_NAME_MAP/REQUEST_MODELSを比較し、既存Client.list_tools()の名前・inputSchema・不足/追加を照合します。列探索は概要→必要なgroup/search、filterは少数取得でignored_filters・実値・単位・件数を検証します。差分を記録し、型やCLIの拡張が必要なら別のdevelop向け実装として扱います。公式説明や生schemaの長文保存物をそのまま配布しません。
 
