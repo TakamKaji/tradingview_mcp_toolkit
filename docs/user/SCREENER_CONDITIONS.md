@@ -22,8 +22,8 @@
 ## 市場・銘柄集合・時間足を先に固定する
 
 - `run_screener.market`の公式例：`japan`、`america`、`uk`、`germany`、`india`、`crypto`、`forex`、`futures`、`bonds`、`cfd`。完全な対応市場一覧・組合せの固定enumは今回確認できていません。未知市場名を作りません。
-- `symbol_types`は銘柄種別（公式例`["stock"]`）。株式/ETF等の種別と国・取引所・上場区分は別です。`get_screener_columns.market`は`stock/etf/crypto/bond/all`であり`japan`は渡しません。
-- `symbolset`は明示集合。公式例`["SYML:SP;SPX"]`はS&P 500で、全米株ではありません。`filters.index`の指数指定と同じ意味になるかは個別に確認します。
+- `symbol_types`は銘柄種別（公式例`["stock"]`）。株式/ETF等の種別と国・取引所・上場区分は別です。**10/27第3ラウンドの公式MCP直接Readでは、NASDAQ 100のindex filterを型指定なしで101/101行、`symbol_types:["stock"]`で98/98行取得し、ARM/ASML/PDD（`type:"dr"`）の3行が除かれました。指数構成全件の依頼に`stock`を無断追加しません。** `get_screener_columns.market`は`stock/etf/crypto/bond/all`であり`japan`は渡しません。
+- `symbolset`は明示集合。公式例`["SYML:SP;SPX"]`はS&P 500で、全米株ではありません。公式MCP直接ReadではS&P 500 stock指定503/503行、`SYML:TVC;NI225`で日経225 stock指定225/225行を実取得し、重複0を確認しました。**これはProviderが定義する当該クエリ集合の全取得であり、指数算出元の原簿との独立照合ではありません。** `filters.index:"nikkei 225"`は拒否されず0件、`filters.index:"TOPIX"`は明示拒否でした。指数の価格シンボルから推測したsymbolsetを有効と決めつけません。
 - `market=japan`は東証プライムを意味しません。prime検索で該当列を発見できなかったことだけで、直接指定の不存在を断定しません。母集団の確定方法を既存Readから調べ、成立しなければ制約を報告します。外部一覧の取得・利用はユーザーの明示的な依頼・承諾後だけです。
 - 日足/1h、指標期間、対象日、確定/進行中足を区別します。列説明にある時間足派生と実際のfilter対応は別です。`RSI|60`や`RSI7|240`は直接値取得に成功しましたが、両方をScreenerのfilterに使った試験は`ignored_filters`に入りました。1h RSIの計算定義や確定足の同一性は未確認です。
 
@@ -63,8 +63,8 @@
 | 高値安値関連 | — | — | `High.3M` / `Low.3M`、`pct_from_high_3m`等 | Screenerの追加応答項目 | 列取得のみ確認（応答に存在）。全てを指定列/filterとして検証していない |
 | セクター | `sector`（文字列） | 値を調べて指定 | `sector` | stock/bond等の列説明に従う | 公式仕様確認、列一覧確認。今回filter値未検証 |
 | 業種 | `industry`（文字列） | 値を調べて指定 | `industry`は公式の既定列例 | 対応市場/分類値を要確認 | 公式仕様確認、今回の個別適用は未確認 |
-| 指数 | `index`（文字列） | `"S&P 500"` | 指数は母集団指定 | america、他指数は個別確認 | 公式仕様確認。過去2026-10-18にS&P 500の取得記録、今回未再試験 |
-| 東証プライム区分 | `market_segment`は無視 | 不合格：`market_segment:"Prime"` | `exchange="TSE"`ではプライム/スタンダード/グロースを区別できない | japanと上場区分を区別 | 公式MCP直接観測で当該filter無視。プライム全銘柄の正規の確定方法は未確認 |
+| 指数 | `index`（文字列）・`symbolset`（別指定） | 合格：S&P 500 index、NASDAQ 100 index、日経225 symbolset。空：nikkei 225 index。拒否：TOPIX index | 構成銘柄集合。指数価格シンボルと集合IDは別 | US/Japan、型指定も個別確認 | 10/27公式MCP直接ReadでS&P 500 stock 503/503、NASDAQ 100型省略101/101（stock限定98/98）、日経225 stock 225/225、全行重複0。指数算出元との独立照合は未実施 |
+| 東証プライム区分 | `market_segment`は無視 | 不合格：`market_segment:"Prime"` | `exchange="TSE"`・`type:stock`・`is_primary`はプライム所属ではない。候補6列（`exchange_listed`等）は2銘柄でnull | japanと上場区分を区別 | 10/27第3ラウンド公式MCP直接観測でもプライム所属・全件の正規の確定方法は未確認。TOPIX構成員を代用しない |
 | アナリスト評価 | `analyst_rating`（文字列） | 許容値は要確認 | `AnalystRating` | stock一覧 | 公式仕様確認（filterキー）、列一覧確認。文字列条件と数値列を混同しない |
 
 時間足列の区切り記号は縦棒（U+007C）です。今回値を確認した完全な表記：
@@ -76,6 +76,8 @@ RSI|60
 OHLCVを使うローカル計算では、[日付範囲・rows/columnsの契約](OFFICIAL_MCP_MANUAL.md#get_ohlcv)に従って実応答を解釈します。columnsの上限8000や日付指定対応は、確定足・価格調整・母集団全件の完全性を保証しません。以下の条件/filter検証は2026-10-26の記録を維持します。
 
 列説明ではADX/AO/ATRP/BB/MACD/RSI/Stoch等に時間足接尾辞の案内があります。`1,5,15,30,60,120,240,1W,1M`等の表記はToolのinterval引数と別です。第2ラウンドで`|60`/`|240`/`|1W`の数値取得に成功した組合せがありますが、`|1D`は試した列でnullでした。`RSI|60`・`RSI7|240`のfilter指定は無視されました。列接尾辞とfilter指定は別契約であり、実際の数値取得と`ignored_filters`を個別に確認します。TechRatingのvariantsは`TechRating_1m`〜`TechRating_1M`型で、別形式です。
+
+第3ラウンド（2026-10-27 21:03〜21:09 JST）の直接MCP Readでは、`search_symbols`が返した先物root（`OSE:NK225`、`CME:NQ`、`COMEX:GC`、`NYMEX:MCL`）は一括quoteでmissingとなる一方、Screenerから発見した**別の連続先物・別の商品クラスを含む識別子**（`OSE:NK225M1!`、`CME_MINI:NQ1!`、`COMEX:GC1!`、`NYMEX:CL1!`）は価格取得できました。これらをルートの確定的な別名変換と扱いません。米10年国債利回り`TVC:US10Y`は価格取得できてもRSI/SMA25/EMA50と出来高はnull、DXY`TVC:DXY`も出来高nullでした。先物連続と限月付きで同じcloseでもEMA50が異なる実例があります。詳しくは[公式MCPマニュアル](OFFICIAL_MCP_MANUAL.md)を参照してください。
 
 ## 公式Preset 6種類
 
