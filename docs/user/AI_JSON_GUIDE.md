@@ -16,12 +16,12 @@
 
 ## AIによる方式選択フロー
 
-先に市場・元の母集団・条件・処理順・ランキング件数・時間足/指標期間・基準日時・保存・Jobの要否を固定します。そのうえで、**直接取得 → 既存ラッパーによる処理 → 必要時だけ外部母集団**の順に調査します。最初からJPX一覧のダウンロードや全銘柄OHLCV取得を前提にしません。
+先に市場・元の母集団・条件・処理順・取得範囲・ランキング件数・時間足/指標期間・基準日時・保存・Jobの要否を固定します。そのうえで、**公式MCPのScreener/Discovery → 既存の型付きReadの組合せ → 必要時の公式OHLCVからのローカル計算 → 制約の報告・選択肢の提示**の順に調査します。外部データ取得は標準フォールバックに含めません。
 
 ### Step 1：標準Screeningで直接実現できるか
 
 - 上記README・本ガイド・FEATURES・SCREENING_MANUAL、実Schemaとサンプルを読み、`run_screener`の市場・母集団・条件・指標・並び順で依頼を表せるか調べる。
-- [条件カタログ](SCREENER_CONDITIONS.md)の基準日・検証範囲と[最新の公式Provider資料](https://www.tradingview.com/mcp/docs)を確認し、必要なら既存`TradingViewClient.get_screener_columns()`で列・時間足・期間を調査する。**列の取得対応と同名のfilter対応は別**であり、Schemaが文字列を受理するだけでは対応済みとしない。未知のfilter・引数・市場指定を作らない。
+- [条件カタログ](SCREENER_CONDITIONS.md)の基準日・検証範囲と[最新の公式Provider資料](https://www.tradingview.com/mcp/docs)を確認し、必要なら既存`TradingViewClient.get_screener_columns()`等の少量Readで列・時間足・期間を調査する。**列の取得対応と同名のfilter対応は別**。Discoveryや列検索で見つからないだけで不存在と断定せず、未確認と非対応を根拠付きで分ける。Schemaが文字列を受理するだけでも対応済みとせず、未知のfilter・引数・市場指定を作らない。
 - 指標の対象市場・期間・価格基準・日時、条件の適用順を確認する。返却の`ignored_filters`等、実際の条件適用、`totalCount`と取得件数・完全性を確認し、条件の無視や切捨てを成功にしない。無視の申告がないだけでも適用を保証しない。
 - 単一JSONで正しく実現できるなら**方式Aを最優先**し、`screenings/*.json`を作る。Jobは依頼された場合だけ作り、通常条件ごとのPython/BATは増やさない。
 
@@ -31,16 +31,18 @@ JSONでは表せない場合、実装済み`TradingViewClient`と型付きReques
 
 候補抽出を使うなら、本来の該当銘柄がすべて候補集合に含まれる根拠を確認します。必要条件による絞込みか、取得上限で切れていないか、元の市場/母集団と処理順を保つかを検証してください。出来高上位100件を全プライムの代理にする等、取りこぼす候補取得を無断で採用しません。網羅性を確認できない候補は評価範囲を限定して報告し、完全な抽出とはしません。
 
-### Step 3：母集団を確定できない場合だけ外部一覧を使う
+### Step 3：制約を報告し、変更・外部データ利用は承諾を得る
 
-Step 1・2の既存ラッパーで要求された母集団を正しく確定できない場合に限り、JPX等の公式・信頼できる外部銘柄一覧を使います。出典・データ基準日、市場変更・新規上場等の差分、TradingViewシンボルへの対応、未対応・欠損・取得失敗を記録します。外部一覧が必要かは調査結果と理由を示して判断し、常に必須と案内しません。
+公式MCPだけで元の母集団・条件を成立させられない場合は、調べたRead/引数・確認済み制限・未検証事項と不足データを説明します。未確認なら必要な少量Readによる調査を続け、調査できない理由も示します。JPX・Yahoo Finance等への自動フォールバックや、代表銘柄への置換で成功にしません。
+
+**条件・母集団の変更と、外部データの取得・利用は、ユーザーの明示的な依頼・承諾がある場合だけです。** 「このツールで作成・実行」は外部データ利用の承諾を含まず、JPXのように外部データの出典が公式でも、承諾なしに取得しません。必要なら変更点を示した選択肢として提案し、承諾前は実行しません。承諾済みの外部利用は別の拡張処理とし、公式MCPの取得経路・結果の出所と分離してproductionへ混入させません。出典・基準日・期中異動・シンボル対応・完全性等は下記の追跡契約に従います。
 
 **作成と完全取得の成功保証は別です。** 事前の全件保証や接続確認が揃わなくても、実用可能ならスクリプトを作成し、実行時に評価済/未評価/失敗件数・完全性を検証します。必要データや接続が使えない時は具体的な不足条件と未実行/失敗状態を示し、架空データや別母集団で成功にしません。作成だけの依頼で実取得せず、実行も依頼され環境が利用可能なら実行・検証します。明示依頼のないWriteやScheduler登録・削除は行いません。
 
 | 希望 | 選択 | 成果物・理由 |
 | --- | --- | --- |
 | 対応済みの市場・filter・sort・limit・columns、任意のsymbolset・preset | **A：標準JSON** | 単一Screeningで表現可能。Screening JSON、必要な場合だけJob JSON |
-| 複数段階の抽出、ランキング確定後の別時間足判定、外部母集団との照合が必要 | **B：複合Python** | 単一JSONには段階・結合・後段判定を記述できない。Pythonと必要設定・依存・起動手順 |
+| 複数段階の抽出、ランキング確定後の別時間足判定、承諾済み外部母集団との照合 | **B：複合Python** | 単一JSONには段階・結合・後段判定を記述できない。Pythonと必要設定・依存・起動手順 |
 | 直接のProvider指標や全件保証を事前確認できないが、既存Readラッパーとデータ処理で実用可能 | **B：作成し、制約を明記** | 直接指標・一括取得を先に調べ、必要ならOHLCV計算。外部母集団はStep 3の条件時だけ使う。作成を完全取得の成功とは扱わない |
 | 必要データ・接続が利用できない | **制約と実行状態を報告** | 作成可能な成果物と不足条件を示す。実行不能なら未実行、実行失敗なら失敗とし、架空データや別母集団で成功にしない |
 
@@ -48,7 +50,7 @@ Step 1・2の既存ラッパーで要求された母集団を正しく確定で�
 
 元の市場・母集団・条件・閾値・時間足・指標期間・処理順を保持します。直接対応が未確認なのか、試した指定が非対応だったのかを[カタログの状態区分](SCREENER_CONDITIONS.md#状態と今回の確認範囲)で示し、方式Bの既存Read・Python処理で元の要求を実現できるか先に調べます。実用可能な方式Bを、直接filterがないという理由で打ち切りません。
 
-条件の変更が必要なら、Providerで確認できた代替案を**最大3件程度**に絞り、各案で元の要求から変わる市場/母集団・条件・閾値・時間足・期間と、検証状態・制約を説明します。元の条件を方式Bで保てる場合は、その方法も選択肢に含めます。**利用者の承諾なしに変更案を採用・実行しません。** 元の要求どおりの方式Bの作成・依頼済み実行には、代替案の承諾待ちを追加しません。
+条件の変更が必要なら、Providerで確認できた代替案や外部データ利用案を**最大3件程度**に絞り、各案で元の要求から変わる市場/母集団・条件・閾値・時間足・期間・取得元と、検証状態・制約を説明します。元の条件を方式Bで保てる場合は、その方法も選択肢に含めます。**利用者の承諾なしに変更案や外部データ利用を採用・実行しません。** 元の条件を保つ公式MCPによる方式Bの作成・依頼済み実行には、追加の承諾待ちを設けません。
 
 簡単な依頼で長い条件一覧を毎回表示せず、条件を尋ねられた時や要求の変更が必要な時だけ、該当項目を簡潔に提示します。
 
@@ -58,11 +60,11 @@ Step 1・2の既存ラッパーで要求された母集団を正しく確定で�
 
 **ケースB：「グロース市場全体を対象に日足出来高上位100件を確定してから、1時間足RSI14が40以下の銘柄を抽出する」→ 方式B。** 「母集団を確認 → 日足出来高で順位確定 → その100件だけに1時間足RSI14の判定 → 保存」という順序が必要。現行の単一Screening JSONには段階や独立した時間足の後段判定を表す項目がない。Job JSONも単一のScreening参照でこの順序を追加できない。
 
-最初からRSI条件を併用して取得すると、**RSI条件を満たす集合の出来高上位100件**になり、依頼と異なる。日本株の先頭1000件を取ってからグロース市場と照合しても、市場全体の上位100件とは保証できない。まず既存ラッパーで母集団・日足出来高→順位確定→1h RSI14直接取得を調べ、必要ならOHLCV計算へ進む。外部一覧は既存ラッパーで母集団を確定できない場合だけ使う。未取得があれば順位や判定の完全性を明示し、評価済範囲と元の母集団全体を区別する。この2例は方式選択の説明であり、実取得の成功を示すものではない。
+最初からRSI条件を併用して取得すると、**RSI条件を満たす集合の出来高上位100件**になり、依頼と異なる。日本株の先頭1000件を取ってからグロース市場と照合しても、市場全体の上位100件とは保証できない。まず既存ラッパーで母集団・日足出来高→順位確定→1h RSI14直接取得を調べ、必要ならOHLCV計算へ進む。母集団を確定できなければ制約を説明し、外部一覧は明示的な依頼・承諾後だけ使う。未取得があれば順位や判定の完全性を明示し、評価済範囲と元の母集団全体を区別する。この2例は方式選択の説明であり、実取得の成功を示すものではない。
 
 ## 母集団・完全性・テクニカル指標の検証契約
 
-「市場」「取引所」「上場区分」「全件」「ランキング」と「フィルタ適用順」を別々に固定します。`market=japan`は東証プライムの指定ではありません。出来高上位100件、手書きの代表銘柄一覧、先頭1000件を全上場銘柄の代わりにしません。Provider対応は[公式資料](https://www.tradingview.com/mcp/docs)、型付きRequest、必要なら既存Clientの`get_screener_columns`によるReadで確認します。列の存在だけでは、その市場でのフィルタ対応や期間・時間足まで保証しません。
+「市場」「取引所」「上場区分」「全件」「ランキング」と「フィルタ適用順」を別々に固定します。`market=japan`は東証プライムの指定ではありません。**プライム全体→主要63銘柄、全米株→S&P 500、市場全体→先頭1000件、指定指標期間→別期間を無断で変更しません。** 小規模Readのテスト結果は調査・部分確認であり、元の全件依頼の完了とは区別します。Provider対応は[公式資料](https://www.tradingview.com/mcp/docs)、型付きRequest、必要なら既存Clientの`get_screener_columns`によるReadで確認します。列の存在だけでは、その市場でのフィルタ対応や期間・時間足まで保証しません。
 
 - 対象母集団件数、評価済件数、未評価件数、失敗件数、完全性、対象時点を報告する。総件数不明は「不明」とし、未評価0とはしない。失敗件数は未評価のうち取得・計算等が失敗した件数として示し、二重加算しない。「母集団全体で該当0件」は必要な全対象を正常に評価できた場合にだけ結論とする。不完全な実行でも「評価済範囲では該当0件」と範囲を限定して報告できる。
 - 標準結果の`totalCount`は**その問合せ条件**の総件数、`returnedCount`は取得行数。`completeCoverage=true`でも別途確認していない上場母集団の完全性は示さない。現行Engineは`status=success`でも`completeCoverage=false`を返し得るため、成功ステータスだけで全件取得と説明しない。標準JSONにない評価件数等は検証報告で補い、結果Schemaを勝手に追加・変更しない。
@@ -81,7 +83,7 @@ Embedded PythonとホストPythonの`site-packages`を`sys.path`で混在させ�
 
 ## 「作成して実行」の完了契約
 
-1. 方式・データ取得可否・実行環境・接続・Read権限を確認する。依頼されたTradingView Readとローカル結果保存はその実行範囲に含む。新規認証や追加権限が必要なら環境上の制約を説明し、認証情報削除で解決しようとしない。
+1. 方式・データ取得可否・実行環境・接続・Read権限を確認する。「作成して実行」の依頼に対し、環境と権限が利用可能なら既存MCPのRead取得・計算・ローカル保存・結果検証まで行う。エージェントによる実行を一律禁止と解釈しない。できなければ実行環境・権限・認証・必要データのどこが使えないかと実際の根拠を示し、認証情報削除で解決しようとしない。
 2. 実行前の時刻と既存最新結果を控える。方式AはRead-onlyの`app.bat screen <name>`等、方式Bは作成したPythonを既存Embedded Python等で起動する。Jobの場合は実際の参照定義と`watchlistSync`等を確認し、暗黙のWriteがあれば実行しない。
 3. 実際のstdout、stderr、exit codeを確認する。exit 0だけで完了とせず、`status`・`errors`・coverageを調べる。診断ログの秘密値は報告しない。
 4. 新しい保存ファイルの実在、内容、今回の実行との対応を照合する。標準結果は`executedAt`、Screening名、条件のfingerprintを確認し、方式Bの別形式なら定義した実行日時・母集団・条件・評価/失敗件数を確認する。`results latest`は過去の成功結果を返し得るため、古いファイルを今回の成功証跡にしない。実行失敗と過去結果は分けて報告する。
@@ -97,14 +99,16 @@ Watchlist更新、Alert Write、Scheduler登録・削除、認証情報削除に
 
 | 入力ケース | 期待判断 | 不合格例 |
 | --- | --- | --- |
-| 東証プライム全体、SMA25乖離率+20%以上 | まずScreenerのプライム/SMA25/乖離率対応と期間・市場・日時を調べ、正しく表せればJSON。不可なら既存ラッパーの直接指標・一括取得、必要時のOHLCV計算を使うPython。母集団を確定できない場合だけJPX一覧を利用。実用可能なら作成し、実行依頼と環境があれば実行・検証 | 調査前からJPX一覧・全銘柄OHLCVを必須化。専用CLIがないだけで拒否。`limit=100`＋代表銘柄を全プライムとする。未取得/失敗を隠して全件success |
-| 日本株PER 0〜15、出来高順20件 | 同梱例とProvider対応を照合し標準JSONを優先。取得列とfilterを混同せず、20件のランキングとして報告 | 不要なPython/BAT、新規API、Schemaに通るだけの未知filter、上位20件を日本株全件とする |
-| 出来高上位100件を確定後、1h RSI14で判定 | 母集団→日足出来高の順位確定→100件のみ1h RSI14→保存を維持するPythonを作成。既存ラッパーで指標を取得、または1h OHLCVから定義したRSI14を計算。未取得による順位/判定の不完全さも報告する | RSI先行フィルタ、先頭1000件を市場全体とする、日足RSIで代用。指標の直接取得がないだけでOHLCV計算を諦める |
-| 全米株を条件なしで全件取得 | 現行Screenerの無条件一括取得制約・最大1000件・ページング未対応を説明。既存Readで元の母集団を確定できるか調べ、できない場合だけ同じ全米株定義を満たす外部一覧と分割取得を検討。実用可能なら作成し、完全性と実行状態を報告 | S&P 500、先頭1000件、空結果へ置換して全米株成功とする。Screener制約を全ラッパーの禁止とする |
+| 東証プライム全体、SMA25乖離率+20%以上 | 公式Screener/Discovery→既存Read→必要時の公式OHLCV計算を調べる。未確認なら断定せず調査し、元の母集団・条件が成立しなければ根拠と制約を報告。外部利用や条件変更は提案し承諾後だけ実行 | 未確認を非対応と断定、JPX自動取得、主要63銘柄・日本株全体へ無断変更、小規模確認を全件完了とする |
+| 日本株PER15倍以下、予想配当利回り3%以上 | 確認済みpe/div_yieldを使う標準JSONを優先。PERの下限・予想配当の基準を上記判定例に従い確認 | 不要なPython/BAT・外部データ、TTMへの無断変更 |
+| 指定3銘柄のSMA25計算 | 指定母集団を保持し、必要なら既存MCPのOHLCVを使うPython。上記の時系列・確定足・欠損・価格調整の契約を検証し、実行依頼と環境/権限があれば実行・結果検証 | 外部銘柄一覧の追加、別銘柄への置換、未検証の直近25行で成功扱い |
+| JPX公式一覧の利用を明示的に許可 | 承諾範囲で外部データを別の拡張処理として取得・利用可能。公式MCP経路と分離し、出典・基準日・対応付け・母集団完全性を検証 | 外部取得をproductionへ追加、承諾範囲外の取得先や母集団変更、外部データを公式MCP由来とする |
 
 [Issue #58](https://github.com/TakamKaji/tradingview_mcp_support/issues/58)の過去生成物`screen_prime_sma25.py`と`run-prime-sma25.bat`は、上記の母集団代替・失敗スキップ・旧BATパスの不合格例です。**元スクリプトの実際の実行失敗原因はログ未提出で未確定**です。文書上の不整合から全原因を断定せず、この個別スクリプトの修理・製品追加は行いません。この表はAIの期待判断であり、Provider実取得や各AIの遵守を実証するものではありません。
 
 ## 利用者が送る依頼文
+
+以下は**作成・ローカル検証だけを依頼するサンプル**です。「実取得しない」はこのサンプルの依頼範囲に限り、全作業共通の禁止ではありません。実際に「作成して実行」と依頼された場合は上記の[完了契約](#作成して実行の完了契約)を適用します。
 
 > https://github.com/TakamKaji/tradingview_mcp_support の `docs/user/AI_JSON_GUIDE.md` とリンク先の実仕様・Schema・サンプルを確認してください。私の希望から、単一Screening JSONで可能なら必ずJSON方式を選び、Jobは必要な場合だけ作成してください。表現できない複合処理だけPythonを選び、理由と必要なデータ・環境を説明してください。未確認の条件やAPIは創作せず、取得制限を明示してください。完成ファイル、保存先、検証・実行手順を教えてください。今回はファイル作成とローカル検証までとし、TradingViewへの実取得・書き込みとScheduler登録は行わないでください。
 
@@ -132,7 +136,7 @@ Pythonを必要とする依頼例：
 
 ## 方式B：Pythonの再利用箇所と境界
 
-**JSONでは表せない処理は、実装済み`TradingViewClient`と型付きRequestを使うPythonを作成します。** 調査順序は上記Step 1〜3に従い、既存指標の直接取得・一括取得を先に検討し、必要な場合にOHLCV計算へ進みます。外部母集団の利用は既存ラッパーで要求された母集団を確定できない場合に限ります。
+**JSONでは表せない処理は、実装済み`TradingViewClient`と型付きRequestを使うPythonを作成します。** 調査順序は上記Step 1〜3に従い、既存指標の直接取得・一括取得を先に検討し、必要な場合に公式OHLCVからのローカル計算へ進みます。外部データ利用の承諾はStep 3を正本とし、母集団が未確定というだけでは許可されません。
 
 汎用pipelineエンジンや複合処理専用CLIは未実装ですが、これは既存ラッパーを呼ぶPythonを作成・直接実行できないという意味ではありません。自作Pythonは標準`screen`やJobの`task.definition`にファイル名・Tool名を指定しても実行できず、既存builtinも任意Pythonの起動機構ではないため、作成したファイルを適切なPython環境から起動します。
 
@@ -145,14 +149,14 @@ Pythonを必要とする依頼例：
 | 結果保存 | [results.py](../../src/tradingview_screening/screening/results.py)。既存Screening結果契約に適合する場合だけ利用。任意Tool応答や外部データの自動保存・履歴比較はない |
 | 管理Watchlist同期 | [watchlist_sync.py](../../src/tradingview_screening/screening/watchlist_sync.py)と[managed_watchlists.py](../../src/tradingview_screening/screening/managed_watchlists.py)。管理対象識別・差分・ロック・書込後確認を維持する |
 
-**利用者にTradingView公式MCPサーバーをAI側へ別途登録・設定するよう要求しません。** 必要なのは既存ツールの実行環境とTradingViewの利用権限・既存認証です。独自のMCP通信・OAuth認証・TradingView用HTTPクライアント・token保存を再実装せず、他のMCPライブラリや非公式TradingView APIを勝手に導入しません。TradingViewのスクレイピング・無断のブラウザ操作や別MCPサーバーの導入も行いません。外部母集団は公開配布データや利用者提供ファイルを用い、TradingViewの通信経路は既存Clientに統一します。
+**利用者にTradingView公式MCPサーバーをAI側へ別途登録・設定するよう要求しません。** 必要なのは既存ツールの実行環境とTradingViewの利用権限・既存認証です。独自のMCP通信・OAuth認証・TradingView用HTTPクライアント・token保存を再実装せず、他のMCPライブラリや非公式TradingView APIを勝手に導入しません。TradingViewのスクレイピング・無断のブラウザ操作や別MCPサーバーの導入も行いません。承諾済みの外部母集団は公開配布データや利用者提供ファイルを別拡張として扱い、TradingViewの通信経路は既存Clientに統一します。
 
 Pythonラッパーの存在は、Providerの応答や全件取得の成功を保証しません。そのため、応答・欠損・エラーの検証を実装します。`get_ohlcv`自体は足の取得機能ですが、そのデータを使ったSMA25・乖離率・RSI14等の計算はローカルPythonで行えます。`get_technicals_rating`等で希望どおりの指標を直接取得できるかも調べ、取得できなければOHLCV計算へ進みます。**標準CLIに専用コマンドがない、またはScreenerに指標がないという理由だけで実装を諦めません。** 配布用コア・ラッパー・認証・通信層を変更しないことと、方式Bの利用者用Pythonを作成することを区別します。
 
 ### 東証プライムSMA25乖離率の組立手順
 
 1. 既存Screenerでプライム母集団・SMA25・乖離率を直接指定できるか、列/フィルタ・期間・基準日時・対象市場を調べる。単一JSONで正しく表せるなら方式Aを使い、JPX一覧やOHLCVの全銘柄取得を追加しない。
-2. 直接表せない時は方式Bとして既存Read関数を調べ、候補取得が真の該当集合を取りこぼさないことを検証し、既存指標の直接取得・一括取得を優先する。ラッパーで母集団を確定できない場合だけ[JPX公式一覧](https://www.jpx.co.jp/markets/statistics-equities/misc/01.html)等を利用し、基準日・期中異動・シンボル対応付けと未照合件数を記録する。
+2. 直接表せない時は方式Bとして既存Read関数を調べ、候補取得が真の該当集合を取りこぼさないことを検証し、既存指標の直接取得・一括取得を優先する。母集団を確定できなければStep 3に従い制約を報告し、JPX等の外部一覧は明示的な依頼・承諾があった場合だけ別拡張として利用する。
 3. ローカル計算が必要な場合に既存`TradingViewClient.get_ohlcv(GetOhlcvRequest(...))`で`interval="1D"`・`summary=false`の日足を取得する。返却を足配列と決めつけず、実際のResponse契約と応答例で格納場所・日時・値の形式を確認してから解釈する。進行中足を除いた25確定日足、NaN/Inf・欠損・重複・基準日・価格調整を検証する。
 4. ローカル計算経路ではPythonで25日SMAと`(基準終値/SMA25-1)*100`を計算して+20%以上を抽出する。非有限値・期間不足・日時不一致は評価不能とする。銘柄単位の回復可能な失敗は理由を残して継続し、共通認証/接続などで中断する場合は途中結果・未評価範囲・中断原因を保存する。NaN比較による偽の条件不適合や、例外の無言スキップを避ける。
 5. 元母集団と対象日時、評価済/未評価/失敗件数、銘柄別の欠損理由、取得/実行時刻、該当結果と完全性を保存する。事前の全件保証がなくても実用可能なスクリプトは作成し、部分結果を全プライム成功とは表示しない。
@@ -161,7 +165,7 @@ Pythonラッパーの存在は、Providerの応答や全件取得の成功を保
 ### データと失敗を追跡する
 
 - `ObservedReadResponse`は型付きの応答包絡であり、OHLCV配列そのものではない。`structured_content`の有無、`success`・`error`、Tool別の追加データやpartial/missing等を実際の応答と照合する。OHLCVの足配列・日時・終値等の内部構造は現行Responseモデルだけでは固定されないため、未確認の構造を捏造しない。構造不一致・Provider失敗・数値不正は未取得/失敗として扱い、正常な空データと区別する。
-- 外部の構成銘柄等は、出典URL、取得時刻（タイムゾーン付き）、対象日、母集団件数、欠落・重複、利用条件・ライセンス、取得制限と失敗時の挙動を示す。銘柄コードとTradingView symbolの対応・未照合件数も記録する。
+- 承諾済みの外部構成銘柄等は、出典URL、取得時刻（タイムゾーン付き）、対象日、母集団件数、欠落・重複、利用条件・ライセンス、取得制限と失敗時の挙動を示す。銘柄コードとTradingView symbolの対応・未照合件数も記録する。
 - 段階ごとの入力・取得・除外・残存件数と欠損理由、ランキング基準・対象日・同順位の扱いを記録する。母集団の確認とランキング全体の網羅性は別に検証する。`totalCount`と`returnedCount`、上位N件と全件を区別する。最大1000行・未確認のページングを全件取得手段として案内しない。
 - 日足出来高の対象日、RSIの出所・時間足・期間・更新時点、確定足/形成中の足を明示する。異なる日時の値を暗黙に同一視しない。時間足不明・欠損・部分取得なら「完全な上位100件」「全市場の該当銘柄」と報告しない。
 - 保存する段階別結果、実行時刻、エラー、完全性の根拠、最終結果形式を決める。複合処理・外部データを単一Screeningのfingerprintや`source=tradingview_official_mcp`だけで表したことにしない。既存契約に合わなければ拡張側の別形式・保存先を示し、標準`results`で読めると偽らない。
@@ -188,12 +192,12 @@ Pythonラッパーの存在は、Providerの応答や全件取得の成功を保
 Read the actual manuals, schemas, Provider-supported fields and bundled examples before choosing an implementation. Japanese documentation is authoritative. If files are inaccessible, ask for attachments or their contents; do not claim to have read them.
 
 - **A — standard JSON, always preferred when sufficient:** Create `screenings/<name>.json`; add `jobs/<name>.json` only when requested. Supported market/filter/sort/limit/columns/symbolset/preset combinations do not need custom Python or BAT files. Japanese stocks with PER/yield filters, volume descending and limit 20 belong here. Clarify PER bounds and forecast versus TTM yield; the bundled `div_yield` filter uses forecast yield.
-- **Discovery order:** First investigate run_screener and column/filter/timeframe support; use standard JSON whenever it can express the request correctly. Otherwise inspect the existing typed Read wrappers for candidate selection, direct indicators and batch reads before local OHLCV calculations. Candidates must not omit true matches. Use an external universe only when the wrappers cannot establish the requested population; a JPX download is not a default prerequisite.
+- **Discovery order:** Investigate official MCP screening and Discovery, then existing typed Read combinations, then local calculations from official OHLCV when needed. Distinguish unverified support from confirmed limitations; a missing search result does not prove absence. Report constraints if the original universe and conditions cannot be established. External data is never an automatic fallback: require explicit user instructions or consent, keep it in a separate extension, and preserve the official MCP path.
 - Consult the dated conditions catalog and current Provider specification. Distinguish unverified support from a rejected key. After investigating the original request through existing wrappers, offer at most about three verified alternatives when needed, explaining every changed constraint. Keep a viable original-condition Python option and obtain consent before adopting or executing a changed request. Do not display the entire catalog for simple requests.
 - Use the existing client, authentication and request governor; never require a separate TradingView MCP registration in the AI, reimplement MCP/OAuth/TradingView HTTP transport, or add another MCP library or unofficial API. Local extension calculations from validated OHLCV are allowed; production core changes are outside this workflow.
-- For Prime/SMA25, investigate direct screening first, then existing indicator reads; only fetch OHLCV or an external universe when needed. Validate the actual response structure, finite values, 25 completed daily bars, dates, duplicates and price adjustments. Create a practical script even without advance full-coverage assurance, record partial progress and failures, and verify execution when requested and available. Otherwise explain why it was not run; never label partial results as full success.
-- For external data, report source, retrieval time, universe count, missing/unmatched symbols, limits and usage terms. Track counts and errors per stage. Never describe partial retrieval as a complete universe, or convert failure into a successful empty Watchlist sync. Custom results need an explicit format and storage path; standard result history does not automatically support them.
+- For Prime/SMA25, investigate direct screening first, then existing indicator reads and official OHLCV calculations when needed. Never silently replace Prime with 63 stocks, the full US market with S&P 500, the universe with the first 1000 rows, or a requested period with another. Validate the actual response structure, finite values, 25 completed daily bars, dates, duplicates and price adjustments. Create a practical original-condition script when possible, record partial progress and failures, and verify execution when requested and available. Small tests do not complete the original full-universe request.
+- For explicitly authorized external data, report source, retrieval time, universe count, missing/unmatched symbols, limits and usage terms. Track counts and errors per stage. Never describe partial retrieval as a complete universe, or convert failure into a successful empty Watchlist sync. Custom results need an explicit format and storage path; standard result history does not automatically support them.
 - ChatGPT provides complete files and save instructions; ordinary chat cannot install them on the user's PC. Codex saves and validates in an accessible local environment. For Python, provide actual paths, dependencies, interpreter, working directory, launch command and result-reading instructions. Report unverified steps honestly.
-- File creation, offline validation, live reads and writes are separate actions. Keep Watchlist writes and scheduling disabled initially; never write to TradingView or register/remove scheduled tasks without explicit user instructions. Sync adds/removes symbols, and a valid empty result clears the managed Watchlist. The bundled `sample_screen_daily` enables writes; `schedule apply` affects **all enabled jobs**.
+- A request to create and run authorizes official MCP Read, local calculations, saving and result verification when the environment and permissions are available. A sample prompt saying not to fetch data limits only that sample; it is not a general execution ban. If blocked, identify the specific environment, permission, authentication or data constraint. Keep Watchlist writes and scheduling disabled initially; never write to TradingView or register/remove scheduled tasks without explicit user instructions. Sync adds/removes symbols, and a valid empty result clears the managed Watchlist. The bundled `sample_screen_daily` enables writes; `schedule apply` affects **all enabled jobs**.
 
 [AI CLI操作](AI_USAGE.md) / [利用者マニュアル](README.md)
