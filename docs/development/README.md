@@ -20,6 +20,7 @@
 | 公式MCPの根拠資料 | [公式資料への参照先](TRADINGVIEW_MCP_OFFICIAL_REFERENCE.md)、[公式の現行ページ](https://www.tradingview.com/mcp/docs) |
 | 全Toolマニュアル・条件カタログの根拠と未確認事項 | [2026-10-26の静的・少量Read検証](MCP_MANUAL_VERIFICATION_2026-10-26.md) |
 | 全35 Toolの機能同等性・OHLCV引数拡張 | [2026-10-27の監査・Read検証](MCP_PARITY_AUDIT_2026-10-27.md) |
+| AI Screeningの外部利用承諾・実行範囲 | [2026-10-27の文書・4ケース検証](AI_SCREENING_CONSENT_VERIFICATION_2026-10-27.md) |
 
 全米株の取得は未対応です。仕様書[19.3](tradingview_screening_system_spec.md#193-phase-9-coverage契約とprovider制約2026-09-27)のblocking limitationを維持し、[19.5](tradingview_screening_system_spec.md#195-builtin-job保存scheduler)の同梱`us_sector_morning.enabled=false`を変更しません。S&P 500限定503件・20分類の実測は全米株成功の根拠にはなりません。[Issue #18](https://github.com/TakamKaji/tradingview_mcp_support/issues/18)で追跡します。
 
