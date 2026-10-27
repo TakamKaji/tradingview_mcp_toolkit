@@ -396,7 +396,7 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | --- | --- | --- | --- |
 | `symbol` | 必須 | string | 未記載 |
 
-2026-10-27の**公式MCP直接観測（第2・第5ラウンド）**では、トヨタ・ソニーに加え、三菱UFJ（8306）・日立（6501）でもraw予想EPS/売上と`get_forecasts`の比率が期間別に同一でした（次FQ `157.4059499449`倍、次FY `158.7805652588`倍、基本EPS TTM `162.6280696048`倍）。価格・財務・forecast表示通貨はJPYですが、予想対象期末・換算元通貨・適用レートは取得できず、**変換の原因は未確定**です。AppleとTSM ADRでは数値のある次FQ/FY予想がrawと一致しましたが、検証対象の全海外銘柄への一般化はできません。4日本株の`get_forecasts`は`success:true`でも`target_mismatch:true`で目標株価がnullとなり、raw目標の値が存在することは品質ガードを迂回してよい根拠ではありません。`quality_note`・通貨・単位・期間を検証できるまで、これらの予想を自動換算したり予想PER/成長率/目標株価へ結合したりしません。
+2026-10-27の**公式MCP直接観測（第2・第5ラウンド）**では、トヨタ・ソニーに加え、三菱UFJ（8306）・日立（6501）でもraw予想EPS/売上と`get_forecasts`の比率が期間別に同一でした（次FQ `157.4059499449`倍、次FY `158.7805652588`倍、基本EPS TTM `162.6280696048`倍）。価格・財務・forecast表示通貨はJPYですが、予想対象期末・換算元通貨・適用レートは取得できず、**変換の原因は未確定**です。AppleとTSM ADRでは数値のある次FQ/FY予想がrawと一致しましたが、検証対象の全海外銘柄への一般化はできません。4日本株の`get_forecasts`は`success:true`でも`target_mismatch:true`で目標株価がnullとなり、raw目標の値が存在することは品質ガードを迂回してよい根拠ではありません。`quality_note`・通貨・単位・期間を検証できるまで、これらの予想を自動換算したり予想PER/成長率/目標株価へ結合したりしません。**画面との追加照合（ユーザーによる2026-10-27の確認）**：日立製作所のTradingView画面にEPS **176.99 JPY**と表示され、公式MCPのraw列`earnings_per_share_basic_ttm=176.9908`を小数2位へ丸めた値と一致。対照の`get_forecasts.estimates.eps_ttm=1.0883164292`とは約162.628倍異なります。**画面のEPS表示対象期間・基本/希薄化のUIラベルは未照合**ですが、この数値一致は少なくともraw TTM値の表示整合性を支持します。全日本株のraw値の正確性まで保証しません。
 
 根拠：[公式のget_forecasts](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
