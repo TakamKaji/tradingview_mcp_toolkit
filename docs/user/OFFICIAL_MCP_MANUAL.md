@@ -653,7 +653,7 @@ limit上限2000。取得したmessageや配信状態に個人情報が含まれ�
 
 ## Screening・指標・複合処理の使い分け
 
-対応する単一条件は[標準JSON](SCREENING_MANUAL.md)が第一候補です。条件名・取得列・Presetの違いは[条件カタログ](SCREENER_CONDITIONS.md)を使い、直接取得→既存ラッパーの組合せ→母集団が確定できない場合だけ外部一覧の順に調べます。
+対応する単一条件は[標準JSON](SCREENING_MANUAL.md)が第一候補です。条件名・取得列・Presetの違いは[条件カタログ](SCREENER_CONDITIONS.md)を使い、公式MCPの直接取得→既存Readの組合せ→必要時の公式OHLCVからの計算を調べます。元の母集団・条件が成立しなければ、未確認と非対応を区別して制約を報告します。外部データは自動フォールバックせず、明示的な依頼・承諾後だけ別拡張として利用します。判断規則の正本は[AIガイド](AI_JSON_GUIDE.md)です。
 
 既存指標はget_symbol_data/batchやget_technicals_ratingで調べ、期間・足が合えば再計算を避けます。SMA25等が直接取れなければget_ohlcvによるローカルPython計算も選択肢です。NaN/欠損・25確定日足・時系列・重複・日時・価格調整を検証し、部分結果を全件成功としません。
 
