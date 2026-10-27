@@ -27,7 +27,7 @@
 
 ### Step 2：既存ラッパーのReadを組み合わせられるか
 
-JSONでは表せない場合、実装済み`TradingViewClient`と型付きRequestの`run_screener`、`get_screener_columns`、`get_symbol_data`、`get_symbol_data_batch`、`get_technicals_rating`、`get_ohlcv`、`search_symbols`を調べます。Screenerの候補抽出→既存指標の直接取得・一括取得→必要ならOHLCVからのローカル計算、という処理で**方式BのPythonを作成**します。2026-10-27の別環境での公式MCP直接実行では、列DiscoveryのSMA検索が不一致でも`SMA25`をScreener取得列・単体・一括Readで利用できました（[条件カタログ](SCREENER_CONDITIONS.md)）。**この観測は本ラッパーでの再現成功を意味しません**が、Discovery不一致のみで直接取得経路を打ち切らないでください。専用CLIや直接指標がないという理由だけで実装不能としません。
+JSONでは表せない場合、実装済み`TradingViewClient`と型付きRequestの`run_screener`、`get_screener_columns`、`get_symbol_data`、`get_symbol_data_batch`、`get_technicals_rating`、`get_ohlcv`、`search_symbols`を調べます。Screenerの候補抽出→既存指標の直接取得・一括取得→必要ならOHLCVからのローカル計算、という処理で**方式BのPythonを作成**します。2026-10-27の別環境での公式MCP直接実行では、列DiscoveryのSMA検索が不一致でも`SMA25`をScreener取得列・単体・一括Readで利用できました（[条件カタログ](SCREENER_CONDITIONS.md)）。**この観測は本ラッパーでの再現成功を意味しません**が、Discovery不一致のみで直接取得経路を打ち切らないでください。後続の直接実験では`SMA13`/`EMA25`/`RSI7`、`RSI|60`/`EMA25|1W`等も数値取得できました。一方、`EMA25`/`SMA13`はfilterで`ignored_filters`に入りました。希望する期間・時間足の列を少数銘柄で試してから、別途filter対応を確認します。専用CLIや直接指標がないという理由だけで実装不能としません。
 
 候補抽出を使うなら、本来の該当銘柄がすべて候補集合に含まれる根拠を確認します。必要条件による絞込みか、取得上限で切れていないか、元の市場/母集団と処理順を保つかを検証してください。出来高上位100件を全プライムの代理にする等、取りこぼす候補取得を無断で採用しません。網羅性を確認できない候補は評価範囲を限定して報告し、完全な抽出とはしません。
 
@@ -165,6 +165,8 @@ Pythonラッパーの存在は、Providerの応答や全件取得の成功を保
 ### データと失敗を追跡する
 
 - `ObservedReadResponse`は型付きの応答包絡であり、OHLCV配列そのものではない。`structured_content`の有無、`success`・`error`、Tool別の追加データやpartial/missing等を実際の応答と照合する。OHLCVの足配列・日時・終値等の内部構造は現行Responseモデルだけでは固定されないため、未確認の構造を捏造しない。構造不一致・Provider失敗・数値不正は未取得/失敗として扱い、正常な空データと区別する。
+- 公式MCP直接観測ではRead 18 Tool・40呼出しのうち9件はProviderの`success`キーがなく、経済カレンダーは`status:ok`を返しました。ツールごとの応答構造を確認し、`success`キー欠如だけで失敗とは判定しません。逆に`success:true`でも`missing_count`・`ignored_filters`・nullを確認します。PowerShellで`RSI`と`rsi`が共存するJSONを解析する場合、通常の`ConvertFrom-Json`はエラーとなるため`-AsHashtable`を利用できます。これは**公式MCP直接実験での知見**であり、ラッパー全Toolの受入成功ではありません。
+- 財務・カレンダー・ニュース・文書をPythonで組み合わせる場合、`period=fy`でもPERがTTMの例、予想株価の`target_mismatch`、銘柄別配当の指定日付窓外データ、ニュースASTのJSON文字列と文書ASTのオブジェクト差などに注意します。個別の実機観測・未確認範囲は[公式MCP機能マニュアル](OFFICIAL_MCP_MANUAL.md)を参照します。
 - 承諾済みの外部構成銘柄等は、出典URL、取得時刻（タイムゾーン付き）、対象日、母集団件数、欠落・重複、利用条件・ライセンス、取得制限と失敗時の挙動を示す。銘柄コードとTradingView symbolの対応・未照合件数も記録する。
 - 段階ごとの入力・取得・除外・残存件数と欠損理由、ランキング基準・対象日・同順位の扱いを記録する。母集団の確認とランキング全体の網羅性は別に検証する。`totalCount`と`returnedCount`、上位N件と全件を区別する。最大1000行・未確認のページングを全件取得手段として案内しない。
 - 日足出来高の対象日、RSIの出所・時間足・期間・更新時点、確定足/形成中の足を明示する。異なる日時の値を暗黙に同一視しない。時間足不明・欠損・部分取得なら「完全な上位100件」「全市場の該当銘柄」と報告しない。
