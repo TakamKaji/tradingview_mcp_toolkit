@@ -1,0 +1,768 @@
+{
+  "retrievedAt": "2026-10-27T08:41:12.544059+09:00",
+  "provenance": {
+    "source": "Official TradingView MCP tools/list inputSchema",
+    "kind": "derived structural test contract",
+    "excluded": [
+      "raw descriptions",
+      "titles",
+      "examples",
+      "tool prose"
+    ]
+  },
+  "tools": {
+    "mcp-tv-create-alert": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string"
+        },
+        "expiration": {
+          "type": "string"
+        },
+        "auto_deactivate": {
+          "type": "boolean"
+        },
+        "email": {
+          "type": "boolean"
+        },
+        "mobile_push": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "popup": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "conditions": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "patternProperties": {
+        "^(webhook|monitor)$": true
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-delete-alert": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-alerts": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-alerts-log": {
+      "type": "object",
+      "properties": {
+        "days": {
+          "type": "integer"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-dividends-calendar": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "market": {
+          "type": "string"
+        },
+        "date_from": {
+          "type": "string"
+        },
+        "date_to": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-document-view": {
+      "type": "object",
+      "properties": {
+        "view_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "view_id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-documents": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "start_date": {
+          "type": "string"
+        },
+        "end_date": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-earnings-calendar": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "date_from": {
+          "type": "string"
+        },
+        "date_to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-economic-calendar": {
+      "type": "object",
+      "properties": {
+        "countries": {
+          "type": "string"
+        },
+        "currencies": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "date_from": {
+          "type": "string"
+        },
+        "date_to": {
+          "type": "string"
+        },
+        "min_importance": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-economic-data": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "date_from": {
+          "type": "string"
+        },
+        "date_to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-economic-symbols": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "search": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-financial-history": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string"
+        },
+        "date_from": {
+          "type": "string"
+        },
+        "date_to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-financials": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "metric": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "period": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-forecasts": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-news": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "lang": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-news-story": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lang": {
+          "type": "string"
+        },
+        "user_prostatus": {
+          "type": "string"
+        },
+        "user_country": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-ohlcv": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "date_from": {
+          "type": "string"
+        },
+        "date_to": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-screener-columns": {
+      "type": "object",
+      "properties": {
+        "market": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "search": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-get-symbol-data": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "columns": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-symbol-data-batch": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "columns": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-get-technicals-rating": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-list-alerts": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "active": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-restart-alerts": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-run-screener": {
+      "type": "object",
+      "properties": {
+        "market": {
+          "type": "string"
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "sort_by": {
+          "type": "string"
+        },
+        "sort_order": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "columns": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "symbol_types": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "filter_preset": {
+          "type": "string"
+        },
+        "symbolset": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-tv-search-symbols": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "type_filter": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-stop-alerts": {
+      "type": "object",
+      "properties": {
+        "alert_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "alert_ids"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-tv-update-alert": {
+      "type": "object",
+      "properties": {
+        "alert_id": {
+          "type": "integer"
+        },
+        "message": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "expiration": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "auto_deactivate": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "email": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "mobile_push": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "popup": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      },
+      "required": [
+        "alert_id"
+      ],
+      "patternProperties": {
+        "^(webhook)$": true
+      },
+      "additionalProperties": false
+    },
+    "mcp-watchlist-add-to-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string"
+        },
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "watchlist_id",
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-create-watchlist": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp-watchlist-delete-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "watchlist_id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-get-active-watchlist": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "mcp-watchlist-get-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "watchlist_id"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-list-watchlists": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "mcp-watchlist-remove-from-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string"
+        },
+        "symbols": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "watchlist_id",
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "mcp-watchlist-update-watchlist": {
+      "type": "object",
+      "properties": {
+        "watchlist_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "watchlist_id"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1136,7 +1136,7 @@ V1実装時点で、公式ドキュメントに掲載されている全35 Tool�
 
 | Tool | 種別 | 機能 | 主な引数 |
 |---|---|---|---|
-| `get_ohlcv` | Read | OHLCVバー取得 | `symbol` 必須, `interval?`, `count?`, `summary?` |
+| `get_ohlcv` | Read | OHLCVバー取得 | `symbol` 必須, `interval?`, `count?`, `summary?`, `date_from?`, `date_to?`, `format?` |
 | `get_economic_data` | Read | 経済指標時系列 | `symbol` 必須, `date_from?`, `date_to?` |
 | `get_economic_symbols` | Read | 経済指標Ticker検索 | `country?`, `category?`, `search?` |
 
@@ -1146,7 +1146,7 @@ V1実装時点で、公式ドキュメントに掲載されている全35 Tool�
 1m / 5m / 15m / 30m / 1h / 4h / 1D / 1W / M / 1mo / month
 ```
 
-`count` は現行最大5000本。
+`count` は形式省略/`rows`で最大5000本、`columns`で最大8000本（2026-10-27のDiscovery説明と短期間Readで確認）。`date_from/date_to`は有効なYYYY-MM-DDまたは時差付きRFC3339、両端を含む範囲。省略した新引数は送信せず、明示nullは不可。詳細・確認範囲は[機能同等性監査](MCP_PARITY_AUDIT_2026-10-27.md)を参照。
 
 ## 20.3 Symbol search — 1
 

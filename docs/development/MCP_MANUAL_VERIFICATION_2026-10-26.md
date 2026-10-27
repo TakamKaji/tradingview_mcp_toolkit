@@ -136,3 +136,13 @@ Windowsのapp.bat / setup.bat / scripts/setenv.bat / scripts/development/console
 ## 配布方針
 
 README2言語・利用者文書6ファイル（新規2を含む）を配布対象コミットとし、本記録・開発索引を別コミットにする。develop向けPRは1本。main反映が必要になった別の配布工程で、レビュー・merge後の実コミットを確認し、配布対象だけをcherry-pick -xする。develop全体をmainへmergeしない。
+
+## PR #63・#65統合追記（2026-10-27）
+
+上記は10/26時点の契約・実測記録として保持する。[PR #63](https://github.com/TakamKaji/tradingview_mcp_support/pull/63)はMerge Commit `0095ee99d427e7463a569eedf6386f4485ce2b7e`でdevelopへ反映した。配布対象04c8eac・開発専用d5d5125の履歴を保持している。
+
+そのdevelopを[PR #65](https://github.com/TakamKaji/tradingview_mcp_support/pull/65)へ通常merge `b219917bf9ac2dc89648ca7bce64cd1960bb3b28`で統合し、開発索引の競合は両方の記録へのリンクを保持して解消した。73c411b・a0defe9を保持し、mainは変更しない。
+
+統合後の[マニュアル](../user/OFFICIAL_MCP_MANUAL.md#get_ohlcv)は現行110引数（OHLCV7引数）へ更新した。date_from/date_to/format、rows5000/columns8000、両応答形式・カーソル保持・省略互換を記載。8000指定は実取得5本の既存Read結果に限る。上記の107引数・旧4引数やDiscovery差分は実装前の記録であり、現在の未対応を示さない。
+
+新しいProvider Readは不要であり、[10/27監査の既存実機結果](MCP_PARITY_AUDIT_2026-10-27.md#少量read実機確認)を再利用する。統合後の検証・配布対象コミット・マージ結果はPR #65と下記監査の統合追記を参照する。

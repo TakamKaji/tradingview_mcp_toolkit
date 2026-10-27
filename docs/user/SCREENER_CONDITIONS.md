@@ -69,6 +69,8 @@
 RSI|60
 ```
 
+OHLCVを使うローカル計算では、[日付範囲・rows/columnsの契約](OFFICIAL_MCP_MANUAL.md#get_ohlcv)に従って実応答を解釈します。columnsの上限8000や日付指定対応は、確定足・価格調整・母集団全件の完全性を保証しません。以下の条件/filter検証は2026-10-26の記録を維持します。
+
 列説明ではADX/AO/ATRP/BB/MACD/RSI/Stoch等に時間足接尾辞の案内があります。`1,5,15,30,60,120,240,1W,1M`等の表記はToolのinterval引数と別です。RSIの1h以外の各組合せやfilterへの転用は今回未検証です。TechRatingのvariantsは`TechRating_1m`〜`TechRating_1M`型で、別形式です。
 
 ## 公式Preset 6種類

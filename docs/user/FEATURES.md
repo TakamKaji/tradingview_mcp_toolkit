@@ -46,7 +46,9 @@ Pythonラッパーはアプリへ組み込むためのAPIです。既存の認�
 
 ### ローソク足取得の範囲
 
-公式`get_ohlcv`は指定銘柄・時間足の始値、高値、安値、終値、出来高を取得するRead Toolです。本ツールには`TradingViewClient.get_ohlcv`と`GetOhlcvRequest`があります。Requestで指定できる項目は`symbol`、`interval`、`count`、`summary`で、countの上限は5000です。Providerの新しい引数がすべてラッパーに追加されているとは限りません。
+公式`get_ohlcv`は指定銘柄・時間足の始値、高値、安値、終値、出来高を取得するRead Toolです。本ツールには`TradingViewClient.get_ohlcv`と`GetOhlcvRequest`があります。従来の`symbol`、`interval`、`count`、`summary`に加え、`date_from`・`date_to`で両端を含む日付範囲、`format`で`rows`（足ごとの配列）/`columns`（各項目の配列）を指定できます。日付は有効な`YYYY-MM-DD`または時差付きRFC3339です。count上限は形式省略/rowsで5000、columnsで8000です。新引数を省略すれば従来どおりProviderの既定値を使います。
+
+2026-10-27の既存Clientによる少量Readで、日付指定・両形式の値の一致・columnsのcount=8000指定（実取得5本）を確認しました。8000本全件の取得保証ではありません。応答の`has_more`・`next_date_to`を確認し、遡る場合も日時・重複・欠損・完全性を検証してください。Providerの新しい引数がすべてラッパーに追加されているとは限りません。
 
 **本ツールのCLIにはローソク足取得コマンドがなく、Jobのtask.definitionにget_ohlcvを指定して動かすこともできません。** 定期取得、ローソク足の自動ファイル保存・履歴管理を行うJobは未実装です。ニュース・財務・評価指標も、Python APIの存在だけで定期Job対応とは扱いません。
 
