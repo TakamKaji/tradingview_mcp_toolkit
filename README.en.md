@@ -104,6 +104,7 @@ Detailed manuals are currently written in **Japanese**.
 | --- | --- |
 | Setup and authentication | [Windows](docs/user/WINDOWS_SETUP.md) / [Docker](docs/user/DOCKER.md) |
 | Features and configuration | [Feature coverage](docs/user/FEATURES.md) / [Screening](docs/user/SCREENING_MANUAL.md) |
+| Official MCP capabilities and condition discovery | [All-tool manual](docs/user/OFFICIAL_MCP_MANUAL.md) / [Screener conditions catalog](docs/user/SCREENER_CONDITIONS.md) (Japanese) |
 | Results and automation | [Results/history/compare](docs/user/RESULTS.md) / [Jobs/Scheduler](docs/user/SCHEDULE_MANUAL.md) |
 | More | [Watchlist sync](docs/user/WATCHLIST_SYNC.md) / [Using the CLI with AI](docs/user/AI_USAGE.md) / [Troubleshooting](docs/user/TROUBLESHOOTING.md) |
 

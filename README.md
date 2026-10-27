@@ -106,6 +106,7 @@ CSV・HTMLの作成は`export-results.bat`（Windows）またはDocker内の`tra
 | --- | --- |
 | 導入・認証 | [Windows](docs/user/WINDOWS_SETUP.md) / [Docker](docs/user/DOCKER.md) |
 | 機能・条件作成 | [機能一覧](docs/user/FEATURES.md) / [Screening](docs/user/SCREENING_MANUAL.md) |
+| 公式MCPで取得できる情報・条件探索 | [全Toolマニュアル](docs/user/OFFICIAL_MCP_MANUAL.md) / [スクリーニング条件カタログ](docs/user/SCREENER_CONDITIONS.md) |
 | 保存・自動化 | [結果・履歴・比較](docs/user/RESULTS.md) / [Job・Scheduler](docs/user/SCHEDULE_MANUAL.md) |
 | その他 | [Watchlist同期](docs/user/WATCHLIST_SYNC.md) / [AIからのCLI利用](docs/user/AI_USAGE.md) / [トラブル対応](docs/user/TROUBLESHOOTING.md) |
 
