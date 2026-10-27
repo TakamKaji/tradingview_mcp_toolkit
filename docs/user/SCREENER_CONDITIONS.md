@@ -49,7 +49,7 @@
 | 負債/資本 | — | — | `debt_to_equity_fq` | stock一覧、FQ | 列取得のみ確認（一覧） |
 | 流動比率 | — | — | `current_ratio_fq` | stock一覧、FQ | 列取得のみ確認（一覧） |
 | RSI（既定） | `rsi` | `[null,40]` | `RSI` / `rsi`。明示`RSI14`は日米2銘柄でnull | Japan、1Dの`RSI`は14期間Wilder計算と近似一致 | 既定列でのRead・filter確認済み。`RSI14`表記の値取得は失敗（原因未確定） |
-| 1時間足/4時間足RSI | `RSI|60`・`RSI7|240`はfilterで無視 | 不合格：`RSI|60:[80,100]` / `RSI7|240:[80,100]` | `RSI7|60`、`RSI|240`、`RSI7|240`等 | TSE:7203、NASDAQ:AAPL | 直接MCPで値取得成功例あり。ただし上記filterは`ignored_filters`、日中足のローカル計算と微差・原因未確定 |
+| 1時間足/4時間足RSI | `RSI|60`・`RSI7|240`はfilterで無視 | 不合格：`RSI|60:[80,100]` / `RSI7|240:[80,100]` | `RSI7|60`、`RSI|240`、`RSI7|240`等 | TSE:7203、NASDAQ:AAPL | 直接MCPで数値取得成功。第4ラウンドではToyotaの形式差を実取得rowsの終値で照合すると各時間足7指標一致。Appleはrows/columns各600本一致でも直接指標差が未解決。上記filterは`ignored_filters` |
 | MACD | `MACD.macd`、`MACD.signal` | `[0,1]`（両者別々に試験） | `MACD.macd` / `MACD.signal`、`MACD.macd|240` / `MACD.signal|1W`等 | 日経225 symbolsetの1D filter、TSE:7203とNASDAQ:AAPLの派生値 | 1D filter適用済み（225→1件/2件）。時間足filter・任意MACDパラメータは未確認 |
 | ストキャスティクス | — | — | カタログ`Stoch`、technicals応答`oscillators.stoch_k/stoch_d` | 既知銘柄1D | 列一覧/Read応答項目のみ確認。`Stoch`をそのままfilterにしない |
 | SMA20/50等 | — | — | technicals応答`moving_averages.sma20/sma50`等 | 既知銘柄1D | Read応答項目のみ確認。Screener列名ではない |
@@ -73,7 +73,7 @@
 RSI|60
 ```
 
-OHLCVを使うローカル計算では、[日付範囲・rows/columnsの契約](OFFICIAL_MCP_MANUAL.md#get_ohlcv)に従って実応答を解釈します。columnsの上限8000や日付指定対応は、確定足・価格調整・母集団全件の完全性を保証しません。以下の条件/filter検証は2026-10-26の記録を維持します。
+OHLCVを使うローカル計算では、[日付範囲・rows/columnsの契約](OFFICIAL_MCP_MANUAL.md#get_ohlcv)に従って実応答を解釈します。第4ラウンドの公式MCP直接ReadではToyotaの過去1h/4hバーでrowsとcolumnsのclose・volumeが異なり、Appleは両format一致でも直接日中指標との差が残りました。**format間の完全一致と、直接指標に対する一致は別の検査**です。独自RSI48/96/192の600本計算には初期値差が残り、期間N本だけで精度を保証しません。columnsの上限8000や日付指定対応は、確定足・価格調整・母集団全件の完全性を保証しません。以下の条件/filter検証は2026-10-26の記録を維持します。
 
 列説明ではADX/AO/ATRP/BB/MACD/RSI/Stoch等に時間足接尾辞の案内があります。`1,5,15,30,60,120,240,1W,1M`等の表記はToolのinterval引数と別です。第2ラウンドで`|60`/`|240`/`|1W`の数値取得に成功した組合せがありますが、`|1D`は試した列でnullでした。`RSI|60`・`RSI7|240`のfilter指定は無視されました。列接尾辞とfilter指定は別契約であり、実際の数値取得と`ignored_filters`を個別に確認します。TechRatingのvariantsは`TechRating_1m`〜`TechRating_1M`型で、別形式です。
 
