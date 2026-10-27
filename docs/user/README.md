@@ -12,6 +12,8 @@
 | 任意：自分のJob・Windowsの定期実行 | [Jobの作成手順と全文JSON](SCHEDULE_MANUAL.md#自分のjobを作る) |
 | AIと会話してScreeningを作成（JSON優先・複合処理はPython） | [AI共通Screening生成ガイド](AI_JSON_GUIDE.md) |
 | AIに操作を頼む | [AIからのCLI利用](AI_USAGE.md) |
+| 公式MCPの取得・filter・財務値の実測制約 | [Provider確認済み事項](PROVIDER_VERIFICATION.md) |
+| 初見Gemini/Codex/Claudeの独立受入 | [自然言語スクリーニング受入](NATURAL_LANGUAGE_ACCEPTANCE.md) |
 | 失敗したとき | [トラブル対応](TROUBLESHOOTING.md) |
 
 コマンドは展開フォルダのコマンドプロンプトで実行します。エクスプローラーのアドレス欄に`cmd`と入力すると、そのフォルダで開けます。PowerShellを使う場合は`app.bat`を`.\app.bat`に読み替えてください。
