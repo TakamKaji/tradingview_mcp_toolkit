@@ -396,7 +396,7 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | --- | --- | --- | --- |
 | `symbol` | 必須 | string | 未記載 |
 
-2026-10-27の公式MCP直接観測では、トヨタとソニーの応答は`success:true`でも`target_mismatch:true`のため目標株価がnullでした。一方`get_symbol_data_batch`のraw列には両社の目標株価があり、raw予想EPS/売上と`get_forecasts`との比率は同じ対象期間で両社共通（次FQ約157.406倍、次FY約158.781倍、EPS TTM約162.628倍）でした。取得通貨は両社ともJPYですが、換算の出所・期間・単位の定義は**未確定**です。Appleの同じ比較値は一致しました。`quality_note`・通貨・単位・期間を確認するまで相互代用や自動換算はしません。
+2026-10-27の**公式MCP直接観測（第2・第5ラウンド）**では、トヨタ・ソニーに加え、三菱UFJ（8306）・日立（6501）でもraw予想EPS/売上と`get_forecasts`の比率が期間別に同一でした（次FQ `157.4059499449`倍、次FY `158.7805652588`倍、基本EPS TTM `162.6280696048`倍）。価格・財務・forecast表示通貨はJPYですが、予想対象期末・換算元通貨・適用レートは取得できず、**変換の原因は未確定**です。AppleとTSM ADRでは数値のある次FQ/FY予想がrawと一致しましたが、検証対象の全海外銘柄への一般化はできません。4日本株の`get_forecasts`は`success:true`でも`target_mismatch:true`で目標株価がnullとなり、raw目標の値が存在することは品質ガードを迂回してよい根拠ではありません。`quality_note`・通貨・単位・期間を検証できるまで、これらの予想を自動換算したり予想PER/成長率/目標株価へ結合したりしません。
 
 根拠：[公式のget_forecasts](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -482,7 +482,7 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | `date_from` | 省略可 | string | today |
 | `date_to` | 省略可 | string | +180d |
 
-日付はYYYY-MM-DDまたはRFC3339。日付範囲を広げても全決算履歴にならない。履歴はget_financial_historyや文書で検討する。10/27の直接MCP ReadではAppleの次回予定を返しましたが、トヨタは0件でした。第2ラウンドではトヨタ/ソニー/三菱UFJの2026〜2027年の広い窓でも0件なのに、同日の`get_symbol_data_batch`でトヨタ/ソニーの次回決算予定が窓内で取得できました。市場・Toolごとの取得経路差や欠損原因は未確定です。0件を無発表・非対応と断定せず、指定窓外の直近報告日が同一行に併記され得る点にも注意します。
+日付はYYYY-MM-DDまたはRFC3339。日付範囲を広げても全決算履歴にならない。履歴はget_financial_historyや文書で検討する。10/27の直接MCP ReadではAppleの次回予定を返しましたが、トヨタは0件でした。第2ラウンドではトヨタ/ソニー/三菱UFJの2026〜2027年の広い窓でも0件なのに、同日の`get_symbol_data_batch`でトヨタ/ソニーの次回決算予定が窓内で取得できました。第5ラウンドでは2026-10-01〜12-31窓の3銘柄一括指定で、raw次回日時が11/5のトヨタ・11/10のソニーは**返却なし**、11/2のAppleだけ返却され`next_date_confirmed:true`でした。市場・Toolごとの取得経路差や欠損原因は未確定です。**0件を無発表・予定なし・通知不要と断定しない**でください。raw次回日時も独立した会社発表で確定したものとは扱いません。指定窓外の直近報告日が同一行に併記され得る点にも注意します。
 
 根拠：[公式のget_earnings_calendar](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -519,7 +519,7 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | `date_to` | 省略可 | string | +30d |
 | `limit` | 省略可 | integer、上限200 | 50 |
 
-銘柄モードsymbolsと市場モードmarketを区別する。市場モードのlimit上限200。2026-10-27の公式MCP直接Readでは`symbols:[TSE:7203,NASDAQ:AAPL]`と2025年の日付窓を指定しても、Appleの2026年の直近配当情報が返りました。**銘柄モードで指定日付に制限された履歴を取得できたとは扱いません**。トヨタ0件を無配や日本株非対応とは断定しません。第2ラウンドではソニー/三菱UFJもsymbolsモード0件でしたが、`market:japan`かつ2026年9月の権利落ち日範囲では3件を取得し、全3件の**recent権利落ち日**が指定窓内でした。ただし全件網羅は未検証です。`dividend_amount`はrecent額ではなくupcoming額と一致する例があり、`*_recent`と`*_upcoming`の日付・金額は同じsuffix同士で扱ってください。
+銘柄モードsymbolsと市場モードmarketを区別する。市場モードのlimit上限200。2026-10-27の公式MCP直接Readでは`symbols:[TSE:7203,NASDAQ:AAPL]`と2025年の日付窓を指定しても、Appleの2026年の直近配当情報が返りました。**銘柄モードで指定日付に制限された履歴を取得できたとは扱いません**。トヨタ0件を無配や日本株非対応とは断定しません。第2ラウンドではソニー/三菱UFJもsymbolsモード0件でしたが、`market:japan`かつ2026年9月の権利落ち日範囲では3件を取得し、全3件の**recent権利落ち日**が指定窓内でした。第5ラウンドではmarketで確認したその同じ3銘柄（3659/6191/8708）をsymbolsで9月窓と2026〜2027年窓に指定しても**全件0件**でした。期間の狭さでは説明できず原因未確定で、0件を無配当と解釈しません。marketをlimit5へ増やすと5行になりましたがtotalCount/cursorがなく、日本株配当の全件網羅は未確認です。`dividend_amount`はupcoming額（なければrecent額）と一致する例があり、**正式な優先規則は未確認**。またmarketの`dividends_yield`とrawの`dividends_yield_current`には大きな値差の例があり、同一指標と決めつけません。`*_recent`と`*_upcoming`の日付・金額は同じsuffix同士で扱い、recent権利落ち日にgeneric金額を自動紐付けしません。
 
 根拠：[公式のget_dividends_calendar](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -724,6 +724,19 @@ Windowsのコマンドプロンプトではリポジトリルートで`call scri
 - **長期RSI：** ローカルWilder RSI48/96/192は取得600本でもseed・履歴長の感度が残りました。例えばApple 1h RSI96の600本でseed差約0.244、RSI192では約5.165。これは**ローカル計算値のみ**であり、公式Provider RSI48/96/192の直接列に成功した証拠ではありません。必要な履歴を追加し、結果の収束を計測します。固定本数で精度を保証しません。
 
 重要な判定は**成功応答とデータ整合性は別**という点です。OHLCVのformat、取得した期間、UTC時点、セッション、バー確定状態、基礎系列と再計算指標を記録し、不一致のまま自動で直接指標と同一視しないでください。実行根拠は会話添付`tradingview_mcp_capability_matrix_round4.md`／`tradingview_mcp_probe_evidence_round4.json`（調査用データはGitHubに転載しない）です。
+
+### 第5ラウンド公式MCP直接観測：日本株の予想・財務・イベント品質
+
+2026-10-27 21:36〜21:37 JSTに公式MCP直接Read **9種類・20回**を実施。Provider `success:true`16件、`success:false`1件（列Discoveryで`currency`検索が該当なし）、`success`キーなし3件（文書系）。**MCP `isError:false` は20件すべて**。Write・ラッパー経由の新規テスト・製品コード変更はありません。
+
+- **予想値：** 日本株4銘柄の共通倍率は次FQ/EPS・売上`157.4059499449`倍、次FY/EPS・売上`158.7805652588`倍、EPS TTM`162.6280696048`倍（raw値 ÷ `get_forecasts`値）。倍率の原因は不明であり、**FX換算の証明・自動補正係数ではありません**。円表示だけで単位や期間を確定しない。TSM ADRは値があるFQ/FY予想のraw/forecast一致、基本EPS TTMは双方nullで「一致した値」に数えない。
+- **財務期間・EPS：** `period:ttm`でも裸`net_income`はFYと一致しTTMとは異なる（トヨタ/Apple）。`period`切替時はraw名のmetricを渡しても返却suffixが切り替わり得ます。Apple FY履歴EPS=7.465は希薄化後EPSと一致、`eps` aliasで返る基本EPS=7.4931とは異なります。全体の統一ルールとは断定せず、suffix・会計期末・基本/希薄化後を毎回保存します。
+- **年度ラベルと文書：** Toyotaの財務履歴FYラベル`2025`は末尾raw実績FY期末2026-03-31、文書FY2026 Q4と対応し、ラベルをそのまま企業FY名へ置き換えるとずれます。Toy​​ota文書要約の「売上・純利益とも前年比増加」は同年度の純利益実績の前年比**19.2439%減**と矛盾しました。原本PDFは未照合のため、要約もraw履歴も正本扱いしないでください。
+- **決算予定：** 同じ10〜12月窓内にraw次回日があるトヨタ（11/5）・ソニー（11/10）が`get_earnings_calendar`で欠落、Apple（11/2）は返却。イベントの0件を「予定なし」へ変換しない。
+- **配当予定：** 日本株のmarket指定では9月窓で3銘柄（追加検証では5行）が取得できた一方、そのうち3銘柄はsymbols指定の同じ窓・広い窓で0件。recent/upcomingのex-date・payment-date・amountは対応suffix同士を比較した3銘柄でraw値と一致（null同士の一致は取得成功とは数えない）。同日の支払日表示の確定性、generic額/yieldの定義、market全件性は未確認。
+- **Discovery不一致：** `get_screener_columns(search=currency,market=stock)`は該当なしでも`get_symbol_data_batch`で`currency`と`fundamental_currency_code`が9銘柄とも非null。カタログ検索の空をフィールド取得非対応とは扱いません。
+
+AI企業分析では、確認できた**実績の明示suffix値**を、通貨・期末・EPS定義を保持して条件付き採用します。raw予想・生の目標株価・カレンダー・配当は検証待ちとし、日本株`get_forecasts`の未検証単位による自動評価、品質ガード迂回、カレンダー0件による通知抑止、要約の増減方向の無検証採用を避けます。調査証跡は会話添付`tradingview_mcp_capability_matrix_round5.md`と`tradingview_mcp_probe_evidence_round5.json`（GitHubに生応答全文を転載しない）です。
 
 ## Provider制限・プラン・安全性
 
