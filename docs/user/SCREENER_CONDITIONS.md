@@ -17,7 +17,7 @@
 
 `get_screener_columns(market="stock")`は**17分類・163列**を返しました。valuation 20列・technicals 26列をgroupで詳細取得し、SMA/EMA/primeをsearchしました。これは固定保証の件数ではありません。表の32項目は用途別の索引で、動的な全列を無差別に転記したものではありません。
 
-10/27の公式MCP直接実行（本リポジトリのClientは未使用）では、`run_screener`の取得列`SMA25`、`get_symbol_data`、`get_symbol_data_batch`からSMA25実値を確認しました。続く第1ラウンド（19:26〜19:27 JST、18 Read Tool・40回）では、列一覧にない`SMA13`/`EMA13`/`EMA25`/`RSI7`、時間足指定`RSI|60`/`EMA25|1W`/`MACD.macd|60`等の直接値取得を確認しました。`price_vs_sma25_pct`と`market_segment`をfilterに渡すと`ignored_filters`で無視されました。公式公開ページ自体はSMA25列やそのfilterの対応を明記していません。これらは**直接接続で試した指定についての観測**であり、別alias・全市場・ラッパー経由での新規再実行の成功保証ではありません。
+10/27の公式MCP直接実行（本リポジトリのClientは未使用）では、`run_screener`の取得列`SMA25`、`get_symbol_data`、`get_symbol_data_batch`からSMA25実値を確認しました。続く第1ラウンド（19:26〜19:27 JST、18 Read Tool・40回）では、列一覧にない`SMA13`/`EMA13`/`EMA25`/`RSI7`、時間足指定`RSI|60`/`EMA25|1W`/`MACD.macd|60`等の直接値取得を確認しました。`price_vs_sma25_pct`と`market_segment`をfilterに渡すと`ignored_filters`で無視されました。公式公開ページ自体はSMA25列やそのfilterの対応を明記していません。第2ラウンド（19:55〜19:59 JST、12 Read Tool・50回）の検証では、`RSI24/48/96/192`・`SMA48/96/192`・`EMA48/96/192`はトヨタとAppleでnullとなり、**一部期間で値を取得できることは任意整数期間の対応を意味しない**と確認しました。nullの理由は未確定です。これらは**直接接続で試した指定についての観測**であり、別alias・全市場・ラッパー経由での新規再実行の成功保証ではありません。
 
 ## 市場・銘柄集合・時間足を先に固定する
 
@@ -25,7 +25,7 @@
 - `symbol_types`は銘柄種別（公式例`["stock"]`）。株式/ETF等の種別と国・取引所・上場区分は別です。`get_screener_columns.market`は`stock/etf/crypto/bond/all`であり`japan`は渡しません。
 - `symbolset`は明示集合。公式例`["SYML:SP;SPX"]`はS&P 500で、全米株ではありません。`filters.index`の指数指定と同じ意味になるかは個別に確認します。
 - `market=japan`は東証プライムを意味しません。prime検索で該当列を発見できなかったことだけで、直接指定の不存在を断定しません。母集団の確定方法を既存Readから調べ、成立しなければ制約を報告します。外部一覧の取得・利用はユーザーの明示的な依頼・承諾後だけです。
-- 日足/1h、指標期間、対象日、確定/進行中足を区別します。列説明にある時間足派生と実際のfilter対応は別です。今回`RSI|60`の値取得を確認しましたが、1h RSI14の期間同一性やfilter対応は未検証です。
+- 日足/1h、指標期間、対象日、確定/進行中足を区別します。列説明にある時間足派生と実際のfilter対応は別です。`RSI|60`や`RSI7|240`は直接値取得に成功しましたが、両方をScreenerのfilterに使った試験は`ignored_filters`に入りました。1h RSIの計算定義や確定足の同一性は未確認です。
 
 ## 主条件・取得項目の索引
 
@@ -48,14 +48,14 @@
 | ROE | — | — | `return_on_equity_ttm` | stock一覧、TTM | 列取得のみ確認（一覧） |
 | 負債/資本 | — | — | `debt_to_equity_fq` | stock一覧、FQ | 列取得のみ確認（一覧） |
 | 流動比率 | — | — | `current_ratio_fq` | stock一覧、FQ | 列取得のみ確認（一覧） |
-| RSI | `rsi` | `[null,40]` | `RSI` | Japan、列説明は既定1D。期間14の同一性は未照合 | 公式仕様確認・実機確認済み（3件の閾値適合） |
-| 1時間足RSI | 時間足filterは— | — | `RSI|60` | TSE:7203、1h派生列 | 直接MCPで値取得済み。1h filter・RSIの平滑化/価格源は未確認 |
-| MACD | — | — | `MACD.macd` / `MACD.signal`、`MACD.macd|60` / `MACD.signal|60` | TSE:7203の1h派生値 | 公式MCP直接観測で両1h列の数値取得済み。期間設定・filter未確認 |
+| RSI（既定） | `rsi` | `[null,40]` | `RSI` / `rsi`。明示`RSI14`は日米2銘柄でnull | Japan、1Dの`RSI`は14期間Wilder計算と近似一致 | 既定列でのRead・filter確認済み。`RSI14`表記の値取得は失敗（原因未確定） |
+| 1時間足/4時間足RSI | `RSI|60`・`RSI7|240`はfilterで無視 | 不合格：`RSI|60:[80,100]` / `RSI7|240:[80,100]` | `RSI7|60`、`RSI|240`、`RSI7|240`等 | TSE:7203、NASDAQ:AAPL | 直接MCPで値取得成功例あり。ただし上記filterは`ignored_filters`、日中足のローカル計算と微差・原因未確定 |
+| MACD | `MACD.macd`、`MACD.signal` | `[0,1]`（両者別々に試験） | `MACD.macd` / `MACD.signal`、`MACD.macd|240` / `MACD.signal|1W`等 | 日経225 symbolsetの1D filter、TSE:7203とNASDAQ:AAPLの派生値 | 1D filter適用済み（225→1件/2件）。時間足filter・任意MACDパラメータは未確認 |
 | ストキャスティクス | — | — | カタログ`Stoch`、technicals応答`oscillators.stoch_k/stoch_d` | 既知銘柄1D | 列一覧/Read応答項目のみ確認。`Stoch`をそのままfilterにしない |
 | SMA20/50等 | — | — | technicals応答`moving_averages.sma20/sma50`等 | 既知銘柄1D | Read応答項目のみ確認。Screener列名ではない |
 | SMA25 | 数値filterは未確認 | — | `SMA25`（Screener・単体・一括Readで値取得）。`get_technicals_rating`の確認済み応答にはなし | Japan/TSE、日足との値照合は代表1銘柄 | 公式MCP直接観測（2026-10-27）。列DiscoveryのSMA検索は一致なし。filter対応は未確認 |
 | SMA25乖離率 | `price_vs_sma25_pct`は無視 | 不合格：`price_vs_sma25_pct:[20,null]` | `close`と`SMA25`を取得し`(close/SMA25-1)*100`を計算 | 価格とSMAの基準時点・確定足に注意 | 公式MCP直接観測で当該filterは無視。他の直接filterは未確認 |
-| 任意期間MA/RSIの値取得 | `EMA25`/`SMA13`はfilterで無視 | 不合格：`EMA25:[0,null]`、`SMA13:[0,null]` | `SMA13`、`EMA13`、`EMA25`、`RSI7`、`SMA25|60`、`EMA25|1W` | TSE:7203で直接Read（10/27第1ラウンド） | 列Discoveryに見えない期間も値取得成功。ただしfilterは別契約、全期間・全銘柄保証なし |
+| 一部の期間変更MA/RSI | `RSI7`はfilter適用、`EMA25`/`SMA13`は無視 | 合格：`RSI7:[80,100]`。不合格：`EMA25:[0,null]`等 | 数値：`RSI7/9/21`、`SMA13/21/25`、`EMA13/21/25`等。null：`RSI24/48/96/192`、`SMA48/96/192`、`EMA48/96/192` | TSE:7203、NASDAQ:AAPL（9/21はToyotaのみ） | 公式MCP直接観測。列Discoveryで見つからなくても取得可能な場合あり。ただし**任意整数期間対応ではない**。nullの内部原因不明 |
 | EMA50/200 | — | — | `EMA50` / `EMA200` | america、oversold_healthy応答 | 列取得のみ確認（値）。EMA検索だけでは発見できなかった |
 | EMA乖離率 | — | — | `price_vs_ema50_pct` / `price_vs_ema200_pct` | 同上、% | 列取得のみ確認（応答の値）。直接filter未確認 |
 | ボラティリティ | — | — | `Volatility.D` | TSE:7203単体Read | 列取得のみ確認（値）、計算基準/filterは未確認 |
@@ -75,7 +75,7 @@ RSI|60
 
 OHLCVを使うローカル計算では、[日付範囲・rows/columnsの契約](OFFICIAL_MCP_MANUAL.md#get_ohlcv)に従って実応答を解釈します。columnsの上限8000や日付指定対応は、確定足・価格調整・母集団全件の完全性を保証しません。以下の条件/filter検証は2026-10-26の記録を維持します。
 
-列説明ではADX/AO/ATRP/BB/MACD/RSI/Stoch等に時間足接尾辞の案内があります。`1,5,15,30,60,120,240,1W,1M`等の表記はToolのinterval引数と別です。RSIの1h以外の各組合せやfilterへの転用は今回未検証です。TechRatingのvariantsは`TechRating_1m`〜`TechRating_1M`型で、別形式です。
+列説明ではADX/AO/ATRP/BB/MACD/RSI/Stoch等に時間足接尾辞の案内があります。`1,5,15,30,60,120,240,1W,1M`等の表記はToolのinterval引数と別です。第2ラウンドで`|60`/`|240`/`|1W`の数値取得に成功した組合せがありますが、`|1D`は試した列でnullでした。`RSI|60`・`RSI7|240`のfilter指定は無視されました。列接尾辞とfilter指定は別契約であり、実際の数値取得と`ignored_filters`を個別に確認します。TechRatingのvariantsは`TechRating_1m`〜`TechRating_1M`型で、別形式です。
 
 ## 公式Preset 6種類
 
