@@ -71,7 +71,7 @@
 
 「公式既定」は公開ページに明記された値だけを記載し、「未記載」はProviderの既定値が不明です。型や上限に通っても意味・対応市場・フィルタ適用・利用権限は別途検証します。日付をstringとして受理することと、Providerの期間指定に適合することも別です。
 
-全メソッドは非同期です。`TypedToolResponse`は`structured_content`と`content`を分離します。`ObservedReadResponse`はその内側のsuccess/error/count/missing_count等を型検証し、Tool別の追加データを保持します。これは足/記事/銘柄の完全固定Schemaではありません。型付き包絡を配列として扱わず、実応答・success/partial/missing・単位/日時/欠損を確認してください。下記の「主な内容」は用途の説明で、全キーの存在保証ではありません。
+全メソッドは非同期です。`TypedToolResponse`は`structured_content`と`content`を分離します。`ObservedReadResponse`はその内側のsuccess/error/count/missing_count等を型検証し、Tool別の追加データを保持します。これは足/記事/銘柄の完全固定Schemaではありません。2026-10-27の公式MCP**直接実行**では18 Read Tool・40回中、Providerの`success:true`が31回、`success`キーなし9回（うち経済カレンダー3回は`status:ok`）でした。Toolごとに成功の表現が異なり、`success`欠落だけを失敗と決めません。反対に`success:true`でも`ignored_filters`・`missing`・各列のnull・取得範囲を検査します。型付き包絡を配列として扱わず、実応答・success/partial/missing・単位/日時/欠損を確認してください。下記の「主な内容」は用途の説明で、全キーの存在保証ではありません。
 
 ## Watchlists
 
@@ -206,7 +206,7 @@ IDでリストを削除する。利用例：利用者が対象を明示して削
 
 生の足を使う場合は`summary=False`を指定します。実測では`structured_content`直下の`bars`が、rowsでは`t,o,h,l,c,v`を持つ足ごとの辞書配列、columnsでは`t/o/h/l/c/v`それぞれの配列を持つ辞書でした。tはUTC Unix秒です。`ObservedReadResponse.structured_content`はモデルなので、辞書で扱う場合は`response.model_dump(mode="json")["structured_content"]`を使います。`has_more`・`next_date_to`等は追加応答項目として保持されますが、自動ページングはしません。遡る場合は返却されたnext_date_toを使い、重複・欠損・対象日時・完全性を検証します。
 
-2026-10-27の少量Readで、日付/RFC3339・rows/columns全OHLCV値の一致・カーソル遡り・旧引数の互換を確認しました。columnsのcount=5001/8000指定は5営業日windowで受理され、実取得は5本です。**8000本全件の取得成功を意味しません。** 巨大応答、全期間、価格調整、確定足の完全性は未確認です。
+2026-10-27の少量Readで、日付/RFC3339・**限定した短い期間の**rows/columns全OHLCV値の一致・カーソル遡り・旧引数の互換を確認しました。**第4ラウンドの長い系列・特定日付窓では形式による値差も再現**されており、rows/columnsの同一性を一般保証しません。columnsのcount=5001/8000指定は5営業日windowで受理され、実取得は5本です。**8000本全件の取得成功を意味しません。** 巨大応答、全期間、価格調整、確定足の完全性は未確認です。別セッションの直接MCP Readでは`count=9000,summary=true`を短い18本窓に指定しても拒否されませんでしたが、実取得上限の突破は示しません。返却noticeは形成中足の可能性、通常取引時間、株式分割調整について注意喚起しており、確定足フラグの存在は未確認です。第2ラウンドの公式MCP直接Readでは、同じ5本のrows/columns全OHLCVが一致し、Apple日足と1h/4hの同取引日最終closeに343.91/343.99の差がありました。350本から算出した日足RSI7/SMA13/EMA13は直接列と一致した一方、日中足のRSI/EMA/MACDには差が残りました。**続く第4ラウンドではToyotaの日中足の差は過去バーの形式別値差で数値上説明でき、Appleの日中足では未解決のまま**です。さらに`count=9000,summary=true`ではAppleの日足6,744本を**集計**できましたが、生バーを6,744本取得したわけではなく、rows5000/columns8000の生データ上限は未検証です。
 
 根拠：[公式のget_ohlcv](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -225,6 +225,8 @@ IDでリストを削除する。利用例：利用者が対象を明示して削
 | `date_to` | 省略可 | string | 未記載 |
 
 symbolはget_economic_symbolsで確認したECONOMICS:コード。date_from/date_toは日付文字列で、対象期間の提供可否は別に確認する。
+
+10/27の公式MCP直接Readでは、米国金利・インフレ・失業率が2026年1〜9月の月次9点を返し、`unit:%/scale:100`でも`value`は4.0等の百分率表示値でした。`scale`を無条件に乗算せず、公表時刻・改定値・提供遅延を別に扱います。
 
 根拠：[公式のget_economic_data](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -257,6 +259,8 @@ categoryはローカル列挙値。country=国コード、searchは部分検索�
 | `query` | 必須 | string | 未記載 |
 | `type_filter` | 省略可 | string：stock, etf, bond, forex, index, futures, crypto, all | all |
 
+第3ラウンドの公式MCP直接Readでは、`search_symbols`が返した先物rootが`get_symbol_data_batch`ではmissingになる例がありました。検索はfuzzy候補の発見であり、価格Read可能な識別子の保証ではありません。先物は`run_screener`のmarket/exchangeとtype/subtype/descriptionから連続・限月識別子を発見し、その**返却された正確なシンボル**で少量Readを検証します。金先物・原油先物ではrootから連続・標準/Microなど商品が変わるため、自動的な別名変換をしません。米10年利回りは`type_filter:index`検索で見つからず、型指定なしで`TVC:US10Y`（`type:bond`）を確認しました。
+
 根拠：[公式のsearch_symbols](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
 ## Screener
@@ -271,6 +275,8 @@ categoryはローカル列挙値。country=国コード、searchは部分検索�
 | --- | --- | --- | --- |
 | `symbol` | 必須 | string | 未記載 |
 | `columns` | 省略可 | 配列<string> / null | name, description, close, change, change_abs, volume, market_cap_basic, price_earnings_ttm, sector, industry |
+
+10/27第2ラウンドの**公式MCP直接観測**では`RSI7/9/21`、`SMA13/21`、`EMA13/21`等が数値を返した一方、`RSI14/24/48/96/192`、`SMA48/96/192`、`EMA48/96/192`は指定した日米2銘柄でnullでした。既定`RSI`は14期間Wilder計算と近似一致しても**明示`RSI14`はnull**で、任意整数期間の取得を保証しません。列名の大小文字も個別確認が必要です（例：`RSI7`は数値、`rsi7`はnull）。詳細は[条件カタログ](SCREENER_CONDITIONS.md)。
 
 根拠：[公式のget_symbol_data](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -292,7 +298,7 @@ categoryはローカル列挙値。country=国コード、searchは部分検索�
 | `filter_preset` | 省略可 | string：pullback_with_reversal, breakout_with_volume, oversold_healthy, earnings_runup, relative_strength, new_highs | 未記載 |
 | `symbolset` | 省略可 | 配列<string> / null | 未記載 |
 
-最大1000行。offset/page/cursorはRequestにない。market=japanと東証プライムは同一ではない。条件名・取得列・Presetは条件カタログを参照。
+最大1000行。offset/page/cursorはRequestにない。market=japanと東証プライムは同一ではない。10/27第2ラウンドの**公式MCP直接観測**では、日経225 symbolsetで`RSI7:[80,100]`が225→3件、`MACD.macd:[0,1]`が225→1件、`MACD.signal:[0,1]`が225→2件となり、取得全行が条件に適合しました。対して`RSI|60`・`RSI7|240`・`SMA96`・`EMA96`は`ignored_filters`に入りました。**単体Readで取得できる列でもfilterに利用可能とは限りません**。第3ラウンドの公式MCP直接Readでは、S&P 500の`symbolset:["SYML:SP;SPX"]`でstock 503/503行、NASDAQ 100のindex filterで型省略101/101行、stock限定98/98行、日経225の`symbolset:["SYML:TVC;NI225"]`でstock 225/225行を取得（重複0）しました。NASDAQ 100の差3行は`type:"dr"`のARM/ASML/PDDで、**指数全構成員の依頼に`symbol_types:["stock"]`を安易に追加すると欠落**します。`filters.index:"nikkei 225"`は成功0行、`filters.index:"TOPIX"`は明示拒否でした。全返却はProviderが定義する集合の完全取得であり、指数算出元との独立の網羅性保証ではありません。条件名・取得列・Presetは条件カタログを参照。
 
 根拠：[公式のrun_screener](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -307,7 +313,7 @@ categoryはローカル列挙値。country=国コード、searchは部分検索�
 | `symbols` | 必須 | 配列<string>、最大要素数50 / null | 未記載 |
 | `columns` | 省略可 | 配列<string> / null | get_symbol_dataと同じ |
 
-symbolsは50要素まで。missing、success=false、partial/warningsを別々に確認する。
+symbolsは50要素まで。missing、success=false、partial/warningsを別々に確認する。10/27の公式MCP直接観測では重複と無効銘柄を混ぜた4入力から有効2件、`missing_count:1`を`success:true`かつ`partial`キーなしで返したため、`success:true`を全銘柄成功と扱いません。
 
 根拠：[公式のget_symbol_data_batch](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -374,7 +380,7 @@ limit上限200、公開説明の取得範囲は合計最大200見出し。offset
 | `user_prostatus` | 省略可 | string：pro, non_pro | non_pro |
 | `user_country` | 省略可 | string | 未記載 |
 
-langは任意文字列。user_prostatus/user_countryは表示条件で、契約プランの権限を上書きする引数ではない。
+langは任意文字列。user_prostatus/user_countryは表示条件で、契約プランの権限を上書きする引数ではない。別セッションの直接MCP Readでは日米記事2件とも`success`キーなしで、`ast_description`はJSON文字列でした。`get_news`で得た非URN形式のIDも無加工で受理され、`permission:headline`でもAST本文が返る1例がありましたが、閲覧・再配布権や全記事対応を意味しません。
 
 根拠：[公式のget_news_story](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -390,6 +396,8 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | --- | --- | --- | --- |
 | `symbol` | 必須 | string | 未記載 |
 
+2026-10-27の**公式MCP直接観測（第2・第5ラウンド）**では、トヨタ・ソニーに加え、三菱UFJ（8306）・日立（6501）でもraw予想EPS/売上と`get_forecasts`の比率が期間別に同一でした（次FQ `157.4059499449`倍、次FY `158.7805652588`倍、基本EPS TTM `162.6280696048`倍）。価格・財務・forecast表示通貨はJPYですが、予想対象期末・換算元通貨・適用レートは取得できず、**変換の原因は未確定**です。AppleとTSM ADRでは数値のある次FQ/FY予想がrawと一致しましたが、検証対象の全海外銘柄への一般化はできません。4日本株の`get_forecasts`は`success:true`でも`target_mismatch:true`で目標株価がnullとなり、raw目標の値が存在することは品質ガードを迂回してよい根拠ではありません。`quality_note`・通貨・単位・期間を検証できるまで、これらの予想を自動換算したり予想PER/成長率/目標株価へ結合したりしません。**画面との追加照合（ユーザーによる2026-10-27の確認）**：日立製作所のTradingView画面にEPS **176.99 JPY**と表示され、公式MCPのraw列`earnings_per_share_basic_ttm=176.9908`を小数2位へ丸めた値と一致。対照の`get_forecasts.estimates.eps_ttm=1.0883164292`とは約162.628倍異なります。**画面のEPS表示対象期間・基本/希薄化のUIラベルは未照合**ですが、この数値一致は少なくともraw TTM値の表示整合性を支持します。全日本株のraw値の正確性まで保証しません。 **為替変換モデルの直接検証（公式MCP Read、2026-10-27 22:16〜22:18 JST）：** 上述の各社に見られた倍率差は、公式MCPで実取得した`FX_IDC:JPYUSD`の日足終値との**数値的な完全一致**が追加確認されました。全4社×5項目で`get_forecasts値 = raw値 × JPYUSD終値`がPython floatの厳密比較（==）で20/20件成立し、最大誤差0。係数は次FQ（2026-09-30候補日）`0.006353`、次FY（2026-03-31候補日）`0.006298`、EPS TTM（2026-06-30候補日）`0.006149`。直接`FX:USDJPY`または`FX_IDC:USDJPY`のOHLCには厳密一致せず、**逆通貨ペアの実取得終値**が一致しました。JPYラベル付きforecastがUSD換算相当の数値となることを強く支持しますが、**MCP内部でのペア選択・換算実行箇所・会計期間の基準日選択は未証明**です。前回の外部USDJPY履歴との近似に比べ、今回は逆通貨ペアの係数を直接再現できています。次FYの2026-03-31は4社の直近実績FY末ですが、次FY予想の基準日になる仕組みは不明。固定係数の適用や品質ガードの迂回は行いません。公式通貨変換の背景は[TradingView株式Screenerの通貨変換説明](https://www.tradingview.com/support/solutions/43000639101-currency-conversion-in-the-stock-screener/)、実測詳細は下記「JPYUSD終値と日本株forecastの20件一致」を参照。
+
 根拠：[公式のget_forecasts](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
 ### get_financials
@@ -403,6 +411,8 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | `symbol` | 必須 | string | 未記載 |
 | `metric` | 省略可 | 配列<string> / null | 未記載 |
 | `period` | 省略可 | string：fy, fq, ttm, fh, current | ttm |
+
+2026-10-27の公式MCP直接観測では、`metric:[revenue,eps,net_income]`は`period:fq/fy`に応じた列を返しましたが、`period:fy`でも`pe`は`price_earnings_ttm`でした。さらにトヨタ/Appleの`period:ttm`で裸列`net_income`は**FYと同値、`net_income_ttm`とは別値**でした。裸の`oper_income`はnullで、明示`oper_income_ttm`を指定しても`period:fq/fy`で返却列が期間に置換される例があります。`eps` aliasは基本EPSへ写像される一方、`get_financial_history`のApple EPSは希薄化後に一致しました。固定期間で数値比較する場合は`get_symbol_data_batch`の明示列と照合し、返却列名のsuffix・定義を確認してください。未知metricやnullを一律ゼロとしません。
 
 根拠：[公式のget_financials](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -418,6 +428,8 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | `period` | 省略可 | string：fq, fy | fq |
 | `date_from` | 省略可 | string | 未記載 |
 | `date_to` | 省略可 | string | 未記載 |
+
+2026-10-27の公式MCP直接観測では、日米2銘柄のFQ履歴が7系列を返しましたが、説明にある営業利益系列は今回の応答に含まれませんでした。第2ラウンドではFQの2020〜2021年指定は両銘柄とも`success:false`で履歴なし、2020〜2024年指定では**Q3 2022〜Q4 2024の10期**が返り、FYは2020〜2025年の6期を取得できました。返却数を固定の上限と断定しません。トヨタの履歴`Q2 2026`と、同額売上を持つ文書の`FY2027 Q1`は表記が異なります。さらに年次文書要約の純利益「増加」と、財務履歴の前年同期比約-19.2%が矛盾しました。**文書要約や履歴ラベルを無検証で正本にせず**、返却値・期末日・原文書を突き合わせます。
 
 根拠：[公式のget_financial_history](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -438,7 +450,7 @@ langは任意文字列。user_prostatus/user_countryは表示条件で、契約�
 | `end_date` | 省略可 | string | 未記載 |
 | `limit` | 省略可 | integer | 20 |
 
-limitはRequestに上限なし、Provider上限は今回未確認。start_date/end_dateはRFC3339のイベント日範囲であり、文書取得日と混同しない。
+limitはRequestに上限なし、Provider上限は今回未確認。start_date/end_dateはRFC3339のイベント日範囲であり、文書取得日と混同しない。別セッションでは日米各2件の文書メタデータ・view候補を取得しましたが、日本の`interim_report`を決算短信や有価証券報告書原本と同定していません。
 
 根拠：[公式のget_documents](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -451,6 +463,8 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | 引数 | 必須性 | 型・許容値・ローカル上限 | 公式既定 |
 | --- | --- | --- | --- |
 | `view_id` | 必須 | string | 未記載 |
+
+2026-10-27の公式MCP直接観測では、`get_document_view`の`astDescription`はオブジェクトで、`get_news_story`のJSON文字列型ASTとは異なりました。返却`id`は入力したsummaryの`view_id`ではなく原文書IDでした。解析時はTool別に型を確認し、両IDを区別して保持します。
 
 根拠：[公式のget_document_view](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -468,7 +482,7 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | `date_from` | 省略可 | string | today |
 | `date_to` | 省略可 | string | +180d |
 
-日付はYYYY-MM-DDまたはRFC3339。日付範囲を広げても全決算履歴にならない。履歴はget_financial_historyや文書で検討する。
+日付はYYYY-MM-DDまたはRFC3339。日付範囲を広げても全決算履歴にならない。履歴はget_financial_historyや文書で検討する。10/27の直接MCP ReadではAppleの次回予定を返しましたが、トヨタは0件でした。第2ラウンドではトヨタ/ソニー/三菱UFJの2026〜2027年の広い窓でも0件なのに、同日の`get_symbol_data_batch`でトヨタ/ソニーの次回決算予定が窓内で取得できました。第5ラウンドでは2026-10-01〜12-31窓の3銘柄一括指定で、raw次回日時が11/5のトヨタ・11/10のソニーは**返却なし**、11/2のAppleだけ返却され`next_date_confirmed:true`でした。市場・Toolごとの取得経路差や欠損原因は未確定です。**0件を無発表・予定なし・通知不要と断定しない**でください。raw次回日時も独立した会社発表で確定したものとは扱いません。指定窓外の直近報告日が同一行に併記され得る点にも注意します。
 
 根拠：[公式のget_earnings_calendar](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -487,7 +501,7 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | `date_to` | 省略可 | string | today 23:59 UTC |
 | `min_importance` | 省略可 | integer、上限1、下限-1 / null | -1 |
 
-カテゴリの綴りgovermentはSchema/公式表記に従う。公開説明の過去範囲は2003-09-01以降、将来は約31日先までで、実機では未検証。
+カテゴリの綴りgovermentはSchema/公式表記に従う。公開説明の過去範囲は2003-09-01以降、将来は約31日先までで、厳密な境界は未検証。10/27の直接MCP Readでは過去・近未来のイベントを`status:ok`（`success`キーなし）で返しました。`actual/actualRaw`と`unit/scale`は別表現であり、先物や経済統計の数値を無条件に倍率変換しません。
 
 根拠：[公式のget_economic_calendar](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -505,7 +519,7 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | `date_to` | 省略可 | string | +30d |
 | `limit` | 省略可 | integer、上限200 | 50 |
 
-銘柄モードsymbolsと市場モードmarketを区別する。市場モードのlimit上限200。
+銘柄モードsymbolsと市場モードmarketを区別する。市場モードのlimit上限200。2026-10-27の公式MCP直接Readでは`symbols:[TSE:7203,NASDAQ:AAPL]`と2025年の日付窓を指定しても、Appleの2026年の直近配当情報が返りました。**銘柄モードで指定日付に制限された履歴を取得できたとは扱いません**。トヨタ0件を無配や日本株非対応とは断定しません。第2ラウンドではソニー/三菱UFJもsymbolsモード0件でしたが、`market:japan`かつ2026年9月の権利落ち日範囲では3件を取得し、全3件の**recent権利落ち日**が指定窓内でした。第5ラウンドではmarketで確認したその同じ3銘柄（3659/6191/8708）をsymbolsで9月窓と2026〜2027年窓に指定しても**全件0件**でした。期間の狭さでは説明できず原因未確定で、0件を無配当と解釈しません。marketをlimit5へ増やすと5行になりましたがtotalCount/cursorがなく、日本株配当の全件網羅は未確認です。`dividend_amount`はupcoming額（なければrecent額）と一致する例があり、**正式な優先規則は未確認**。またmarketの`dividends_yield`とrawの`dividends_yield_current`には大きな値差の例があり、同一指標と決めつけません。`*_recent`と`*_upcoming`の日付・金額は同じsuffix同士で扱い、recent権利落ち日にgeneric金額を自動紐付けしません。
 
 根拠：[公式のget_dividends_calendar](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
@@ -681,6 +695,83 @@ async def read_window():
 
 Windowsのコマンドプロンプトではリポジトリルートで`call scripts\setenv.bat`後の`"%PYTHON_EXECUTABLE%"`を使います。通常Screeningは`app.bat screen <name>`で実行します。独自Pythonをscreen/Jobへ渡さず、[AIガイドの起動・実行契約](AI_JSON_GUIDE.md#作成して実行の完了契約)に従います。
 
+### 第3ラウンド公式MCP直接観測：株式以外の識別子と時系列
+
+以下は**公式MCPへの直接接続**で得た数値Readと各3本のOHLCV成功例です。ラッパー側の新規成功ではなく、未実行の時間足へ一般化しません。
+
+| 対象 | Quote/OHLCVに成功したシンボル | OHLCV時間足 | データ解釈上の注意 |
+| --- | --- | --- | --- |
+| 日経225ミニ連続先物 | `OSE:NK225M1!` | 1D | 現物日経・通常先物と別契約。`update_mode:delayed_streaming_900` |
+| NASDAQ 100連続先物 | `CME_MINI:NQ1!` | 4h | 限月付き`NQZ2026`とはEMA50が異なる |
+| 金連続先物 | `COMEX:GC1!` | 1h | 現物XAUUSDではない。`GCZ2026`とEMA50に差 |
+| WTI原油連続先物 | `NYMEX:CL1!` | 1D | Micro WTIの`MCL`とは別、`CLZ2026`とEMA50/SMA25に差 |
+| USDJPY | `FX:USDJPY` | 4h | volumeは数値だが単位未確認 |
+| 米10年国債利回り | `TVC:US10Y` | 1D | volume・標準RSI/SMA25/EMA50はnull。`change`は利回り水準の増減幅ではなく相対変化率の実例 |
+| ドル指数 | `TVC:DXY` | 1h | `type:index/subtype:cfd`。volumeはnull、ICEUS版との同一性未確認 |
+
+調査では`run_screener`の`market:futures/forex/cfd/bonds`がそれぞれ応答しましたが、市場名を純粋な商品種別と扱えません。実際`market:cfd`でCRYPTOCAPの暗号資産時価総額指数が返りました。`type/subtype/typespecs/exchange`を照合してください。連続・限月先物は同じcloseでも指標履歴が異なり、ロール/接続・調整方式は未確認です。債券利回りの`change`を利回りのパーセントポイント変化と読み替えず、null出来高をゼロに補完しません。遅延表記の数値単位、取引時間、足確定の厳密条件は未検証です。
+
+### 第4ラウンド公式MCP直接観測：OHLCV形式差と指標の再現性
+
+2026-10-27 21:25〜21:29 JSTに公式MCP直接Readを3種類・27回（全件Provider `success:true`、Writeなし）実施し、Toyota（`TSE:7203`）/Apple（`NASDAQ:AAPL`）の1D・1h・4hの600本OHLCVと直接指標を照合しました。**本ラッパーの追加実行結果ではありません。** 結果の一致許容誤差は絶対`1e-8`です。
+
+- **日足：** 両銘柄のRSI7、既定RSI（14期間Wilder候補）、SMA13、EMA13/25、MACD本線/シグナルがすべて一致。これは試験した銘柄・時点・計算定義での結果です。
+- **Toyota 1h・4h：** 1hの2026-10-23 15:00 JSTバーは`rows`のclose=3105/volume=8,365,100に対し`columns`のclose=3096/volume=1,393,000。4hの2026-10-02 13:00 JSTバーは`rows`のclose=2856.5/volume=14,758,300、`columns`のclose=2867/volume=6,343,600。各volume差は同日15:30の30mバーに一致。`columns`600本の該当close各1か所を**実取得したrowsの値にローカル診断用として置換**すると、各時間足の7指標すべてが直接値と一致しました（Providerには書き戻していない）。引けオークションやキャッシュ等、Provider内部原因は未確定です。Toyota全600本のrowsを通算検査したわけではありません。
+- **Apple 1h・4h：** 各600本の`rows`と`columns`は全OHLCVが一致しましたが、RSI/SMA/EMA/MACDの各7項目は直接指標と不一致のままです。`close|60`/`close|240`は343.98、OHLCV最終closeは343.99であり、米国株の価格系列/配信元等の原因は未確定。日足と日中足の終値・volumeも同一視できません。**rowsを全銘柄の真値・自動修復先として固定しません。**
+- **Tech Rating：** 1h/4hを指定した`get_technicals_rating`のRSI・MACD本線/シグナルは同時間足のbatch値と一致しましたが、同Toolのprice/volumeは日足相当でした。レスポンス内フィールドの時間足粒度を混同しません。
+- **時刻・確定足：** `t`はバー開始時刻に対応する観測。Toyotaには昼休みと15:30の30mバー、AppleにはDSTに伴うUTC時刻の切替と4h最終区間の端数があります。`is_closed`/`barstate.isconfirmed`/調整係数の候補列は試験ではnull。Provider `update_time`は時間足ごとのバー終了や確定時刻を保証しません。
+- **カーソル：** `next_date_to`をそのまま次回`date_to`に渡し、Toyota 1hの600本＋遡り5本で重複0・継続を確認。ただし履歴の全期間・全銘柄の保証ではありません。生データ実取得の最大は600本で、公開Tool説明のrows5000/columns8000の上限到達は未試験です。
+- **長期RSI：** ローカルWilder RSI48/96/192は取得600本でもseed・履歴長の感度が残りました。例えばApple 1h RSI96の600本でseed差約0.244、RSI192では約5.165。これは**ローカル計算値のみ**であり、公式Provider RSI48/96/192の直接列に成功した証拠ではありません。必要な履歴を追加し、結果の収束を計測します。固定本数で精度を保証しません。
+
+重要な判定は**成功応答とデータ整合性は別**という点です。OHLCVのformat、取得した期間、UTC時点、セッション、バー確定状態、基礎系列と再計算指標を記録し、不一致のまま自動で直接指標と同一視しないでください。実行根拠は会話添付`tradingview_mcp_capability_matrix_round4.md`／`tradingview_mcp_probe_evidence_round4.json`（調査用データはGitHubに転載しない）です。
+
+### 第5ラウンド公式MCP直接観測：日本株の予想・財務・イベント品質
+
+2026-10-27 21:36〜21:37 JSTに公式MCP直接Read **9種類・20回**を実施。Provider `success:true`16件、`success:false`1件（列Discoveryで`currency`検索が該当なし）、`success`キーなし3件（文書系）。**MCP `isError:false` は20件すべて**。Write・ラッパー経由の新規テスト・製品コード変更はありません。
+
+- **予想値：** 日本株4銘柄の共通倍率は次FQ/EPS・売上`157.4059499449`倍、次FY/EPS・売上`158.7805652588`倍、EPS TTM`162.6280696048`倍（raw値 ÷ `get_forecasts`値）。倍率の原因は不明であり、**FX換算の証明・自動補正係数ではありません**。円表示だけで単位や期間を確定しない。TSM ADRは値があるFQ/FY予想のraw/forecast一致、基本EPS TTMは双方nullで「一致した値」に数えない。
+- **財務期間・EPS：** `period:ttm`でも裸`net_income`はFYと一致しTTMとは異なる（トヨタ/Apple）。`period`切替時はraw名のmetricを渡しても返却suffixが切り替わり得ます。Apple FY履歴EPS=7.465は希薄化後EPSと一致、`eps` aliasで返る基本EPS=7.4931とは異なります。全体の統一ルールとは断定せず、suffix・会計期末・基本/希薄化後を毎回保存します。
+- **年度ラベルと文書：** Toyotaの財務履歴FYラベル`2025`は末尾raw実績FY期末2026-03-31、文書FY2026 Q4と対応し、ラベルをそのまま企業FY名へ置き換えるとずれます。Toy​​ota文書要約の「売上・純利益とも前年比増加」は同年度の純利益実績の前年比**19.2439%減**と矛盾しました。原本PDFは未照合のため、要約もraw履歴も正本扱いしないでください。
+- **決算予定：** 同じ10〜12月窓内にraw次回日があるトヨタ（11/5）・ソニー（11/10）が`get_earnings_calendar`で欠落、Apple（11/2）は返却。イベントの0件を「予定なし」へ変換しない。
+- **配当予定：** 日本株のmarket指定では9月窓で3銘柄（追加検証では5行）が取得できた一方、そのうち3銘柄はsymbols指定の同じ窓・広い窓で0件。recent/upcomingのex-date・payment-date・amountは対応suffix同士を比較した3銘柄でraw値と一致（null同士の一致は取得成功とは数えない）。同日の支払日表示の確定性、generic額/yieldの定義、market全件性は未確認。
+- **Discovery不一致：** `get_screener_columns(search=currency,market=stock)`は該当なしでも`get_symbol_data_batch`で`currency`と`fundamental_currency_code`が9銘柄とも非null。カタログ検索の空をフィールド取得非対応とは扱いません。
+
+AI企業分析では、確認できた**実績の明示suffix値**を、通貨・期末・EPS定義を保持して条件付き採用します。raw予想・生の目標株価・カレンダー・配当は検証待ちとし、日本株`get_forecasts`の未検証単位による自動評価、品質ガード迂回、カレンダー0件による通知抑止、要約の増減方向の無検証採用を避けます。調査証跡は会話添付`tradingview_mcp_capability_matrix_round5.md`と`tradingview_mcp_probe_evidence_round5.json`（GitHubに生応答全文を転載しない）です。
+
+### JPYUSD終値と日本株forecastの20件一致（公式MCP追加観測）
+
+10/27 22:16〜22:18 JSTの公式MCP直接Readは**3種類・15回、全件Provider success:true、Write/設定変更0**でした。前回の日本株forecastとraw数値は再取得せず、第5ラウンドの証跡を再利用しています。為替の数値は公式MCPの`get_ohlcv`で`FX_IDC:JPYUSD`の該当期間を取得し、同じraw/forecast比較で確認しました。
+
+| 比較した項目 | 期末候補日（バー開始日はUTC前日22:00） | `FX_IDC:JPYUSD`の終値 | raw / forecast |
+| --- | --- | ---: | ---: |
+| 次FQ予想EPS・売上 | 2026-09-30 | `0.006353` | `157.40594994490792` |
+| 次FY予想EPS・売上 | 2026-03-31 | `0.006298` | `158.78056525881232` |
+| 実績EPS TTM | 2026-06-30 | `0.006149` | `162.6280696048138` |
+
+トヨタ・ソニー・三菱UFJ・日立の各5項目（EPS次FQ/FY/TTM、売上次FQ/FY）すべてで`raw × 上記の日足終値 = get_forecasts`がPython floatで完全一致し、20/20・誤差0でした。例：日立EPS TTM `176.9908 × 0.006149 = 1.0883164292`。Decimalの文字列表現まで厳密一致するとは主張しません。`FX:USDJPY`と`FX_IDC:USDJPY`の日足・比較した1h OHLCには逆数の厳密一致がなく、バー時刻と価格提供元も異なります。Pineの[通貨変換説明](https://www.tradingview.com/pine-script-docs/concepts/other-timeframes-and-data/#currency)は本MCPの内部計算契約を証明するものではありません。
+
+数値モデルを再現できたことと**MCPが内部でこの系列を使っていることの因果的証明**を区別します。`JPY`通貨ラベル、次FY予想への直近FY末レート適用、原データ/変換後データの由来、`target_mismatch`の内部条件は未解明。`get_forecasts`のJPYラベル値をそのまま円建て予想PER・EPSへ利用せず、固定レート補正も実装しません。
+
+別の重要なOHLCV上の注意として、1hのRFC3339 `date_to`を指定した3回はいずれも、要求した時刻の**後**に開始する23本を含む32本を返しました（`has_more:true`、指定窓内52本のうち一部）。Provider `success:true`だけで「指定時刻までに制限された」と判断せず、返却`t`と要求範囲を自前で検査してください。実測根拠は会話添付`tradingview_mcp_fx_conversion_validation.md`／`tradingview_mcp_fx_conversion_evidence.json`。提供元の生応答全文は本リポジトリに転載しません。
+
+### 財務期末の異なる3社で為替基準日を追加検証（公式MCP直接Read）
+
+2026-10-27 22:34〜22:36 JSTに公式MCP **5種類・17 Read**（Provider `success:true` 13回、`success:false` 4回、MCP isError=false 17回、Write 0）。4件のfalseは**未来の候補日へのJPYUSD OHLCV照会で`no bars`**であり、Tool非対応の証明ではありません。ネクソン（12月決算）・イオン（2月決算）・ファーストリテイリング（8月決算）はraw `fiscal_period_end_fy/fq` と別の `get_financials(period:fy)` を照合して選定。ラッパー経由の受入確認ではありません。
+
+| 銘柄（実績FY末 / FQ末） | 次FY・EPS/売上：実績FY末対応係数 | TTM EPS：実績FQ末対応係数 | 次FQ・EPS/売上 |
+| --- | --- | --- | --- |
+| ネクソン（2025-12-31 / 2026-06-30） | **0.006381**、2/2 float一致 | **0.006149**、1/1一致 | 推定2026-09-30の**0.006353**、2/2一致 |
+| イオン（2026-02-28 / 2026-08-31） | **0.006406**、2/2一致（FY末は土曜、直前金曜終値） | **0.006258**、1/1一致 | **0.006348**、参照日未確定、2項目 |
+| ファーストリテイリング（2026-08-31 / 同日） | **0.006258**、2/2一致 | **0.006258**、1/1一致 | **0.006348**、参照日未確定、2項目 |
+
+既存の3月決算4社の**20/20**と今回の**11/15**を合わせ、計**7社・31/35項目で観測候補の`FX_IDC:JPYUSD`日足終値×rawが`get_forecasts`値にPython floatの`==`で一致**しました。うち次FYは7社・14/14項目が**直近実績FY末の係数**、EPS TTMは7社・7/7項目が**直近実績FQ末の係数**という関係と整合。次FQは5社・10/14項目が**推定次FQ末候補**と対応し、残るイオン/Fastの4項目は未来の2026-11-30候補の為替データを取得できないため**参照日未確定であり、不一致確定ではありません**。
+
+**固定係数を全日本株へ流用するのは誤り**です。以前の3月決算4社で確認した期間別の係数を新3社15項目へ適用すると、**12/15項目が不一致**でした。土曜のイオン実績FY末について直前利用可能な金曜終値で一致したのは**1例**であり、全休日の換算規則と断定しません。Fastの実績FY/FQ末は同日なので同社単体ではどちらを参照したか識別できません。またNexon次FY係数0.006381は他の日にも出るため、**数値一致だけでは日付の一意性・MCP内部の参照時刻・実行処理を証明しません**。
+
+`get_earnings_calendar`は今回の3社すべて0件でしたが、rawの次回決算日時は指定2026-10-01〜2027-03-31窓内でした。0件を予定なしと扱わない。予想対象の期末を取得する候補列7種類も全社nullであり、実績期末と**予想対象期末を混同しない**。`target_mismatch:true`も3社全てで観測しましたが、為替換算が原因との証明には使いません。
+
+**利用方針：** JPYと表示される日本株`get_forecasts`のEPS・売上予想を、そのまま円建てとしてPER・成長率等へ入力しない。raw側・forecast側の数値、期末、表示通貨、期間別FX照合の根拠を保持する。今回の係数・候補日を固定して自動補正する実装は行わない。報告と全17回の引数/レスポンス/float・Decimal比較は会話添付`fx_conversion_period_mapping.md`と`fx_conversion_period_mapping_evidence.json`に保存され、GitHubには生応答を転載していません。内部の通貨変換経路・換算時点は引き続き未証明です。
+
 ## Provider制限・プラン・安全性
 
 全Toolにインターネット・公式MCP対象プラン・保存済み認証・Tool権限が必要です。公開資料ではEssential以上/試用プラン除外と案内されていますが、契約条件は公式ページで再確認してください。これはAIへの別途サーバー登録を求める意味ではありません。
@@ -694,11 +785,12 @@ Providerの目安は約100要求/分、アプリ既定Governorは30要求/分・
 | 項目 | 照合結果と扱い |
 | --- | --- |
 | Tool集合 | 公開資料・ローカル・2026-10-27 Discoveryの35名が一致。不足/追加は0。live109引数に対しローカル110引数で、差は保持したWatchlistのdescription。全Toolの実行成功を示すものではない |
-| get_ohlcvの追加引数 | date_from/date_to/formatは公開ページに未掲載だが、Discoveryと少量Readを根拠に既存Requestで対応済み。countもrows5000/columns8000へ対応。2026-10-26時点の未対応状態は解消した |
+| get_ohlcvの追加引数 | 2026-10-27再閲覧の公開ページはcount上限5000・symbol/interval/count/summaryを記載。date_from/date_to/formatは公開ページに未掲載だが、Discoveryと少量Readを根拠に既存Requestで対応済み。countもrows5000/columns8000へ対応。8000本の実取得成功を主張しない |
 | update_watchlist.description | 公開ページと現行Requestにはあるが、当日Discoveryにはない。Writeを実行しての可否検証はしていない |
 | Alert追加キー | ローカルCreateはwebhook/monitor、Updateはwebhookを受理し得るが、公開ページはwebhook等を制限。Schema適合を実行成功としない |
 | NULL・型・上限 | ローカルには必須nullableや公開資料で未指定の上限がある。表はローカル契約、意味的な成功はProvider側で別途確認 |
 | 応答 | Read包絡の型検証はあるが、全35 Toolの完全な出力Schema/全キーは固定していない。公開説明と実応答を混同しない |
+| ScreenerのSMA25と市場区分 | 公式公開ページは`SMA25`の直接取得、`price_vs_sma25_pct`や`market_segment`のfilter可否を個別に明記していない。10/27の別環境の公式MCP直接ReadではSMA25値をScreener/単体/一括取得でき、上記2filterはignored_filtersで無視された。詳細は[条件カタログ](SCREENER_CONDITIONS.md) |
 
 ## 確認状態と仕様変更への対応
 
@@ -717,6 +809,8 @@ Providerの目安は約100要求/分、アプリ既定Governorは30要求/分・
 filterの実値検証・無視されたキーは[条件カタログ](SCREENER_CONDITIONS.md#filter適用を確かめる手順)に記載しています。初回のsandbox内statusは接続待ちで中断し、ネットワーク利用可能な実行でstatus成功を確認しました。認証設定や資格情報の手動変更は行っていません。
 
 2026-10-27 08:43〜08:44 JSTには、既存ClientからOHLCV10回と、batch/財務/news/経済symbol/経済calendar各1回、計6 Tool・15回の少量Readを追加しました。success=true 13回、未知OHLCV銘柄のsuccess=false 1回、経済calendarのstatus=ok 1回です。batchは取得1・missing 1を保持しました。上表は10/26時点の記録であり、今回も全35 Tool・全市場・全件の成功を検証したものではありません。機能を変更しない今回の文書統合では、この既存結果を再利用しています。
+
+2026-10-27の**別環境での公式MCP直接利用**の実行記録では、35 ToolのうちRead 6種類・計40回を呼び出し、`SMA25`の値取得、東証株を価格帯に分割した3,761件の取得と3,748件の乖離率計算を行いました。プライム所属は確認できず、34件の+20%以上候補をプライム該当と断定していません。これは**本リポジトリのClientを用いた追加実機検証ではない**ため、上表の10/26既存ラッパーの検証件数には合算しません。実機データの大規模転載は行わず、利用可能性と制約だけを[条件カタログ](SCREENER_CONDITIONS.md)に反映します。
 
 Beta更新時は公式ページのTool集合と既存TOOL_NAME_MAP/REQUEST_MODELSを比較し、既存Client.list_tools()の名前・inputSchema・不足/追加を照合します。列探索は概要→必要なgroup/search、filterは少数取得でignored_filters・実値・単位・件数を検証します。差分を記録し、型やCLIの拡張が必要なら別のdevelop向け実装として扱います。公式説明や生schemaの長文保存物をそのまま配布しません。
 
