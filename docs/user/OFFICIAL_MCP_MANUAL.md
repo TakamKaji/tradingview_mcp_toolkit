@@ -694,11 +694,12 @@ Providerの目安は約100要求/分、アプリ既定Governorは30要求/分・
 | 項目 | 照合結果と扱い |
 | --- | --- |
 | Tool集合 | 公開資料・ローカル・2026-10-27 Discoveryの35名が一致。不足/追加は0。live109引数に対しローカル110引数で、差は保持したWatchlistのdescription。全Toolの実行成功を示すものではない |
-| get_ohlcvの追加引数 | date_from/date_to/formatは公開ページに未掲載だが、Discoveryと少量Readを根拠に既存Requestで対応済み。countもrows5000/columns8000へ対応。2026-10-26時点の未対応状態は解消した |
+| get_ohlcvの追加引数 | 2026-10-27再閲覧の公開ページはcount上限5000・symbol/interval/count/summaryを記載。date_from/date_to/formatは公開ページに未掲載だが、Discoveryと少量Readを根拠に既存Requestで対応済み。countもrows5000/columns8000へ対応。8000本の実取得成功を主張しない |
 | update_watchlist.description | 公開ページと現行Requestにはあるが、当日Discoveryにはない。Writeを実行しての可否検証はしていない |
 | Alert追加キー | ローカルCreateはwebhook/monitor、Updateはwebhookを受理し得るが、公開ページはwebhook等を制限。Schema適合を実行成功としない |
 | NULL・型・上限 | ローカルには必須nullableや公開資料で未指定の上限がある。表はローカル契約、意味的な成功はProvider側で別途確認 |
 | 応答 | Read包絡の型検証はあるが、全35 Toolの完全な出力Schema/全キーは固定していない。公開説明と実応答を混同しない |
+| ScreenerのSMA25と市場区分 | 公式公開ページは`SMA25`の直接取得、`price_vs_sma25_pct`や`market_segment`のfilter可否を個別に明記していない。10/27の別環境の公式MCP直接ReadではSMA25値をScreener/単体/一括取得でき、上記2filterはignored_filtersで無視された。詳細は[条件カタログ](SCREENER_CONDITIONS.md) |
 
 ## 確認状態と仕様変更への対応
 
@@ -717,6 +718,8 @@ Providerの目安は約100要求/分、アプリ既定Governorは30要求/分・
 filterの実値検証・無視されたキーは[条件カタログ](SCREENER_CONDITIONS.md#filter適用を確かめる手順)に記載しています。初回のsandbox内statusは接続待ちで中断し、ネットワーク利用可能な実行でstatus成功を確認しました。認証設定や資格情報の手動変更は行っていません。
 
 2026-10-27 08:43〜08:44 JSTには、既存ClientからOHLCV10回と、batch/財務/news/経済symbol/経済calendar各1回、計6 Tool・15回の少量Readを追加しました。success=true 13回、未知OHLCV銘柄のsuccess=false 1回、経済calendarのstatus=ok 1回です。batchは取得1・missing 1を保持しました。上表は10/26時点の記録であり、今回も全35 Tool・全市場・全件の成功を検証したものではありません。機能を変更しない今回の文書統合では、この既存結果を再利用しています。
+
+2026-10-27の**別環境での公式MCP直接利用**の実行記録では、35 ToolのうちRead 6種類・計40回を呼び出し、`SMA25`の値取得、東証株を価格帯に分割した3,761件の取得と3,748件の乖離率計算を行いました。プライム所属は確認できず、34件の+20%以上候補をプライム該当と断定していません。これは**本リポジトリのClientを用いた追加実機検証ではない**ため、上表の10/26既存ラッパーの検証件数には合算しません。実機データの大規模転載は行わず、利用可能性と制約だけを[条件カタログ](SCREENER_CONDITIONS.md)に反映します。
 
 Beta更新時は公式ページのTool集合と既存TOOL_NAME_MAP/REQUEST_MODELSを比較し、既存Client.list_tools()の名前・inputSchema・不足/追加を照合します。列探索は概要→必要なgroup/search、filterは少数取得でignored_filters・実値・単位・件数を検証します。差分を記録し、型やCLIの拡張が必要なら別のdevelop向け実装として扱います。公式説明や生schemaの長文保存物をそのまま配布しません。
 
