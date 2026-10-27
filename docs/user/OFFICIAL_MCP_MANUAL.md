@@ -515,7 +515,7 @@ limitはRequestに上限なし、Provider上限は今回未確認。start_date/e
 | `date_to` | 省略可 | string | +30d |
 | `limit` | 省略可 | integer、上限200 | 50 |
 
-銘柄モードsymbolsと市場モードmarketを区別する。市場モードのlimit上限200。
+銘柄モードsymbolsと市場モードmarketを区別する。市場モードのlimit上限200。2026-10-27の公式MCP直接Readでは`symbols:[TSE:7203,NASDAQ:AAPL]`と2025年の日付窓を指定しても、Appleの2026年の直近配当情報が返りました。**銘柄モードで指定日付に制限された履歴を取得できたとは扱いません**。トヨタ0件を無配や日本株非対応とは断定せず、市場モードの日付条件適用は未確認です。
 
 根拠：[公式のget_dividends_calendar](https://www.tradingview.com/mcp/docs) / [現行Schema](../../src/tradingview_screening/integrations/tradingview/schemas.py)。動作確認：静的照合、今回の個別実行は末尾参照。
 
