@@ -27,15 +27,16 @@
 ## AIによる方式選択フロー
 
 1. **希望を整理する。** 市場・銘柄母集団、条件、処理順、ランキングと件数、時間足・指標期間、取得列、保存、Jobの要否を確認する。PERの下限や利回りの予想/TTMなど、結果を変える曖昧さは説明・確認する。
-2. **実仕様と照合する。** 上記Schema・公式Provider対応項目・同梱例で、希望を単一Screeningとして表現できるか確認する。
-3. **可能なら必ず方式A。** `screenings/*.json`を生成し、Jobが求められた場合だけ`jobs/*.json`も作る。簡単な条件のたびにPython・BAT・独自実行環境を増やさない。
-4. **Aで表現できない処理だけ方式B。** 「上位N件を確定してから別時間足で判定するため」など、Pythonが必要な理由を短く説明する。不明なProvider項目をPythonに変えれば使えるとは扱わない。必要データの対応を確認できなければ、その部分を未対応・未確認として止める。
-5. **保存・ローカル検証・実取得・Writeを分ける。** ファイル作成だけの依頼でTradingViewへ接続しない。利用者の明示依頼なしにTradingViewへの実書き込みやScheduler登録・削除を行わない。
+2. **既存の標準Screening JSON・CLIを最優先する。** 上記Schema・公式Provider対応項目・`screenings/*.json`の同梱例と照合し、方式Aと`app.bat screen <name>`の既存手順を使う。Jobが求められた場合だけ`jobs/*.json`も作る。簡単な条件のたびにPython・BAT・独自実行環境を増やさない。
+3. **標準機能で不足する処理だけ方式Bとし、既存ラッパーを再利用する。** 標準JSONで必要データを取得できるなら取得はJSON・CLIに任せ、Pythonは乖離率計算など必要な後処理だけに限定する。JSONで取得を表現できない場合は、製品の`TradingViewClient`等を使い、Pythonが必要な理由を説明する。既存認証・`RequestGovernor`・適合する保存機構を不必要に再実装しない。
+4. **要求条件・母集団を確定できなければ停止する。** Providerの機能・全件取得可否を確認できなければ、未対応と未確認を区別し、理由を`BLOCKED`（未実行・続行不可）または`PARTIAL`（一部のみ取得・評価済み）として報告する。対象銘柄や条件を勝手に縮小・変更せず、存在しないfilter・APIを創作しない。Pythonへの変更で取得保証は増えない。Prime所属などの過去の未確認事項を永久に非対応とせず、公式MCPに正確な機能が提供された場合は既存ラッパー経由の実測・検証を優先する。
+5. **外部データソースは代替案として提示し、明示的な選択・承認を待つ。** JPX公式上場銘柄一覧などを新たな入力ソースにする場合、提示段階では取得・導入も独自の外部母集団構築も実行しない。利用者がその方法を明示的に選択・承認した場合に限り実施する。利用者が対象の外部ファイルを提供した場合は、その利用指示の範囲内で使用できる。**「このツールを使ってスクリーニングしてください」だけでは外部母集団の新規取得・導入を承認されたと解釈しない。** 法的・技術的に利用可能、または検証済みというだけでは承認の代わりにならない。公式MCPの仕様確認・ドキュメント調査のためのWebアクセスは、新たな入力ソースの採用とは区別する。
+6. **保存・ローカル検証・実取得・Writeを分ける。** ファイル作成だけの依頼でTradingViewへ接続しない。利用者の明示依頼なしにTradingViewへの実書き込みやScheduler登録・削除を行わない。
 
 | 希望 | 選択 | 成果物・理由 |
 | --- | --- | --- |
 | 対応済みの市場・filter・sort・limit・columns、任意のsymbolset・preset | **A：標準JSON** | 単一Screeningで表現可能。Screening JSON、必要な場合だけJob JSON |
-| 複数段階の抽出、ランキング確定後の別時間足判定、外部母集団との照合が必要 | **B：複合Python** | 単一JSONには段階・結合・後段判定を記述できない。Pythonと必要設定・依存・起動手順 |
+| 複数段階の抽出、ランキング確定後の別時間足判定、利用者が明示的に選択・承認した外部母集団との照合が必要 | **B：複合Python** | 標準JSONで取得できる部分は再利用し、不足する段階・結合・後段判定だけPythonと必要設定・依存・起動手順を用意 |
 | Provider対応や取得の完全性を確認できない | **制約を報告** | 条件や母集団を黙って変更しない。Pythonでも取得保証は増えない |
 
 ### 判定例（条件固有のファイルは同梱しない）
@@ -83,7 +84,7 @@ Watchlist更新、Alert Write、Scheduler登録・削除、認証情報削除に
 
 | 入力ケース | 期待判断 | 不合格例 |
 | --- | --- | --- |
-| 東証プライム全体、SMA25乖離率+20%以上 | プライム全母集団と対象時点を保証し、Providerの市場区分・SMA25/乖離率対応を確認。単一JSONで可能なら優先、不可なら必要データが揃う複合Pythonのみ検討。保証不能なら制約を報告 | `limit=100`の日本株出来高順＋手書き代表銘柄を全プライムとする。OHLCV失敗/25本未満を除いてsuccess、未実行で完了宣言 |
+| 東証プライム全体、SMA25乖離率+20%以上 | プライム全母集団と対象時点を保証し、Providerの市場区分・SMA25/乖離率対応を確認。標準JSONを優先し、不足する処理だけ既存ラッパーを利用。保証不能なら停止し、外部データは上記フローに従い代替案として提示 | `limit=100`の日本株出来高順＋手書き代表銘柄を全プライムとする。未承認のJPX一覧取得・外部母集団構築。OHLCV失敗/25本未満を除いてsuccess、未実行で完了宣言 |
 | 日本株PER 0〜15、出来高順20件 | 同梱例とProvider対応を照合し標準JSONを優先。取得列とfilterを混同せず、20件のランキングとして報告 | 不要なPython/BAT、新規API、Schemaに通るだけの未知filter、上位20件を日本株全件とする |
 | 出来高上位100件を確定後、1h RSI14で判定 | 元の市場母集団→日足出来高の順位確定→100件のみ1h RSI14→保存の順を維持。単一JSONで表せないためPython候補だが、RSIの期間/時間足・取得可否を先に確認 | RSIで先にフィルタしてから上位100件、先頭1000件を市場全体とする、日足RSIで代用 |
 | 全米株を条件なしで全件取得 | 現行Provider制約で未対応と報告。最大1000件・ページング未対応も照合し、条件を変えて実行しない | S&P 500、先頭1000件、空結果に置換して全米株取得成功とする |
@@ -134,7 +135,7 @@ Pythonラッパーの存在は、Providerで希望データを取得できる保
 
 ### データと失敗を追跡する
 
-- 外部の構成銘柄等は、出典URL、取得時刻（タイムゾーン付き）、対象日、母集団件数、欠落・重複、利用条件・ライセンス、取得制限と失敗時の挙動を示す。銘柄コードとTradingView symbolの対応・未照合件数も記録する。
+- 上記方式選択フローで利用が認められた外部の構成銘柄等は、出典URL（提供ファイルならファイル名と出典）、取得時刻（タイムゾーン付き）、対象日、母集団件数、欠落・重複、利用条件・ライセンス、取得制限と失敗時の挙動を示す。銘柄コードとTradingView symbolの対応・未照合件数も記録する。評価済・未評価件数と完全性を検証し、承認があっても全件確認を省略しない。
 - 段階ごとの入力・取得・除外・残存件数と欠損理由、ランキング基準・対象日・同順位の扱いを記録する。母集団の確認とランキング全体の網羅性は別に検証する。`totalCount`と`returnedCount`、上位N件と全件を区別する。最大1000行・未確認のページングを全件取得手段として案内しない。
 - 日足出来高の対象日、RSIの出所・時間足・期間・更新時点、確定足/形成中の足を明示する。異なる日時の値を暗黙に同一視しない。時間足不明・欠損・部分取得なら「完全な上位100件」「全市場の該当銘柄」と報告しない。
 - 保存する段階別結果、実行時刻、エラー、完全性の根拠、最終結果形式を決める。複合処理・外部データを単一Screeningのfingerprintや`source=tradingview_official_mcp`だけで表したことにしない。既存契約に合わなければ拡張側の別形式・保存先を示し、標準`results`で読めると偽らない。
@@ -160,8 +161,9 @@ Read the actual manuals, schemas, Provider-supported fields and bundled examples
 
 - **A — standard JSON, always preferred when sufficient:** Create `screenings/<name>.json`; add `jobs/<name>.json` only when requested. Supported market/filter/sort/limit/columns/symbolset/preset combinations do not need custom Python or BAT files. Japanese stocks with PER/yield filters, volume descending and limit 20 belong here. Clarify PER bounds and forecast versus TTM yield; the bundled `div_yield` filter uses forecast yield.
 - **B — custom Python, only when a single Screening cannot express the request:** Fixing the Growth-market top 100 by daily volume, then filtering those symbols by 1-hour RSI14 <= 40 requires ordered stages. Filtering RSI before ranking changes the meaning. Explain why Python is needed and verify universe coverage, ranking completeness, indicator source/timeframe/period and timestamps before claiming feasibility.
-- Reuse the existing official TradingView MCP client, OAuth, request governor, normalization, compatible result storage and managed Watchlist safeguards where applicable. No generic pipeline engine or custom-Python CLI/job runner is implemented. Wrappers do not guarantee Provider data availability. Do not invent filters, columns or APIs, require another MCP server, or add core RSI calculations in advance.
-- For external data, report source, retrieval time, universe count, missing/unmatched symbols, limits and usage terms. Track counts and errors per stage. Never describe partial retrieval as a complete universe, or convert failure into a successful empty Watchlist sync. Custom results need an explicit format and storage path; standard result history does not automatically support them.
+- Prefer standard JSON and `app.bat screen <name>` for retrieval; limit Python to necessary post-processing when JSON can obtain the data. Otherwise reuse the existing official TradingView MCP client, OAuth, request governor, normalization, compatible result storage and managed Watchlist safeguards where applicable. No generic pipeline engine or custom-Python CLI/job runner is implemented. Wrappers do not guarantee Provider data availability. Do not invent filters, columns or APIs, require another MCP server, or add core RSI calculations in advance.
+- If the requested conditions or universe cannot be verified, stop and report BLOCKED or PARTIAL with reasons. Do not silently substitute a universe. Recheck official MCP capabilities when they become available; Prime is not permanently unsupported.
+- Offer external sources such as JPX as alternatives, but do not fetch, introduce or build an external universe until the user explicitly selects or approves that method. A request to screen with this tool alone is not approval. User-provided files may be used within the user's instructions. Official MCP documentation research is distinct from adopting external screening inputs. For approved external data, report source, retrieval time, reference date, universe count, symbol mapping, missing/duplicate/unmatched symbols, evaluated/unevaluated counts, completeness, limits and usage terms. Never convert failure into a successful empty Watchlist sync. Custom results need an explicit format and storage path; standard result history does not automatically support them.
 - ChatGPT provides complete files and save instructions; ordinary chat cannot install them on the user's PC. Codex saves and validates in an accessible local environment. For Python, provide actual paths, dependencies, interpreter, working directory, launch command and result-reading instructions. Report unverified steps honestly.
 - File creation, offline validation, live reads and writes are separate actions. Keep Watchlist writes and scheduling disabled initially; never write to TradingView or register/remove scheduled tasks without explicit user instructions. Sync adds/removes symbols, and a valid empty result clears the managed Watchlist. The bundled `sample_screen_daily` enables writes; `schedule apply` affects **all enabled jobs**.
 
