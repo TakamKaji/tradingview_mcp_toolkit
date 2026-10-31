@@ -16,7 +16,7 @@
 | Dockerコンテナ認証の境界と受入状況 | [Issue #40の実装・検証記録](DOCKER_VALIDATION.md) |
 | 開発依存・テスト | [開発・検証手順](DEVELOPMENT.md) |
 | develop/mainの共有コミット運用 | [cherry-pick手順](BRANCH_WORKFLOW.md) |
-| Public公開前の監査・未解決事項 | [公開前監査（2026-10-20）](PUBLIC_RELEASE_AUDIT.md)、[依存ライセンス調査](PUBLIC_DEPENDENCY_LICENSES_2026-10-20.md) |
+| Public公開前の監査・未解決事項 | [最新再監査（2026-10-31）](PUBLIC_RELEASE_REAUDIT_2026-10-31.md)、[今回の依存ライセンス](PUBLIC_DEPENDENCY_LICENSES_2026-10-31.md)、[旧監査](PUBLIC_RELEASE_AUDIT.md)、[発行前チェックリスト](../release/RELEASE_CHECKLIST_0.1.0b1.md) |
 | 公式MCPの根拠資料 | [公式資料への参照先](TRADINGVIEW_MCP_OFFICIAL_REFERENCE.md)、[公式の現行ページ](https://www.tradingview.com/mcp/docs) |
 | 全Toolマニュアル・条件カタログの根拠と未確認事項 | [2026-10-26の静的・少量Read検証](MCP_MANUAL_VERIFICATION_2026-10-26.md) |
 | 全35 Toolの機能同等性・OHLCV引数拡張 | [2026-10-27の監査・Read検証](MCP_PARITY_AUDIT_2026-10-27.md) |
