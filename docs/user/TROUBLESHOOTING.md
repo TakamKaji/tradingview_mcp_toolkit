@@ -10,6 +10,7 @@
 | GitHubのページを開けない／404 | URLとアクセス権を確認してください。Releaseの一覧に版がない場合はmainのCode → Download ZIPを利用します |
 | setupが見つからない | ZIPを「すべて展開」し、setup.batとapp.batがあるフォルダを開きます |
 | ダウンロード・依存導入に失敗 | [必要な通信先](WINDOWS_SETUP.md#通信先と未確認事項)とネットワーク設定を確認し、setupを再実行します |
+| pip導入中にNo such file or directory／Long Pathの案内 | 展開先が長すぎる可能性があります。元のZIPを、書き込み可能な短いパス・短いフォルダ名で新規展開しsetupを実行します。失敗済みruntimeのコピーや認証情報の削除は不要です |
 | AUTH_REQUIRED / exit 3 | 未認証・失効のためです。setup.batを通常実行するか、明示的にapp.bat mcp authで認可します |
 | statusが通信エラー | status自体はブラウザを開きません。通信やProviderの状況を確認し、credential削除・認証連打で代用しません |
 | OAuthでブラウザ認可が戻らない | 公式画面での許可、利用プラン、127.0.0.1:8765のポート競合を確認します。独立新規ユーザーでの初回認証は未検証です |
