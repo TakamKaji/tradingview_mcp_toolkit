@@ -48,6 +48,6 @@ Pythonラッパーはアプリへ組み込むためのAPIです。既存の認�
 
 **本ツールのCLIにはローソク足取得コマンドがなく、Jobのtask.definitionにget_ohlcvを指定して動かすこともできません。** 定期取得、ローソク足の自動ファイル保存・履歴管理を行うJobは未実装です。ニュース・財務・評価指標も、Python APIの存在だけで定期Job対応とは扱いません。
 
-Python APIの実装は[client.py](../../src/tradingview_screening/integrations/tradingview/client.py)と[schemas.py](../../src/tradingview_screening/integrations/tradingview/schemas.py)、詳しい組み込み方法は[developのAPI資料](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/API.md)を参照してください。Write APIの利用には対象と副作用の確認が必要です。`get_active_watchlist`もProvider説明上activate/createを伴う場合があるため、安全なRead-only例として使いません。
+Python APIの実装は[client.py](../../src/tradingview_screening/integrations/tradingview/client.py)と[schemas.py](../../src/tradingview_screening/integrations/tradingview/schemas.py)を参照してください。Write APIの利用には対象と副作用の確認が必要です。`get_active_watchlist`もProvider説明上activate/createを伴う場合があるため、安全なRead-only例として使いません。
 
 [利用者マニュアル一覧](README.md)

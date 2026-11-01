@@ -98,11 +98,11 @@ Watchlist更新、Alert Write、Scheduler登録・削除、認証情報削除に
 | 出来高上位100件を確定後、1h RSI14で判定 | 元の市場母集団→日足出来高の順位確定→100件のみ1h RSI14→保存の順を維持。単一JSONで表せないためPython候補だが、RSIの期間/時間足・取得可否を先に確認 | RSIで先にフィルタしてから上位100件、先頭1000件を市場全体とする、日足RSIで代用 |
 | 全米株を条件なしで全件取得 | 現行Provider制約で未対応と報告。最大1000件・ページング未対応も照合し、条件を変えて実行しない | S&P 500、先頭1000件、空結果に置換して全米株取得成功とする |
 
-[Issue #58](https://github.com/TakamKaji/tradingview_mcp_support/issues/58)の過去生成物`screen_prime_sma25.py`と`run-prime-sma25.bat`は、上記の母集団代替・失敗スキップ・旧BATパスの不合格例です。**元スクリプトの実際の実行失敗原因はログ未提出で未確定**です。文書上の不整合から全原因を断定せず、この個別スクリプトの修理・製品追加は行いません。この表はAIの期待判断であり、Provider実取得や各AIの遵守を実証するものではありません。
+過去のAI生成物`screen_prime_sma25.py`と`run-prime-sma25.bat`は、上記の母集団代替・失敗スキップ・旧BATパスの不合格例です。**元スクリプトの実際の実行失敗原因はログ未提出で未確定**です。文書上の不整合から全原因を断定せず、この個別スクリプトの修理・製品追加は行いません。この表はAIの期待判断であり、Provider実取得や各AIの遵守を実証するものではありません。
 
 ## 利用者が送る依頼文
 
-> https://github.com/TakamKaji/tradingview_mcp_support の `docs/user/AI_JSON_GUIDE.md` とリンク先の実仕様・Schema・サンプルを確認してください。私の希望から、単一Screening JSONで可能なら必ずJSON方式を選び、Jobは必要な場合だけ作成してください。表現できない複合処理だけPythonを選び、理由と必要なデータ・環境を説明してください。未確認の条件やAPIは創作せず、取得制限を明示してください。完成ファイル、保存先、検証・実行手順を教えてください。今回はファイル作成とローカル検証までとし、TradingViewへの実取得・書き込みとScheduler登録は行わないでください。
+> https://github.com/TakamKaji/tradingview_mcp_toolkit の `docs/user/AI_JSON_GUIDE.md` とリンク先の実仕様・Schema・サンプルを確認してください。私の希望から、単一Screening JSONで可能なら必ずJSON方式を選び、Jobは必要な場合だけ作成してください。表現できない複合処理だけPythonを選び、理由と必要なデータ・環境を説明してください。未確認の条件やAPIは創作せず、取得制限を明示してください。完成ファイル、保存先、検証・実行手順を教えてください。今回はファイル作成とローカル検証までとし、TradingViewへの実取得・書き込みとScheduler登録は行わないでください。
 
 Pythonを必要とする依頼例：
 
