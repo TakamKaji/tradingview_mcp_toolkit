@@ -18,7 +18,7 @@
 
 コマンドは展開フォルダのコマンドプロンプトで実行します。エクスプローラーのアドレス欄に`cmd`と入力すると、そのフォルダで開けます。PowerShellを使う場合は`app.bat`を`.\app.bat`に読み替えてください。
 
-Dockerでは`docker compose -f compose.docker.yml run --rm app`へCLI引数を渡します。macOSでは補助ファイル`./mac.command`も使えます。定期登録はWindowsネイティブ専用です。
+Dockerでは`docker compose -f compose.docker.yml run --rm app`へCLI引数を渡します。macOSでは補助起動スクリプト`./mac.command`も使えます。定期登録はWindowsネイティブ専用です。
 
 作成した定義は`screen my_japan_value`、Jobは`run my_japan_value_daily`で実行し、結果参照にはScreening名を使います。全文例のファイルを保存してから実行してください。
 

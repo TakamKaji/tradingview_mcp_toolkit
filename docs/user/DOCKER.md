@@ -6,9 +6,9 @@ Windows・macOS等のホストから既存CLIを手動実行する構成です�
 
 1. ホストに合う[Docker Desktop](https://docs.docker.com/desktop/)等を導入し、起動します。Dockerの利用条件も確認してください。
 2. リポジトリの配布ZIPを展開します。`compose.docker.yml`、`mac.command`、`screenings/`、`jobs/`が同じフォルダにあることを確認します。
-3. 展開フォルダで[Composeのコマンド](#ターミナルからcomposeを直接使う)を実行します。macOSでは、以下の補助起動も利用できます。
+3. 展開フォルダで[Composeのコマンド](#ターミナルからcomposeを直接使う)を実行します。macOSでは、以下の補助起動スクリプトも利用できます。
 
-## macOSの補助起動ファイル
+## macOSの補助起動スクリプト
 
 `mac.command`をダブルクリックするとbuildし、ターミナルへCLIのヘルプを表示します。**認証・Job・Watchlist Write・定期登録は自動実行しません。**
 
@@ -22,7 +22,7 @@ Windows・macOS等のホストから既存CLIを手動実行する構成です�
 ./mac.command mcp tools
 ```
 
-`mcp auth`のときだけ、Macのブラウザで固定入口`http://127.0.0.1:8765/oauth/authorize`を開きます。そこからTradingView公式の認可画面へ移動し、ログイン・許可するとcallbackを受信します。ブラウザが開かない場合は、認証コマンドの実行中にこの固定入口を自分で開いてください。認証完了後は入口も閉じます。
+`mcp auth`のときだけ、Macのブラウザで認可開始URL`http://127.0.0.1:8765/oauth/authorize`を開きます。そこからTradingView公式の認可画面へ移動し、ログイン・許可するとcallbackを受信します。ブラウザが開かない場合は、認証コマンドの実行中にこの認可開始URLを自分で開いてください。認証完了後は認可開始URLの待ち受けも終了します。
 
 認可URLのstate、認可code、tokenをターミナルへコピーしません。ブラウザを開くのは`mcp auth`だけです。`mcp status/tools`やJobは認証切れでも勝手にブラウザを開かず、`AUTH_REQUIRED`・exit 3なら手動で認証し直します。
 
@@ -40,11 +40,11 @@ docker compose -f compose.docker.yml run --rm app mcp status
 docker compose -f compose.docker.yml run --rm app mcp tools
 ```
 
-Composeでのauthは、表示された固定入口をホストのブラウザで手動で開きます。通常の読み取りコマンドには`--service-ports`を付けません。イメージはPython 3.12公式イメージを使い、通常はホストのCPUに合うアーキテクチャでbuildします。
+Composeでのauthは、表示された認可開始URLをホストのブラウザで手動で開きます。通常の読み取りコマンドには`--service-ports`を付けません。イメージはPython 3.12公式イメージを使い、通常はホストのCPUに合うアーキテクチャでbuildします。
 
 ## Screening・手動Job・結果
 
-Composeでは、以下の`./mac.command`を`docker compose -f compose.docker.yml run --rm app`に読み替えます。macOSの補助起動ではそのまま実行できます。
+Composeでは、以下の`./mac.command`を`docker compose -f compose.docker.yml run --rm app`に読み替えます。macOSの補助起動スクリプトではそのまま実行できます。
 
 ```sh
 ./mac.command screen public_japan_value
@@ -71,7 +71,7 @@ Composeでは、以下の`./mac.command`を`docker compose -f compose.docker.yml
 
 固定のCompose project名を使うので、展開先を変えても同じDocker Engineの同名volumeを再利用します。並行して別の利用者・別環境を動かす場合は、Composeの`-p`で別project名を明示します。その場合`mac.command`の既定volumeとは別になります。異なる環境でWatchlist mappingだけをコピーして使い回さないでください。
 
-**コンテナの認証volumeは暗号化されたOS Keychainではありません。** ファイルの所有者・モードとDocker DesktopのVMで保護する方式です。ホストのDocker管理権限者・管理者・VMバックアップへのアクセス権者は内容を読めます。信頼できる個人用環境で使い、OSログイン・ディスク暗号化で保護し、認証volumeを共有・通常の結果バックアップへ同梱しないでください。Docker secretも書込み・更新可能なOAuth永続ストアではないため採用していません。
+**コンテナの認証volumeは暗号化されたOS Keychainではありません。** ファイルの所有者・モードとDocker DesktopのVMで保護する方式です。ホストのDocker管理権限者・管理者・VMバックアップへのアクセス権者は内容を読めます。信頼できる個人用環境で使い、OSログイン・ディスク暗号化で保護し、認証volumeを共有・通常の結果バックアップへ同梱しないでください。Docker secretも書き込み・更新可能なOAuth永続ストアではないため採用していません。
 
 LinuxコンテナからMac Keychainを直接使う構成にはしていません。ホスト側のCredential中継を追加すると通信・認可の境界が増えるため、今回は専用volumeを選びました。WindowsのCredential Manager、通常macOS PythonのOS keyring経路は変更しません。
 
@@ -95,7 +95,7 @@ docker compose -f compose.docker.yml run --rm --entrypoint tar app -czf - -C /wo
 
 - Dockerに接続できない：Docker Desktopを起動し、`docker compose version`を確認します。ホストへのPython追加では解決しません。
 - ポート8765が使用中：別の認証を終了してから再実行します。ポートを外部へ公開したりredirect URIを独自変更しません。
-- ブラウザが開かない／認証タイムアウト：auth実行中に固定入口を開きます。古いページでなく新しい認証を使います。callbackのcode等は貼り付けません。
+- ブラウザが開かない／認証タイムアウト：auth実行中に認可開始URLを開きます。古いページでなく新しい認証を使います。callbackのcode等は貼り付けません。
 - `CREDENTIAL_STORE_ERROR`：専用volumeの所有UID10001・dir0700/file0600、symlinkでないことを確認します。読み出しや権限緩和、Windows credentialのエクスポートで回避しません。既存volumeを消す前に原因を診断します。
 - `Mounts denied`・ファイルを読めない：展開フォルダだけをDocker DesktopのFile Sharingへ許可し、ホスト上のscreenings/jobsの存在・読み取り権限を確認します。ホーム全体の共有や`chmod -R 777`は不要です。これらのbind mountはコンテナから書き込めません。
 - 結果がホストのresultsに見えない：コンテナ版は専用volumeです。`results latest/history`またはバックアップで確認します。

@@ -1,6 +1,6 @@
 # 公式TradingView MCP 実機観測・配布版での安全な利用（2026-10-27）
 
-この文書は**公式MCPへ直接接続した計246 Read**の調査結果のうち、配布用`main`で誤動作を避けるための要点です。調査は**本リポジトリのラッパーの受入テストではありません**。最新のProvider挙動・自分の認証プランでは再試行し、`success`に加えて条件適用・行数・欠損を確認します。
+この文書は**公式MCPへ直接接続した計246 Read**の調査結果のうち、配布用`main`で誤動作を避けるための要点です。調査は**本リポジトリのラッパーの受入テストではありません**。利用時には、ご自身の認証プランと実行環境でProviderの現在の挙動を再確認し、`success`に加えて条件適用・行数・欠損を確認します。
 
 ## 銘柄集合とSMA25
 
@@ -19,9 +19,9 @@
 
 ## 財務・予想・カレンダー
 
-- `get_forecasts`の日本株7銘柄で**JPYラベルなのに円建てraw値と異なる**例。4社20/20と追加3社11/15、計31/35項目で`raw × FX_IDC:JPYUSD`の対象期末候補の日足終値がPython floatで一致。次FYのEPS/売上は7社14/14で直近実績FY末、EPS TTMは7社7/7で実績FQ末の係数と一致。残るイオン/Fast次FQ4項目は基準日未確定（未来候補で照合不可）。
+- `get_forecasts`の日本株7銘柄で**JPYラベルなのに円建てraw値と異なる**例。4社20/20と追加3社11/15、計31/35項目で`raw × FX_IDC:JPYUSD`の対象期末候補の日足終値がPython floatで一致。次FYのEPS/売上は7社14/14で直近実績FY末、EPS TTMは7社7/7で実績FQ末の係数と一致。イオンとファーストリテイリングの、次のFQに関する残り4項目は基準日未確定（未来候補で照合不可）。
 - **円建ての予想PER・成長率・目標株価へ`get_forecasts`のJPYラベル値を無検証で使用しない**。直近3月決算会社の固定係数を他社に当てると12/15項目が不一致。固定レートで自動補正しない。内部の通貨変換手順と会計期間の選択は未証明。日立のTradingView画面EPS 176.99 JPYはraw基本EPS TTM 176.9908の丸めと一致した例です。
-- 財務の裸`net_income`が`period:ttm`指定でもFY値を返した例や、`eps`と履歴EPSで基本/希薄化が異なる例あり。**返却した実際のsuffix・通貨・会計期末を照合**。
+- 財務データで、サフィックスなしの`net_income`が`period:ttm`指定でもFY値を返した例や、`eps`と履歴EPSで基本/希薄化が異なる例あり。**返却された値のsuffix・通貨・会計期末を照合**。
 - 日本株の`get_earnings_calendar`0件でも、別のraw列に指定期間内の次回予定日があった例あり。配当はmarketモードで取得できる銘柄がsymbolsモードで0件になる例あり。0件を「発表なし」「無配」と断定しない。
 - `get_screener_columns`の検索で0件でも実列Readが成功する例あり。Discovery・列Read・filter適用・単位の正当性を個別に検証します。
 
@@ -29,7 +29,7 @@
 
 1. README→[AI JSONガイド](AI_JSON_GUIDE.md)→実際の[Screening Schema](../../src/tradingview_screening/screening/schema.py)、[公式MCP Request](../../src/tradingview_screening/integrations/tradingview/schemas.py)を読んで方式選択。
 2. `run_screener`のProvider成功、`ignored_filters`、`totalCount`、`returnedCount`、`completeCoverage`、重複・nullを確認し、結果の時点・未評価件数を明示。
-3. `app.bat screen <name>`はTradingView Readとローカル保存。`results latest <name>`は**古い成功結果の可能性**もあるので作成日時を確認。`watchlistSync`、Alert Write、`schedule apply/remove`は明示指示なしに実行しない。
+3. `app.bat screen <name>`はTradingViewからのデータ読み取り（Read）とローカル保存。`results latest <name>`は**古い成功結果の可能性**もあるので作成日時を確認。`watchlistSync`、Alert Write、`schedule apply/remove`は明示指示なしに実行しない。
 4. `get_forecasts`、`get_ohlcv`等はラッパーのPython Readメソッドに対応していても専用CLI/Jobがあるとは限らない。CLIがないことをProvider非対応と混同しない。
 
-**再現可能な取得条件・出力・失敗分類と実機受入の手順：** [自然言語スクリーニング受入](NATURAL_LANGUAGE_ACCEPTANCE.md)。公式MCPの詳細な調査は開発ブランチ`develop`に保管（この`main`版のダウンロードZIPには開発用生証跡を同梱しない）。
+**再現可能な取得条件・出力・失敗分類と実機受入の手順：** [自然言語スクリーニング受入](NATURAL_LANGUAGE_ACCEPTANCE.md)。この文書は2026-10-27の公式MCPへの直接Readによる調査結果の要約です。配布ZIPには生の調査資料を含めません。過去の観測結果と現在のProvider挙動、本ラッパー経由の動作確認は区別し、上記の未検証事項を確認済みとは扱わないでください。

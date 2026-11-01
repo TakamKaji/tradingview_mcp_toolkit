@@ -56,18 +56,18 @@ docker compose -f compose.docker.yml run --rm app screen public_japan_value
 docker compose -f compose.docker.yml run --rm app results latest public_japan_value
 ```
 
-コンテナの結果・認証情報は**Docker volume**に保存されます。`mac.command`はmacOS向けの補助起動ファイルですが、Docker構成自体はMac専用ではありません。Windows Docker Desktop／Linux amd64で実OAuth・取得・永続化を確認済みで、Mac実機・arm64は未検証です。
+コンテナの結果・認証情報は**Docker volume**に保存されます。`mac.command`はmacOS向けの補助起動スクリプトですが、Docker構成自体はMac専用ではありません。Windows Docker Desktop／Linux amd64で実OAuth・取得・永続化を確認済みで、Mac実機・arm64は未検証です。
 
 [Dockerの認証・保存先・トラブル対応](docs/user/DOCKER.md)
 
 ## AIとの会話からScreeningを作る
 
-対応CLIはこのフォルダを起点に起動します。[Gemini入口](GEMINI.md)・[Codex入口](AGENTS.md)・[Claude入口](CLAUDE.md)と[自動読込の条件・検証範囲](docs/user/AI_USAGE.md#プロジェクトルートでaiを起動する)を確認してください。母集団・処理順を保ち、「作成して実行」は実行結果まで検証します。
+対応CLIは、このフォルダを作業ディレクトリとして起動します。[Gemini入口](GEMINI.md)・[Codex入口](AGENTS.md)・[Claude入口](CLAUDE.md)と[自動読込の条件・検証範囲](docs/user/AI_USAGE.md#プロジェクトルートでaiを起動する)を確認してください。母集団・処理順を保ち、「作成して実行」は実行結果まで検証します。
 
 Gemini CLI・Codex・Claude Code・ChatGPTに[AIによるScreening生成ガイド](docs/user/AI_JSON_GUIDE.md)と実仕様・Schema・サンプルを読ませ、希望を自然な言葉で伝えます。 [公式MCP直接Readの確認済み制約](docs/user/PROVIDER_VERIFICATION.md)と[3エージェント受入手順](docs/user/NATURAL_LANGUAGE_ACCEPTANCE.md)も配布用mainに同梱しています。実機で3エージェントが検証済みという意味ではありません。AIは次の2方式から選択します。
 
 - **方式A（最優先）：標準Screening JSON。** 単一Screeningで表現できる条件は`screenings/*.json`を作り、Jobが必要な場合だけ`jobs/*.json`も作ります。簡単な条件にPythonやBATは不要です。
-- **方式B：高度な複合Python処理。** ランキング確定後の別時間足判定、外部母集団との照合など、単一JSONで表現できない処理だけ選び、理由を説明します。既存の公式MCPクライアント・認証・通信制御・保存・Watchlist安全機構を可能な範囲で再利用します。汎用pipelineエンジンや専用CLIは未実装です。
+- **方式B：高度な複合Python処理。** ランキング確定後の別時間足判定、外部母集団との照合など、単一JSONで表現できない処理に限って方式BのPython処理を選び、その理由を説明します。既存の公式MCPクライアント・認証・通信制御・保存・Watchlist安全機構を可能な範囲で再利用します。汎用pipelineエンジンや専用CLIは未実装です。
 
 **一般ユーザーはGitやCodexをインストールする必要はありません。** ChatGPTは完成ファイルと保存手順を提供し、Codexはアクセス可能なローカル環境への保存・検証まで対応します。Python方式は編集・検証できる実行環境が必要です。取得制限・欠損・未確認事項を明示し、不完全な取得を全件と扱いません。ファイル作成と実取得は別操作です。明示依頼なしにTradingViewへの実書き込みやScheduler登録を実行せず、初期はWatchlist同期・定期登録を無効にします。
 

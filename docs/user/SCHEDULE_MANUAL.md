@@ -43,17 +43,17 @@ Jobは実行対象のScreening、保存・同期、任意の定期登録時刻�
 | --- | --- |
 | schemaVersion | 整数1 |
 | name | `.json`を除くJobファイル名と一致 |
-| enabled | 定期登録の対象にするか。falseでも明示した手動runは実行する |
+| enabled | 定期登録の対象にするか。falseでも、明示的に指定すれば手動で実行できる |
 | task.type / definition | 自分のScreeningを呼ぶ場合は`screening`とScreening名。任意の公式Tool名は指定できない |
 | schedule.type / time / timezone | 定期登録は`daily`・24時間表記`HH:MM`・`Asia/Tokyo`のみ |
 | output.save | 結果JSONをPCへ保存するか |
 | output.watchlistSync | 管理Watchlist同期を呼ぶか。Screening側も有効なら実Writeを行う |
 
-手動runでもschedule項目は必要です。ただし手動実行はその場で動き、設定時刻まで待ちません。Schemaが他のIANA timezoneを読めても、現在のScheduler登録はAsia/Tokyo以外に対応しません。
+手動実行でもschedule項目は必要です。ただし手動実行はその場で動き、設定時刻まで待ちません。Schemaが他のIANA timezoneを読めても、現在のScheduler登録はAsia/Tokyo以外に対応しません。
 
 ## 手動で実行・結果確認する
 
-次は上のScreeningとJobを作成してから使うコマンドです。コマンドプロンプトでは`app.bat`、PowerShellでは`.\app.bat`を使います。
+以下は、上のScreeningとJobを作成した後に使うコマンドです。コマンドプロンプトでは`app.bat`、PowerShellでは`.\app.bat`を使います。
 
 ```bat
 app.bat jobs list
@@ -61,7 +61,7 @@ app.bat run my_japan_value_daily
 app.bat results latest my_japan_value
 ```
 
-`run`に渡すのは**Job名**、`results`に渡すのは**Screening名**です。例はTradingView Read＋ローカル保存だけで、Watchlist WriteやTask登録は行いません。`jobs list`は全Jobの定義・参照を検証し、不正なものが1つでもあればexit 2になります。
+`run`に渡すのは**Job名**、`results`に渡すのは**Screening名**です。例はTradingViewからのデータ読み取り（Read）＋ローカル保存だけで、Watchlist WriteやTask登録は行いません。`jobs list`は全Jobの定義・参照を検証し、不正なものが1つでもあればexit 2になります。
 
 `app.bat schedule list`は登録済みの管理Taskを列挙するだけで、登録・削除は行いません。
 
@@ -85,7 +85,7 @@ app.bat schedule list
 
 ## 定期実行を止める（削除操作）
 
-**次は自分で作成したJobの管理Taskを削除する操作です。** 削除を意図する場合だけ実行します。
+**以下は、自分で作成したJobの管理Taskを削除する操作です。** 削除を意図する場合だけ実行します。
 
 ```bat
 app.bat schedule remove my_japan_value_daily
