@@ -10,17 +10,17 @@
 4. 実際のサンプル：[Screening](../../screenings/public_japan_value.json)・[読み取り専用Job](../../jobs/public_sample_screen_daily.json)
 5. 実際の[Screening Schema](../../src/tradingview_screening/screening/schema.py)・[Job Schema](../../src/tradingview_screening/jobs/schema.py)、[公式Providerの資料](https://www.tradingview.com/mcp/docs)・[型付きRequest](../../src/tradingview_screening/integrations/tradingview/schemas.py)
 
-**必ず実際のファイルを読んでから作成してください。** 公開URLでもAIの閲覧機能やアクセス権によっては本文を読めません。読めないAIは閲覧したふりをせず、上記資料の添付・本文の提供を求めてください。Privateの間は通常の公開URLでは閲覧できません。新しいfilter・列・市場等はProviderの対応を確認し、Schemaが文字列を受理するだけで対応済みとしないでください。
+**必ず実際のファイルを読んでから作成してください。** 公開URLでもAIの閲覧機能やアクセス権によっては本文を読めません。読めないAIは閲覧したふりをせず、上記資料の添付・本文の提供を求めてください。新しいfilter・列・市場等はProviderの対応を確認し、Schemaが文字列を受理するだけで対応済みとしないでください。
 
 ## 2026-10-27公式MCP実測を踏まえた追加判定（配布版）
 
 最新の[公式MCP Read能力・制約の要点](PROVIDER_VERIFICATION.md)は必ず確認してください。**公式MCPに246回直接Readした調査と、この配布版ラッパーの実行成功は別**です。
 
-- **日経225構成銘柄**：公式MCP直接観測で`symbolset:["SYML:TVC;NI225"]`の225/225行を取得。全件を対象に`close`と`SMA25`を取得後、乖離率`(close/SMA25-1)*100`をローカルで評価する方法が候補です。未検証の`price_vs_sma25_pct`や日経225の文字列index filterで代用しない。Providerの今回の全件取得を、本ラッパー経由の新規受入成功とは呼ばない。
-- **指数型指定**：NASDAQ 100で型省略101/101件、stock限定98/98件（ARM・ASML・PDDは`dr`型）。指数全構成銘柄に`symbolTypes:["stock"]`を自動追加しない。
+- **日経225構成銘柄**：公式MCP直接観測で`symbolset:["SYML:TVC;NI225"]`の225/225行を取得。全件を対象に`close`と`SMA25`を取得後、乖離率`(close/SMA25-1)*100`をローカルで評価する方法が候補です。未検証の`price_vs_sma25_pct`や日経225の文字列index filterで代用しない。この公式MCPへの直接Readで全件を取得できたことを、本ラッパー経由での新たな受入検証の成功とは扱わない。
+- **指数構成銘柄の種別指定**：NASDAQ 100で型省略101/101件、stock限定98/98件（ARM・ASML・PDDは`dr`型）。指数全構成銘柄に`symbolTypes:["stock"]`を自動追加しない。
 - **東証プライム**：Prime所属とPrime全件の母集団は未確定。`market:japan`・TOPIX・先頭1,000銘柄への無断代用は禁止。完全性を保証できない場合、未達として停止・報告。
 - **標準指標**：`SMA25`の直接値取得成功例はある一方、任意期間のRSI/SMA/EMAは不保証。列が存在してもfilterに通るとは限らず、`ignored_filters`があれば成功扱いしない。OHLCVで再計算する場合はformat・時間足・バーの確定性・履歴長を検証する。
-- **財務予想**：日本株`get_forecasts`の予想EPS等は、JPYラベルのままraw値にJPYUSD終値を掛けた値と一致する例が7社あります。JPY単位として予想PER計算しない。固定換算係数を自動補正に利用しない。
+- **財務予想**：日本株`get_forecasts`の予想EPS等は、JPYラベルのままraw値にJPYUSD終値を掛けた値と一致する例が7社あります。JPYラベルだけを根拠に円建ての値として予想PERを計算しない。固定換算係数を自動補正に利用しない。
 
 初見エージェントの受入方法は[自然言語スクリーニング受入](NATURAL_LANGUAGE_ACCEPTANCE.md)。ファイル生成だけでなく、実行ログ・母集団の証拠・保存結果で合否を決めます。
 
@@ -58,18 +58,18 @@
 
 ## 母集団・完全性・テクニカル指標の検証契約
 
-「市場」「取引所」「上場区分」「全件」「ランキング」と「フィルタ適用順」を別々に固定します。`market=japan`は東証プライムの指定ではありません。出来高上位100件、手書きの代表銘柄一覧、先頭1000件を全上場銘柄の代わりにしません。Provider対応は[公式資料](https://www.tradingview.com/mcp/docs)、型付きRequest、必要なら既存Clientの`get_screener_columns`によるReadで確認します。列の存在だけでは、その市場でのフィルタ対応や期間・時間足まで保証しません。
+「市場」「取引所」「上場区分」「全件」「ランキング」と「フィルター適用順」を別々に固定します。`market=japan`は東証プライムの指定ではありません。出来高上位100件、手書きの代表銘柄一覧、先頭1000件を全上場銘柄の代わりにしません。Provider対応は[公式資料](https://www.tradingview.com/mcp/docs)、型付きRequest、必要なら既存Clientの`get_screener_columns`によるReadで確認します。列の存在だけでは、その市場でのフィルター対応や期間・時間足まで保証しません。
 
 - 対象母集団件数、評価済件数、未評価件数、失敗件数、完全性、対象時点を報告する。総件数不明は「不明」とし、未評価0とはしない。失敗件数は未評価のうち取得・計算等が失敗した件数として示し、二重加算しない。該当0件は必要な全対象を正常に評価できた場合にだけ結論とする。
 - 標準結果の`totalCount`は**その問合せ条件**の総件数、`returnedCount`は取得行数。`completeCoverage=true`でも別途確認していない上場母集団の完全性は示さない。現行Engineは`status=success`でも`completeCoverage=false`を返し得るため、成功ステータスだけで全件取得と説明しない。標準JSONにない評価件数等は検証報告で補い、結果Schemaを勝手に追加・変更しない。
 - `RunScreenerRequest`は最大1000行で、全件列挙用のoffset/page引数はない。`get_news`のページングをScreenerへ転用しない。全件を保証できない時は制約を明示し、母集団・条件を緩和せず完全取得の成功報告を止める。
-- 25日SMAは、同じ基準日の**確定日足の終値25本**で計算可能か確認する。OHLCVを使う場合は`interval="1D"`で、生の足が必要なため`summary=false`とし、進行中足の除外後にも25本確保する。日時を解釈して昇順に整え、重複、非数値・欠損、取引日の抜け、株式分割等の価格調整の整合を検証する。休日を欠損扱いせず、25暦日や直近25行というだけで25取引日とみなさない。25本未満・日付不明・未確定足混在を無言でスキップしない。
+- 25日SMAは、同じ基準日の**確定日足の終値25本**で計算可能か確認する。OHLCVを使う場合は`interval="1D"`で、個々のローソク足データが必要なため`summary=false`とし、進行中の日足バーを除いた後も、確定済みの日足バーを25本確保する。日時を解釈して昇順に整え、重複、非数値・欠損、取引日の抜け、株式分割等の価格調整の整合を検証する。休日を欠損扱いせず、25暦日や直近25行というだけで25取引日とみなさない。25本未満・日付不明・未確定足混在を無言でスキップしない。
 - 基準価格を同じ確定日の終値`C(t)`とするなら、`SMA25(t)=直近25確定日足終値の平均`、`乖離率=(C(t)/SMA25(t)-1)*100`と示す。SMAが0・欠損なら評価不能。未指定の「20%以上」は通常**+20%以上**と解釈して報告し、絶対値20%以上（下方乖離を含む）へ変えない。進行中の現在値を使う依頼ならSMAとの時点差と計算基準を明示する。
 - 同じ期間・時間足・価格基準の正しいProvider指標を直接取得できれば再計算を避ける。SMA25、RSI14の対応をラッパー名から推定せず、未確認なら未確認とする。Publicコアに新しい指標計算を追加しない。
 
 ## Windowsの起動契約
 
-正式な利用者入口は[setup.bat](../../setup.bat)、[app.bat](../../app.bat)、[export-results.bat](../../export-results.bat)。内部BATは[scripts/setenv.bat](../../scripts/setenv.bat)と[scripts/setup-runtime.bat](../../scripts/setup-runtime.bat)です。旧ルート直下の`setenv.bat`を呼ぶ生成物は不合格です。条件ごとの新規BATを安易に作らず、通常は既存`app.bat`を使います。
+正式な利用者入口は[setup.bat](../../setup.bat)、[app.bat](../../app.bat)、[export-results.bat](../../export-results.bat)。内部BATは[scripts/setenv.bat](../../scripts/setenv.bat)と[scripts/setup-runtime.bat](../../scripts/setup-runtime.bat)です。現在は存在しないプロジェクトルート直下の`setenv.bat`を呼ぶ生成物は不合格です。条件ごとの新規BATを安易に作らず、通常は既存`app.bat`を使います。
 
 複合Pythonに実行環境の設定が必要な場合だけ、プロジェクトルートのコマンドプロンプトで`call scripts\setenv.bat`後、`"%PYTHON_EXECUTABLE%" <拡張スクリプトのパス>`を使います。BAT内の相対パスはBATの保存場所から解決するため、場所を確認せず`%~dp0setenv.bat`を生成しません。PowerShellからBATを単独実行しても親PowerShellへ環境変数は引き継がれません。同じcmdプロセスで設定とPython実行を行ってください。
 
@@ -77,7 +77,7 @@ Embedded PythonとホストPythonの`site-packages`を`sys.path`で混在させ�
 
 ## 「作成して実行」の完了契約
 
-1. 方式・データ取得可否・実行環境・接続・Read権限を確認する。依頼されたTradingView Readとローカル結果保存はその実行範囲に含む。新規認証や追加権限が必要なら環境上の制約を説明し、認証情報削除で解決しようとしない。
+1. 方式・データ取得可否・実行環境・接続・Read権限を確認する。依頼されたTradingViewからのデータ読み取り（Read）とローカル結果保存はその実行範囲に含む。新規認証や追加権限が必要なら環境上の制約を説明し、認証情報削除で解決しようとしない。
 2. 実行前の時刻と既存最新結果を控え、Read-onlyの`app.bat screen <name>`等を実行する。Jobの場合は実際の参照定義と`watchlistSync`等を確認し、暗黙のWriteがあれば実行しない。
 3. 実際のstdout、stderr、exit codeを確認する。exit 0だけで完了とせず、`status`・`errors`・coverageを調べる。診断ログの秘密値は報告しない。
 4. 新しい保存ファイルの実在、内容、`executedAt`、Screening名、条件のfingerprint、今回の実行との対応を照合する。`results latest`は過去の成功結果を返し得るため、古いファイルを今回の成功証跡にしない。実行失敗と過去結果は分けて報告する。
@@ -89,13 +89,13 @@ Watchlist更新、Alert Write、Scheduler登録・削除、認証情報削除に
 
 ## 自然言語の回帰ケースと不合格例
 
-まず「このフォルダの使い方を理解して」、次に「このツールを使って東証プライムに上場している企業の中から25日移動平均線との乖離率が20％以上の銘柄をスクリーニングするスクリプトを作成し実行してください。」と依頼された場合も、README→本ガイド→実Schema・サンプル・BATを確認し、次の判断を行います。利用可能なら正しい方式で実行証跡まで検証し、不可なら不足する母集団・指標・接続の根拠を示して未実行/失敗と報告します。「スクリプト」という語だけでPython/BATを選びません。
+まず「このフォルダの使い方を理解して」、次に「このツールを使って東証プライムに上場している企業の中から25日移動平均線との乖離率が20%以上の銘柄をスクリーニングするスクリプトを作成し実行してください。」と依頼された場合も、README→本ガイド→実Schema・サンプル・BATを確認し、次の判断を行います。利用可能なら正しい方式で実行証跡まで検証し、不可なら不足する母集団・指標・接続の根拠を示して未実行/失敗と報告します。「スクリプト」という語だけでPython/BATを選びません。
 
 | 入力ケース | 期待判断 | 不合格例 |
 | --- | --- | --- |
 | 東証プライム全体、SMA25乖離率+20%以上 | プライム全母集団と対象時点を保証し、Providerの市場区分・SMA25/乖離率対応を確認。標準JSONを優先し、不足する処理だけ既存ラッパーを利用。保証不能なら停止し、外部データは上記フローに従い代替案として提示 | `limit=100`の日本株出来高順＋手書き代表銘柄を全プライムとする。未承認のJPX一覧取得・外部母集団構築。OHLCV失敗/25本未満を除いてsuccess、未実行で完了宣言 |
 | 日本株PER 0〜15、出来高順20件 | 同梱例とProvider対応を照合し標準JSONを優先。取得列とfilterを混同せず、20件のランキングとして報告 | 不要なPython/BAT、新規API、Schemaに通るだけの未知filter、上位20件を日本株全件とする |
-| 出来高上位100件を確定後、1h RSI14で判定 | 元の市場母集団→日足出来高の順位確定→100件のみ1h RSI14→保存の順を維持。単一JSONで表せないためPython候補だが、RSIの期間/時間足・取得可否を先に確認 | RSIで先にフィルタしてから上位100件、先頭1000件を市場全体とする、日足RSIで代用 |
+| 出来高上位100件を確定後、1h RSI14で判定 | 元の市場母集団→日足出来高の順位確定→100件のみ1h RSI14→保存の順を維持。単一JSONで表せないためPython候補だが、RSIの期間/時間足・取得可否を先に確認 | RSIで先にフィルターしてから上位100件、先頭1000件を市場全体とする、日足RSIで代用 |
 | 全米株を条件なしで全件取得 | 現行Provider制約で未対応と報告。最大1000件・ページング未対応も照合し、条件を変えて実行しない | S&P 500、先頭1000件、空結果に置換して全米株取得成功とする |
 
 過去のAI生成物`screen_prime_sma25.py`と`run-prime-sma25.bat`は、上記の母集団代替・失敗スキップ・旧BATパスの不合格例です。**元スクリプトの実際の実行失敗原因はログ未提出で未確定**です。文書上の不整合から全原因を断定せず、この個別スクリプトの修理・製品追加は行いません。この表はAIの期待判断であり、Provider実取得や各AIの遵守を実証するものではありません。
@@ -112,7 +112,7 @@ Pythonを必要とする依頼例：
 
 - **正しいJSONだけをファイルへ保存。** UTF-8（BOMなし）、コメント・余計な末尾カンマ・Markdownコードフェンスなし。JSON全文を省略しない。
 - 新しいファイル名は英数字で始め、続きは英数字・`_`・`-`のみ。パス・空白・日本語・Windows予約名は使用禁止。`screenings/<name>.json`や`jobs/<name>.json`の`<name>`をJSON内の`name`と一致させ、既存サンプルを上書きしない。
-- Screeningの`schemaVersion`は整数`1`、`limit`は整数1～1000、`columns`は空でない配列。通常の数値`filters`は`[下限, 上限]`で、片側の制限なしは`null`。例：`"pe":[0,15]`、`"div_yield":[3,null]`。フィルター名と取得列名は異なる場合がある。
+- Screeningの`schemaVersion`は整数`1`、`limit`は整数1〜1000、`columns`は空でない配列。通常の数値`filters`は`[下限, 上限]`で、片側の制限なしは`null`。例：`"pe":[0,15]`、`"div_yield":[3,null]`。フィルター名と取得列名は異なる場合がある。
 - **Providerの未確認フィルター・列・市場・presetを創作しない。** 未対応・不明な希望は利用者に伝え、勝手に別条件や別Universeへ置き換えない。`mcp tools`はツール一覧表示であり、任意Toolの実行用CLIではない。
 - ScreeningのWatchlistは最初`{"enabled":false}`。Jobは`schemaVersion=1`、`task.type="screening"`、`task.definition`に**Screening名**、`enabled=false`、`output.save=true`、`output.watchlistSync=false`。Jobの`schedule`は手動実行でも必須。現行Schedulerは`daily`、`HH:MM`、`Asia/Tokyo`のみに対応。時刻の希望がなければ例示時刻を明示し、実際の定期登録をしない。
 - **Watchlistへの銘柄追加・削除やTask登録・削除はユーザーの明示依頼なしに行わない。** 同梱`sample_screen_daily`は`enabled=true`かつWriteあり。`schedule apply`は有効な**全Job**を登録・更新するため、自動実行しない。
@@ -123,7 +123,7 @@ Pythonを必要とする依頼例：
 1. 完全な`screenings/<name>.json`と、希望された場合は`jobs/<name>.json`を用意する。
 2. 希望した条件とJSONフィールドの対応、未対応・未確認事項を短く説明する。
 3. CodexはJSON構文・Schema・ファイル名・Job参照先をローカルで検証する。[load_screening_by_name](../../src/tradingview_screening/screening/validators.py)と[load_job_by_name・validate_job_screening_reference](../../src/tradingview_screening/jobs/loader.py)はMCPへ接続せず検証できる。Screeningの読込後は内部の`name`と指定ファイル名の一致も照合する。専用のvalidate CLIはない。利用可能なプロジェクト環境で検証し、未実行なら理由を報告する。
-4. **利用者が実取得を依頼した後**はWindowsのコマンドプロンプトで`app.bat screen <screening_name>`、結果は`app.bat results latest <screening_name>`。`screen`はTradingView Readとローカル保存だけでWatchlistを更新しない。Jobなら`app.bat run <job_name>`。`enabled=false`でも手動runは実行する。結果参照は**Job名でなくScreening名**。失敗後の`latest`は古い成功結果の場合があるため日時も確認する。PowerShellは`.\app.bat`、Dockerは[Docker導入](DOCKER.md)を参照。
+4. **利用者が実取得を依頼した後**はWindowsのコマンドプロンプトで`app.bat screen <screening_name>`、結果は`app.bat results latest <screening_name>`。`screen`はTradingViewからのデータ読み取り（Read）とローカル保存だけでWatchlistを更新しない。Jobなら`app.bat run <job_name>`。`enabled=false`でも、明示的に指定すれば手動で実行できる。結果参照は**Job名でなくScreening名**。失敗後の`latest`は古い成功結果の場合があるため日時も確認する。PowerShellは`.\app.bat`、Dockerは[Docker導入](DOCKER.md)を参照。
 5. 修正依頼時は指定された条件だけを変え、既存ファイルを意図せず変更しない。
 
 ## 方式B：Pythonの再利用箇所と境界

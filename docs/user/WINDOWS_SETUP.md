@@ -9,7 +9,7 @@
 
 ## ダウンロードする
 
-1. [GitHub Releases](https://github.com/TakamKaji/tradingview_mcp_toolkit/releases)で対象バージョンの**Assets → Source code (zip)**を取得します。Releaseがない場合は`main`ブランチの**Code → Download ZIP**を利用します。
+1. リポジトリの`main`ブランチで **Code → Download ZIP** を選び、ソースZIPを取得します。特定バージョンの[GitHub Release](https://github.com/TakamKaji/tradingview_mcp_toolkit/releases)がある場合は、その**Source code (zip)**も利用できます。
 2. ZIPを「すべて展開」し、`setup.bat`と`app.bat`のあるフォルダを開きます。ZIP内から直接BATを実行しないでください。
 
 Gitでmainをcloneしても利用できますが、導入にGitや開発ツールは必要ありません。
@@ -57,7 +57,7 @@ app.bat mcp tools
 
 更新する場合は新しいソースを別フォルダへ展開してセットアップします。既存の`screenings/`、`jobs/`、`results/`、`.local/managed_watchlists.json`などは必要に応じてバックアップし、旧環境を削除せずに新しい設定を確認してください。旧フォルダを参照するTaskやmappingは自動移行されません。
 
-フォルダを削除しても、登録済みScheduler TaskやCredential Managerの情報は消えません。定期実行を使っていた場合は[Schedulerの削除手順](SCHEDULE_MANUAL.md#定期実行を止める削除操作)を確認し、認証の解除はTradingView側の正規の連携管理から判断してください。tokenをファイルへ書き出して移行しないでください。
+フォルダを削除しても、登録済みScheduler TaskやCredential Managerの情報は消えません。定期実行を使っていた場合は[Schedulerの削除手順](SCHEDULE_MANUAL.md#定期実行を止める削除操作)を確認し、認証を解除する場合は、TradingView側の連携管理画面で対象の連携を確認し、解除するかどうかを判断してください。tokenをファイルへ書き出して移行しないでください。
 
 ## 通信先と未確認事項
 

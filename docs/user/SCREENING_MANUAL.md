@@ -11,7 +11,7 @@ Screeningは対象市場・条件・並び順・取得列をJSONで定義し、�
 3. 下の全文例を参考に条件を編集します。この例では上限を20件にし、Watchlist同期は無効にしています。
 4. **UTF-8（BOMなし）**で保存します。末尾が`.json.txt`にならないよう注意してください。JSONにはコメントや末尾の余分なカンマを書けません。
 
-名前には先頭が半角英数字で、その後は半角英数字・`_`・`-`を使えます。空白、日本語、パス区切り、`.`、Windows予約名（`CON`、`NUL`等）は使いません。同名の既存サンプルを上書きせず、別名で保存してください。
+名前の先頭には半角英数字を使います。2文字目以降には半角英数字・`_`・`-`を使えます。空白、日本語、パス区切り、`.`、Windows予約名（`CON`、`NUL`等）は使いません。同名の既存サンプルを上書きせず、別名で保存してください。
 
 `screenings/my_japan_value.json`の全文：
 
@@ -77,7 +77,7 @@ filter名と取得列名が同じとは限りません。この日本株例はfi
 
 ### 取得列・上限・Watchlist
 
-`columns`は表示したいProviderの列を選びます。`close`、`change`、`volume`など、まず同梱例の列を使い、変更時は[公式MCP資料](https://www.tradingview.com/mcp/docs)の対応範囲を確認してください。全列を列挙する専用CLIはありません。詳しい列の探索はPython APIの`get_screener_columns`を使う範囲です（[利用方法の違い](FEATURES.md#c-公式toolと本ツールの接続範囲)）。Tool一覧を表示する`mcp tools`と、取得列の一覧は別です。
+`columns`は表示したいProviderの列を選びます。`close`、`change`、`volume`など、まず同梱例の列を使い、変更時は[公式MCP資料](https://www.tradingview.com/mcp/docs)の対応範囲を確認してください。全列を列挙する専用CLIはありません。列を詳しく調べるには、Python APIの`get_screener_columns`を使います（[利用方法の違い](FEATURES.md#c-公式toolと本ツールの接続範囲)）。Tool一覧を表示する`mcp tools`と、取得列の一覧は別です。
 
 `limit=20`でも実際の取得が20件未満になる場合があります。`totalCount`は条件に対するProvider総件数、`returnedCount`は実取得行数です。上限まで取れただけでは全件取得とは限りません。`completeCoverage=true`も指定した条件内の完全性で、市場全体の保証ではありません。
 
@@ -92,7 +92,7 @@ app.bat screen my_japan_value
 app.bat results latest my_japan_value
 ```
 
-最初のコマンドはTradingView ReadとPC内へのJSON保存、次は保存結果の読み取りです。成功時は`results/YYYY-MM-DD/`へ保存されます。履歴・比較は[Results](RESULTS.md)を参照してください。この名前は上の手順で作成して初めて使える例で、同名ファイルは最初から同梱されていません。
+最初のコマンドはTradingViewからデータを読み取ってPC内にJSONを保存し、2つ目のコマンドは保存済みの結果を表示します。成功時は`results/YYYY-MM-DD/`へ保存されます。履歴・比較は[Results](RESULTS.md)を参照してください。この名前は上の手順で作成して初めて使える例で、同名ファイルは最初から同梱されていません。
 
 ## 同梱サンプルからコピー元を選ぶ
 

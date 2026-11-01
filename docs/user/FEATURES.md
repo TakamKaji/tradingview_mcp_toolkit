@@ -2,7 +2,7 @@
 
 本ツールの共通機能、設定の使用例、Python APIだけにある操作を分けて説明します。公式MCPにToolがあることと、本ツールのCLIや定期Jobからそのまま使えることは別です。
 
-Windowsネイティブは[setup.batから導入](WINDOWS_SETUP.md)、Dockerコンテナは[Docker導入手順](DOCKER.md)から実行します。コンテナ内では共通CLIの認証・Screening・保存結果・手動Jobを使えますが、Windows Task Schedulerによる定期登録は使いません。
+Windowsネイティブは[setup.batから導入](WINDOWS_SETUP.md)、Dockerコンテナは[Docker導入手順](DOCKER.md)から実行します。コンテナ内では共通CLIの認証・Screening・保存結果の参照とJobの手動実行を利用できますが、Windows Task Schedulerによる定期登録は使いません。
 
 ## A. 本体の共通機能
 
@@ -15,13 +15,13 @@ Windowsネイティブは[setup.batから導入](WINDOWS_SETUP.md)、Dockerコ�
 | Job Runner | run、jobs list | 対象Screening、保存・同期をJob JSONで設定 |
 | Windows定期登録 | schedule apply/list/remove | 日次・Asia/Tokyo・ログオン中。apply/removeはTaskの作成/更新・削除 |
 
-条件定義とJobの時刻は利用者が設定します。履歴比較は同じ条件の直近2成功結果を対象にし、条件が異なる・旧形式で確認できない場合は比較不能を返します。不完全取得の差分は観測した集合の差で、条件への不適合を断定しません。
+条件定義とJobの時刻は利用者が設定します。履歴比較は同じ条件の直近2件の成功結果を対象にし、条件が異なる・旧形式で確認できない場合は比較不能を返します。不完全取得の差分は観測した集合の差で、条件への不適合を断定しません。
 
 ## B. 同梱サンプル
 
 `screenings/`の日本株割安・S&P 500・公式preset等は条件の使用例、`jobs/`の日次設定はJobの使用例です。特定条件・実行時刻を固定した監視サービスではありません。コピーして別名・別条件・別時刻で使えます。
 
-[Screeningの全文例](SCREENING_MANUAL.md#自分の条件を追加する)と[Jobの全文例](SCHEDULE_MANUAL.md#自分のjobを作る)から、自分の定義を作成してください。同梱の`sample_screen_daily`は初期設定で定期登録対象かつWatchlist Writeありなので、登録前に全Jobを確認します。`us_sector_morning`はProvider制約で無効であり、全米株集計を利用できるサンプルとして扱いません。
+[Screeningの全文例](SCREENING_MANUAL.md#自分の条件を追加する)と[Jobの全文例](SCHEDULE_MANUAL.md#自分のjobを作る)から、自分の定義を作成してください。同梱の`sample_screen_daily`は初期設定で定期登録対象かつWatchlist Writeありなので、登録前に全Jobを確認します。`us_sector_morning`はProvider制約で無効であり、全米株集計を実行できるサンプルではありません。
 
 ## C. 公式Toolと本ツールの接続範囲
 

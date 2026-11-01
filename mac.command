@@ -4,11 +4,11 @@ set -u
 cd -- "$(dirname -- "$0")" || exit 1
 
 if ! command -v docker >/dev/null 2>&1; then
-    printf '%s\n' 'Docker Desktopをインストールして起動してください。' >&2
+    printf '%s\n' 'dockerコマンドが見つかりません。Docker Desktop等の導入と、コマンドを実行できる環境かどうかを確認してください。' >&2
     exit 1
 fi
 if ! docker compose version >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
-    printf '%s\n' 'Docker DesktopとDocker Composeを利用できません。Docker Desktopの起動状態を確認してください。' >&2
+    printf '%s\n' 'Docker Composeの動作、またはDocker Engineへの接続を確認できません。Dockerの起動状態とComposeの利用環境を確認してください。' >&2
     exit 1
 fi
 

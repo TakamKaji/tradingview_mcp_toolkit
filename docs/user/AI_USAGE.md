@@ -4,7 +4,7 @@ AIには展開フォルダで共通`app.bat`を使うよう依頼します。通
 
 ## プロジェクトルートでAIを起動する
 
-`README.md`と`app.bat`があるフォルダを作業場所にして、対応CLIを起動します。配布mainの[GEMINI.md](../../GEMINI.md)・[AGENTS.md](../../AGENTS.md)・[CLAUDE.md](../../CLAUDE.md)は短い利用者向け入口、developの入口は開発規則も保持します。詳細なScreening規則の正本は両ブランチ共通の[AI生成ガイド](AI_JSON_GUIDE.md)です。
+`README.md`と`app.bat`があるフォルダを作業場所にして、対応CLIを起動します。配布mainの[GEMINI.md](../../GEMINI.md)・[AGENTS.md](../../AGENTS.md)・[CLAUDE.md](../../CLAUDE.md)は利用者向けの短い入口です。詳細なScreening規則の正本は[AI生成ガイド](AI_JSON_GUIDE.md)です。
 
 | 製品 | 自動読込と起動条件 | ルート起動時の確認方法・限界 |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ app.bat results latest my_japan_value
 app.bat results history my_japan_value --limit 10
 ```
 
-TradingView ReadとPC内への保存です。Jobを作った場合は`run my_japan_value_daily`で実行しますが、結果参照には引き続きScreening名`my_japan_value`を使います。`enabled=false`でも手動runは実行します。
+TradingViewからのデータ読み取り（Read）とPC内への保存です。Jobを作った場合は`run my_japan_value_daily`で実行しますが、結果参照には引き続きScreening名`my_japan_value`を使います。`enabled=false`でも、明示的に指定すれば手動で実行できます。
 
 ## 前回差分を確認する
 

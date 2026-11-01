@@ -65,7 +65,7 @@ try {
             Write-Host ''
             Write-Host '初回ログインが必要です。既定ブラウザでTradingViewにログインしてください。' -ForegroundColor Yellow
             Write-Host '表示されたアクセス許可画面で認可すると、こちらの処理を再開します。'
-            Write-Host 'OAuth認証コードやトークンは、他人へ共有しないでください。'
+            Write-Host 'OAuth認証コードやトークンは、第三者と共有しないでください。'
             Write-Host ''
             $AuthResult = Invoke-Application -CommandArgs @('mcp','auth')
             if ($AuthResult -ne 0) {
@@ -92,7 +92,7 @@ try {
     Write-Host '=============================================================='
     Write-Host '  セットアップ完了'
     Write-Host '=============================================================='
-    Write-Host '詳細な使い方は docs\WINDOWS_SETUP.md を参照してください。'
+    Write-Host '詳細な使い方は docs\user\WINDOWS_SETUP.md を参照してください。'
     Write-Host '実際のスクリーニングやWatchlist更新は自動実行しません。'
 } catch {
     $ExitCode = 1
