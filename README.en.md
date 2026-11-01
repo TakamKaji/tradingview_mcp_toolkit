@@ -22,7 +22,7 @@ The package also provides **typed Python wrappers for 35 official MCP tools**. N
 
 You need internet access and a [TradingView plan with access to its official MCP server](https://www.tradingview.com/mcp/docs). You do **not** need to install Python on your host computer.
 
-On the repository's [main branch](https://github.com/TakamKaji/tradingview_mcp_support), choose **Code → Download ZIP**, then extract it. When a GitHub Release is available, its **Source code (zip)** can also be used.
+On the repository's [main branch](https://github.com/TakamKaji/tradingview_mcp_toolkit), choose **Code → Download ZIP**, then extract it. When a GitHub Release is available, its **Source code (zip)** can also be used.
 
 ### Native Windows
 

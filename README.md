@@ -22,7 +22,7 @@ TradingView公式MCPの**35 Toolに対応するPythonラッパー**もありま�
 
 必要なものは、インターネット接続と[TradingView公式MCPを利用できるプラン](https://www.tradingview.com/mcp/docs)です。ホストPCへのPythonの事前インストールは不要です。
 
-[GitHubのmainブランチ](https://github.com/TakamKaji/tradingview_mcp_support)で **Code → Download ZIP** から取得し、ZIPを展開してください。GitHub Releaseが公開された場合は、その**Source code (zip)**も利用できます。
+[GitHubのmainブランチ](https://github.com/TakamKaji/tradingview_mcp_toolkit)で **Code → Download ZIP** から取得し、ZIPを展開してください。GitHub Releaseが公開された場合は、その**Source code (zip)**も利用できます。
 
 ### Windows（ネイティブ）
 

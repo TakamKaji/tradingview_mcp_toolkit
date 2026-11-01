@@ -35,4 +35,4 @@ app.bat mcp tools
 
 比較だけを行う場合はMCP接続確認自体が不要です。`results history/compare`はPC内の保存結果だけを読みます。
 
-[利用者マニュアル一覧](README.md) / [開発・診断資料](https://github.com/TakamKaji/tradingview_mcp_support/blob/develop/docs/development/README.md)
+[利用者マニュアル一覧](README.md)
