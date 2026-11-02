@@ -1,47 +1,49 @@
-# TradingView MCP Support
+# TradingView MCP Toolkit
 
 **日本語** | [English](README.en.md)
 
-TradingView公式MCPを使い、**自分で設定した条件で銘柄をスクリーニングし、結果を保存・比較できる**ローカルCLIツールです。条件や実行時刻はJSONで変更できます。
+TradingView公式MCPを**AIエージェントなしで利用するためのPython CLI・ライブラリ**です。JSONで定義した株式スクリーニングの実行、データ取得、外部ツールによる自動処理への組み込みに使えます。AIのインストールや契約は不要です。
 
 > **非公式ツールです。** TradingView社の公式製品ではなく、提携・承認を受けたものでもありません。
 
-## できること
+## 主な利用例
 
-| 機能 | 概要 |
+| 用途 | 構成 |
 | --- | --- |
-| スクリーニング | 日本株・米国株など、JSONで指定した市場・条件・取得列で検索 |
-| 結果の管理 | JSON保存、最新結果・履歴の表示、同条件での前回比較 |
-| Job | 複数の操作を設定ファイルで管理して手動実行 |
-| Watchlist同期 | 管理対象Watchlistへ銘柄を追加・削除（**書き込み操作**） |
-| 定期実行 | Windows Task Schedulerに日次Jobを登録（Windowsネイティブのみ） |
+| 日次スクリーニングを蓄積し、前回と比較する | 標準CLIとJSON定義を使い、Windows Task Schedulerまたは外部スケジューラで実行 |
+| 指定銘柄の株価情報・OHLCVを自分の処理へ取り込む | Pythonラッパーを使った独自プログラムを作成 |
+| 外部のジョブ管理ツールから繰り返し実行する | 利用者がCLIの呼び出しを設定 |
+| ホストとPython実行環境・依存ライブラリを分離する | Dockerコンテナでデータ取得処理を実行 |
+| 保存結果をブラウザや表計算ソフトで使う | 保存JSONを既存のエクスポート機能でCSV・HTMLへ変換 |
 
-TradingView公式MCPの**35 Toolに対応するPythonラッパー**もあります。ただし、すべてをCLIから直接実行できるわけではありません。OHLCV・ニュース・財務などの専用CLIや定期取得Jobは未実装です（[機能の対応範囲](docs/user/FEATURES.md)）。
+## 現在利用できる機能
 
-## まず使ってみる
+**標準CLI**は、Screening JSONの実行、結果JSONの保存・履歴・同条件の前回比較、Jobの手動実行に対応します。WindowsネイティブではTask Schedulerへ日次Jobを登録できます。管理Watchlist同期は、設定したJobの実行に伴う**明示的な書き込み（Write）**です。
 
-必要なものは、インターネット接続と[TradingView公式MCPを利用できるプラン](https://www.tradingview.com/mcp/docs)です。ホストPCへのPythonの事前インストールは不要です。
+**Python API**は、既存の認証・通信処理を再利用し、`TradingViewClient`の`get_symbol_data`、`get_symbol_data_batch`、`get_ohlcv`等を独自プログラムから呼び出せます。35 Toolの対応範囲は[機能一覧](docs/user/FEATURES.md#c-公式toolと本ツールの接続範囲)、実際の入力は[Request定義](src/tradingview_screening/integrations/tradingview/schemas.py)を参照してください。
 
-[GitHubのmainブランチ](https://github.com/TakamKaji/tradingview_mcp_toolkit)で **Code → Download ZIP** から取得し、ZIPを展開してください。GitHub Releaseが公開された場合は、その**Source code (zip)**も利用できます。
+**個別銘柄の株価・OHLCV取得用CLIや、その定期保存Jobは標準搭載していません。** Python APIで取得した任意の応答が、標準Screeningの保存・比較へ自動接続されるわけでもありません。
+
+## 導入方法
+
+インターネット接続と[TradingView公式MCPを利用できる契約プラン](https://www.tradingview.com/mcp/docs)が必要です。[mainブランチ](https://github.com/TakamKaji/tradingview_mcp_toolkit)の **Code → Download ZIP** から取得・展開してください。特定バージョンのGitHub Releaseがある場合は、そのSource code (zip)も利用できます。
 
 ### Windows（ネイティブ）
 
-1. Windows 64-bit環境で、展開フォルダ内の **`setup.bat` をダブルクリック**します。管理者権限は不要です。
-2. 画面の案内に従ってTradingViewのOAuth認証を完了します。
-3. 展開フォルダのエクスプローラーのアドレス欄に`cmd`と入力し、以下を実行します。
+システムPythonの事前導入は不要です。Windows 64-bitで`setup.bat`をダブルクリックし、案内に従って公式ブラウザ画面でOAuth認可を行います。管理者権限は不要です。
+
+展開フォルダのエクスプローラーのアドレス欄に`cmd`と入力し、読み取り専用サンプルを実行します。
 
 ```bat
 app.bat run public_sample_screen_daily
 app.bat results latest sample_standard_screen
 ```
 
-このJobは**Read-only＋ローカル保存**のサンプルです。Windowsでは結果を展開先の`results/`に保存します。
-
-[Windowsの詳しい導入手順](docs/user/WINDOWS_SETUP.md)
+このJobはWatchlistへ書き込まず、結果を展開先の`results/`に保存します。[Windows導入手順](docs/user/WINDOWS_SETUP.md)を参照してください。
 
 ### Docker（Windows・macOSなど）
 
-Docker Desktop等とDocker Composeが必要です。展開フォルダのターミナルで実行します。
+Docker Desktop等とComposeが必要です。ホストへのPython事前導入は不要です。展開フォルダのターミナルで実行します。
 
 ```sh
 docker compose -f compose.docker.yml build app
@@ -49,65 +51,38 @@ docker compose -f compose.docker.yml run --rm app --version
 docker compose -f compose.docker.yml run --rm --service-ports app mcp auth
 ```
 
-認証コマンド実行中に、表示される案内に従ってホストのブラウザから`http://127.0.0.1:8765/oauth/authorize`を開きます。認証後、以下で読み取りと保存結果を確認できます。
+認証コマンドの実行中に、案内に従ってホストのブラウザで`http://127.0.0.1:8765/oauth/authorize`を開きます。認証後、読み取りと保存結果を確認します。
 
 ```sh
 docker compose -f compose.docker.yml run --rm app screen public_japan_value
 docker compose -f compose.docker.yml run --rm app results latest public_japan_value
 ```
 
-コンテナの結果・認証情報は**Docker volume**に保存されます。`mac.command`はmacOS向けの補助起動スクリプトですが、Docker構成自体はMac専用ではありません。Windows Docker Desktop／Linux amd64で実OAuth・取得・永続化を確認済みで、Mac実機・arm64は未検証です。
+結果と認証情報は専用のDocker volumeに保存されます。`mac.command`はmacOS向けの補助起動スクリプトです。[Docker導入・保存先](docs/user/DOCKER.md)を参照してください。
 
-[Dockerの認証・保存先・トラブル対応](docs/user/DOCKER.md)
+## 他の自動化ツールとの連携
 
-## AIとの会話からScreeningを作る
+外部システムからCLIを呼び出すことで、ScreeningやJobを繰り返し実行できます。Windows Task Schedulerへの登録は標準機能です。cron等のホスト側スケジューラやジョブ管理・ワークフローツールからの呼び出しは、**利用者が設定する連携方式**であり、専用コネクターが実装されているわけではありません。
 
-対応CLIは、このフォルダを作業ディレクトリとして起動します。[Gemini入口](GEMINI.md)・[Codex入口](AGENTS.md)・[Claude入口](CLAUDE.md)と[自動読込の条件・検証範囲](docs/user/AI_USAGE.md#プロジェクトルートでaiを起動する)を確認してください。母集団・処理順を保ち、「作成して実行」は実行結果まで検証します。
+外部ツールには、展開フォルダを作業ディレクトリとして、実行コマンド・実行ユーザー・保存先・認証情報へのアクセスを設定し、stdout・stderr・終了コードと新しい保存結果を確認してください。**Docker版に組み込みSchedulerはありません。** ホスト側でComposeコマンド等の実行を設定します。
 
-Gemini CLI・Codex・Claude Code・ChatGPTに[AIによるScreening生成ガイド](docs/user/AI_JSON_GUIDE.md)と実仕様・Schema・サンプルを読ませ、希望を自然な言葉で伝えます。 [公式MCP直接Readの確認済み制約](docs/user/PROVIDER_VERIFICATION.md)と[3エージェント受入手順](docs/user/NATURAL_LANGUAGE_ACCEPTANCE.md)も配布用mainに同梱しています。実機で3エージェントが検証済みという意味ではありません。AIは次の2方式から選択します。
+特定銘柄の株価・OHLCVを定期取得する場合は、**Pythonラッパーを使う独自処理と外部スケジューラを組み合わせます**。取得条件・時点・保存形式・失敗時の扱いは独自処理側で実装する必要があります。
 
-- **方式A（最優先）：標準Screening JSON。** 単一Screeningで表現できる条件は`screenings/*.json`を作り、Jobが必要な場合だけ`jobs/*.json`も作ります。簡単な条件にPythonやBATは不要です。
-- **方式B：高度な複合Python処理。** ランキング確定後の別時間足判定、外部母集団との照合など、単一JSONで表現できない処理に限って方式BのPython処理を選び、その理由を説明します。既存の公式MCPクライアント・認証・通信制御・保存・Watchlist安全機構を可能な範囲で再利用します。汎用pipelineエンジンや専用CLIは未実装です。
+自分の条件は[Screening作成手順](docs/user/SCREENING_MANUAL.md#自分の条件を追加する)、JobとWindows定期登録は[Job・Scheduler](docs/user/SCHEDULE_MANUAL.md)へ。結果の参照にはJob名ではなくScreening名を使います。CSV・HTMLへの変換は[結果のエクスポート](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換)を参照してください。
 
-**一般ユーザーはGitやCodexをインストールする必要はありません。** ChatGPTは完成ファイルと保存手順を提供し、Codexはアクセス可能なローカル環境への保存・検証まで対応します。Python方式は編集・検証できる実行環境が必要です。取得制限・欠損・未確認事項を明示し、不完全な取得を全件と扱いません。ファイル作成と実取得は別操作です。明示依頼なしにTradingViewへの実書き込みやScheduler登録を実行せず、初期はWatchlist同期・定期登録を無効にします。
+## AIとの連携（任意）
 
-## 自分のスクリーニング・Jobを作る
+Gemini CLI・Codex・Claude Code向けの[指示ファイルと利用手順](docs/user/AI_USAGE.md#プロジェクトルートでaiを起動する)を用意しています。AIは条件JSONや、標準機能で不足する独自処理の作成を補助するために任意で使えます。詳細は[AI共通ガイド](docs/user/AI_JSON_GUIDE.md)へ。各AIの独立実機受入には[未検証事項](docs/user/NATURAL_LANGUAGE_ACCEPTANCE.md)が残っており、指示ファイルの存在だけで動作確認済みとは扱いません。
 
-1. `screenings/public_japan_value.json`を`screenings/my_japan_value.json`へコピーし、JSON内の`name`も`my_japan_value`に変更します。
-2. 市場・条件・取得列などを編集し、`app.bat screen my_japan_value`（Windows）で実行します。
-3. 日次Jobにする場合は`jobs/`のサンプルをコピーし、`task.definition`に自分のScreening名を指定します。まず`enabled=false`・`watchlistSync=false`で手動確認してください。
+## 制約・注意点
 
-結果を参照するコマンドには**Job名ではなくScreening名**を指定します。
+- **Providerの対応範囲：** 市場・指標・取得上限に制約があります。取得成功と全件取得は別です。条件の無視、null、行数、データ取得時点とOHLCVの確定足・価格調整を確認してください。[観測上の注意](docs/user/PROVIDER_VERIFICATION.md)を参照。
+- **全米株の条件なし一括取得は未対応：** Providerの拒否、1,000行上限と全件列挙手段の制約があり、`us_sector_morning`は無効です。[詳細](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)を参照。
+- **書き込みと定期登録：** Watchlist同期はTradingViewへのWriteです。`sample_screen_daily`は初期状態で`enabled=true`・`watchlistSync=true`です。`schedule apply`は有効な全Jobを登録・更新するため、設定と同期先を確認し、明示的に実行してください。上の`public_sample_screen_daily`はRead-onlyです。
+- **認証情報：** Dockerの専用credential volumeはOSの暗号化Keychainではありません。volumeの共有や`docker compose down -v`等の削除に注意してください。[保存と保護](docs/user/DOCKER.md#データと認証情報の保存場所)を参照。
+- **検証範囲：** Windows Docker Desktop／Linux amd64での実OAuth・取得・永続化は確認済みです。Mac実機・arm64、新規Windowsユーザーの初回OAuthは未検証です。
 
-[Screeningの作成手順](docs/user/SCREENING_MANUAL.md#自分の条件を追加する) / [Jobの作成手順](docs/user/SCHEDULE_MANUAL.md#自分のjobを作る)
-
-## 安全上の注意と制限
-
-- **書き込みに注意：** `sample_screen_daily`は初期状態で`enabled=true`かつ`watchlistSync=true`です。`schedule apply`は有効な**すべてのJob**を登録・更新します。利用前に設定と同期先を確認してください。上記の`public_sample_screen_daily`はWatchlistへ書き込みません。
-- **全米株の無条件一括取得は未対応：** TradingView公式MCP Providerが要求を拒否し、取得上限1,000行と全件列挙手段の制約があります。`us_sector_morning`は無効です（[詳細](docs/user/SCREENING_MANUAL.md#公式mcp-beta版のスクリーニング制限2026-10-18実機確認)）。
-- **認証情報：** Dockerのcredential volumeはOSの暗号化Keychainではありません。`docker compose down -v`等によるvolume削除にも注意してください（[保存と保護](docs/user/DOCKER.md#データと認証情報の保存場所)）。
-
-## 結果の4つの使い道
-
-- **JSON（標準）**：`results/`へ保存する正本。履歴・前回比較に使用。
-- **HTML（任意）**：保存済みJSONを別スクリプトで表形式へ変換。ブラウザで閲覧、銘柄からチャートへ移動。
-- **CSV（任意）**：同じJSONを表に変換し、Excelなどで加工。
-- **TradingView Watchlist（明示操作のみ）**：既存Jobによる管理リストへの差分同期。**結果ファイルの単純な変換ではなく、銘柄の追加・削除を伴うWrite操作**です。
-
-CSV・HTMLの作成は`export-results.bat`（Windows）またはDocker内の`tradingview_screening.export_results`を使います。詳細は[結果ファイルの変換手順](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換)へ。通常のScreening実行ではJSONだけを保存し、ほかの形式は自動生成しません。
-
-表示言語は日本語が既定で、`--lang en`ならCSVは英語見出し、HTMLは英語初期表示になります。HTMLは生成後も「日本語 / English」でオフライン切り替え可能です。英語の既定出力名は`.en.csv`・`.en.html`で、元JSONと取得値は変更しません。
-
-## マニュアル
-
-各マニュアルの本文は**日本語**です。
-
-| 目的 | マニュアル |
-| --- | --- |
-| 導入・認証 | [Windows](docs/user/WINDOWS_SETUP.md) / [Docker](docs/user/DOCKER.md) |
-| 機能・条件作成 | [機能一覧](docs/user/FEATURES.md) / [Screening](docs/user/SCREENING_MANUAL.md) |
-| 保存・自動化 | [結果・履歴・比較](docs/user/RESULTS.md) / [Job・Scheduler](docs/user/SCHEDULE_MANUAL.md) |
-| その他 | [Watchlist同期](docs/user/WATCHLIST_SYNC.md) / [AIからのCLI利用](docs/user/AI_USAGE.md) / [トラブル対応](docs/user/TROUBLESHOOTING.md) |
+詳細は[利用者マニュアル一覧](docs/user/README.md)と[トラブル対応](docs/user/TROUBLESHOOTING.md)へ。マニュアルは日本語で、日本語READMEを正本とします。
 
 ## ライセンス
 

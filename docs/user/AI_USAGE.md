@@ -1,6 +1,6 @@
 # AIから共通CLIを使う
 
-AIには展開フォルダで共通`app.bat`を使うよう依頼します。通常のScreening・結果管理・Job実行に、別のTradingView connectorや条件ごとのPythonスクリプトは不要です。初回導入は[Windows導入](WINDOWS_SETUP.md)を完了してください。
+このページはAIによる任意の操作支援を使う場合の手順です。通常のCLI・Python APIの利用にAIは不要です。AIを使う場合は、展開フォルダで共通`app.bat`を使うよう依頼します。通常のScreening・結果管理・Job実行に、別のTradingView connectorや条件ごとのPythonスクリプトは不要です。初回導入は[Windows導入](WINDOWS_SETUP.md)を完了してください。
 
 ## プロジェクトルートでAIを起動する
 
