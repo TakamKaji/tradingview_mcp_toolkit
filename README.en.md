@@ -60,6 +60,27 @@ docker compose -f compose.docker.yml run --rm app results latest public_japan_va
 
 Results and credentials are stored in dedicated Docker volumes. `mac.command` is an optional macOS launcher. See [Docker setup and storage](docs/user/DOCKER.md).
 
+## Saved results and CSV/HTML export
+
+JSON is the authoritative saved result used for history and comparisons. Convert saved JSON to **CSV or HTML** with the bundled `export-results.bat`: CSV for spreadsheets such as Excel, or HTML for a browser table with links to TradingView charts.
+
+On Windows, replace the example path with your own saved result:
+
+```bat
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format csv
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format html
+```
+
+Japanese is the default. Add `--lang en` for English CSV headers or the initial HTML language. Generated HTML also supports offline switching between Japanese and English. CSV uses UTF-8 with BOM; the source JSON and retrieved values remain unchanged. Normal screenings save JSON only; export is a separate, optional operation.
+
+The same exporter is available in Docker. Use an input path inside the results volume:
+
+```sh
+docker compose -f compose.docker.yml run --rm --entrypoint python app -m tradingview_screening.export_results /workspace/results/2026-10-22/my_japan_value_153000.json --format csv
+```
+
+Export does not connect to TradingView or write to Watchlists. **Watchlist sync is a separate write operation that adds or removes symbols.** See [result export options](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換) for output paths and overwrite handling.
+
 ## External automation
 
 External systems can invoke the CLI repeatedly to run Screenings or Jobs. Windows Task Scheduler registration is built in. Calling commands from host-side cron, job managers, or workflow tools is a **user-configured integration**, not a dedicated connector supplied by this toolkit.

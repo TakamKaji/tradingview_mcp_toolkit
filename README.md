@@ -60,6 +60,27 @@ docker compose -f compose.docker.yml run --rm app results latest public_japan_va
 
 結果と認証情報は専用のDocker volumeに保存されます。`mac.command`はmacOS向けの補助起動スクリプトです。[Docker導入・保存先](docs/user/DOCKER.md)を参照してください。
 
+## 保存結果の利用・CSV／HTML変換
+
+取得結果はJSONを正本として保存し、履歴・前回比較に使います。保存済みJSONは、同梱の`export-results.bat`で**CSVやHTMLへ変換**できます。CSVはExcel等での加工、HTMLはブラウザでの一覧表示とTradingViewチャートへの移動に使えます。
+
+Windowsでは、以下のパスを自分の保存結果に置き換えて実行します。
+
+```bat
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format csv
+export-results.bat "results\2026-10-22\my_japan_value_153000.json" --format html
+```
+
+既定は日本語です。`--lang en`でCSVの英語見出し・HTMLの英語初期表示を選べます。HTMLは生成後も「日本語 / English」でオフライン切り替えが可能です。CSVはUTF-8 BOM付きで、元JSONと取得値は変更しません。通常のScreeningはJSONだけを保存し、変換は必要なときに別途実行します。
+
+Dockerでも同じ変換機能を使えます。入力は専用volume内のパスを指定します。
+
+```sh
+docker compose -f compose.docker.yml run --rm --entrypoint python app -m tradingview_screening.export_results /workspace/results/2026-10-22/my_japan_value_153000.json --format csv
+```
+
+変換のためのTradingView接続やWatchlistへの書き込みは発生しません。**Watchlist同期は銘柄の追加・削除を伴う別のWrite操作**です。出力先や上書き指定は[結果のエクスポート](docs/user/RESULTS.md#保存jsonからcsvhtmlを作る任意の後変換)を参照してください。
+
 ## 他の自動化ツールとの連携
 
 外部システムからCLIを呼び出すことで、ScreeningやJobを繰り返し実行できます。Windows Task Schedulerへの登録は標準機能です。cron等のホスト側スケジューラやジョブ管理・ワークフローツールからの呼び出しは、**利用者が設定する連携方式**であり、専用コネクターが実装されているわけではありません。
