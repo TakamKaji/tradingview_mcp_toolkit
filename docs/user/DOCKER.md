@@ -1,6 +1,6 @@
 # Dockerコンテナで使う
 
-Windows・macOS等のホストから既存CLIを手動実行する構成です。ホストへのPythonインストールは不要です。Windows上のDocker Desktop・Linux/amd64で実OAuth、Screening、Job、認証・結果の永続化を確認しています。Mac実機・arm64は未検証です。[共通機能とサンプル](FEATURES.md)の区別は同じで、コンテナ内のSchedulerには対応しません。
+ホストからPython実行環境と依存ライブラリを分離し、Windows・macOS等から既存CLIを実行する構成です。AIエージェントは不要です。外部スケジューラからの呼び出しは利用者が設定します。ホストへのPythonインストールは不要です。Windows上のDocker Desktop・Linux/amd64で実OAuth、Screening、Job、認証・結果の永続化を確認しています。Mac実機・arm64は未検証です。[共通機能とサンプル](FEATURES.md)の区別は同じで、コンテナ内のSchedulerには対応しません。
 
 ## 準備
 

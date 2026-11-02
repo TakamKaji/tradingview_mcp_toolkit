@@ -1,6 +1,6 @@
 # 共通機能・同梱サンプル・公式Toolの対応範囲
 
-本ツールの共通機能、設定の使用例、Python APIだけにある操作を分けて説明します。公式MCPにToolがあることと、本ツールのCLIや定期Jobからそのまま使えることは別です。
+TradingView MCP ToolkitはAIエージェントなしで利用できます。ここでは標準CLIの共通機能、設定の使用例、独自プログラムから利用するPython APIの範囲を分けて説明します。公式MCPにToolがあることと、本ツールのCLIや定期Jobからそのまま使えることは別です。
 
 Windowsネイティブは[setup.batから導入](WINDOWS_SETUP.md)、Dockerコンテナは[Docker導入手順](DOCKER.md)から実行します。コンテナ内では共通CLIの認証・Screening・保存結果の参照とJobの手動実行を利用できますが、Windows Task Schedulerによる定期登録は使いません。
 
